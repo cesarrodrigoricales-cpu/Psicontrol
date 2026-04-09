@@ -169,7 +169,7 @@
     </div>
 
     <!-- ═══ HISTORIAL ═══ -->
-    <div class="page" id="page-historial">
+       <div class="page" id="page-historial">
       <div class="page-header">
         <div>
           <div class="page-title">Historial de registros</div>
@@ -183,19 +183,13 @@
       <div class="card">
         <div class="card-header">
           <div class="card-title">Pacientes registrados</div>
-          <input type="text" id="hist-search" placeholder="Filtrar..." style="padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:12px;background:var(--bg);outline:none;width:180px;" oninput="filterHistorial()">
+          <input type="text" id="hist-search" class="filter-input" placeholder="Filtrar por nombre, motivo..." oninput="filterHistorial()">
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Paciente</th>
-                <th>Edad</th>
-                <th>Teléfono</th>
-                <th>Motivo</th>
-                <th>Fecha</th>
-                <th>Estado</th>
-                <th></th>
+                <th>Paciente</th><th>Edad</th><th>Teléfono</th><th>Motivo</th><th>Fecha</th><th>Estado</th><th>Acciones</th>
               </tr>
             </thead>
             <tbody id="hist-tbody"></tbody>
@@ -205,7 +199,7 @@
     </div>
 
     <!-- ═══ CITAS ═══ -->
-    <div class="page" id="page-citas">
+  <div class="page" id="page-citas">
       <div class="page-header">
         <div>
           <div class="page-title">Citas</div>
@@ -220,22 +214,16 @@
         <div class="card-header">
           <div class="card-title">Próximas citas</div>
           <div style="display:flex;gap:8px;">
-            <button class="btn-secondary" onclick="filterCitas('todas')" id="fc-todas" style="font-size:11px;padding:5px 12px;">Todas</button>
-            <button class="btn-secondary" onclick="filterCitas('pendiente')" id="fc-pend" style="font-size:11px;padding:5px 12px;">Pendientes</button>
-            <button class="btn-secondary" onclick="filterCitas('confirmada')" id="fc-conf" style="font-size:11px;padding:5px 12px;">Confirmadas</button>
+            <button class="btn-secondary" onclick="filterCitas('todas')"      id="fc-todas" style="font-size:11px;padding:5px 12px;">Todas</button>
+            <button class="btn-secondary" onclick="filterCitas('pendiente')"  id="fc-pend"  style="font-size:11px;padding:5px 12px;">Pendientes</button>
+            <button class="btn-secondary" onclick="filterCitas('confirmada')" id="fc-conf"  style="font-size:11px;padding:5px 12px;">Confirmadas</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Paciente</th>
-                <th>Fecha</th>
-                <th>Hora</th>
-                <th>Tipo</th>
-                <th>Duración</th>
-                <th>Estado</th>
-                <th>Acción</th>
+                <th>Paciente</th><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Duración</th><th>Estado</th><th>Acciones</th>
               </tr>
             </thead>
             <tbody id="citas-tbody"></tbody>
@@ -243,6 +231,7 @@
         </div>
       </div>
     </div>
+
 
     <!-- ═══ NUEVO REGISTRO ═══ -->
     <div class="page" id="page-nuevo">
@@ -449,11 +438,76 @@
   </div>
 </div>
 
+    <!-- MODAL: EDITAR PACIENTE  -->
+  <div class="modal-overlay" id="modal-editar-paciente">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Editar paciente</div>
+      <button class="modal-close" onclick="closeModal('modal-editar-paciente')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="ep-id">
+      <div class="modal-edit-grid">
+        <div class="form-group">
+          <label>Nombres *</label>
+          <input type="text" id="ep-nombres">
+          <span class="field-hint"></span>
+        </div>
+        <div class="form-group">
+          <label>Apellidos *</label>
+          <input type="text" id="ep-apellidos">
+          <span class="field-hint"></span>
+        </div>
+        <div class="form-group">
+          <label>Edad *</label>
+          <input type="number" id="ep-edad" min="1" max="129">
+          <span class="field-hint"></span>
+        </div>
+        <div class="form-group">
+          <label>Teléfono</label>
+          <input type="tel" id="ep-tel">
+        </div>
+        <div class="form-group">
+          <label>Correo electrónico</label>
+          <input type="email" id="ep-email">
+          <span class="field-hint"></span>
+        </div>
+        <div class="form-group">
+          <label>Fecha de registro</label>
+          <input type="date" id="ep-fecha">
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="ep-estado">
+            <option>Activo</option>
+            <option>Inactivo</option>
+            <option>Alta</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Motivo de consulta *</label>
+          <input type="text" id="ep-motivo">
+          <span class="field-hint"></span>
+        </div>
+        <div class="form-group full">
+          <label>Notas adicionales</label>
+          <textarea id="ep-notas"></textarea>
+        </div>
+      </div>
+      <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn-secondary" onclick="closeModal('modal-editar-paciente')">Cancelar</button>
+        <button class="btn-primary" onclick="guardarEdicionPaciente()">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+  </div>
+
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toast-container"></div>
-
+<canvas id="graficoPDF" width="400" height="200" style="display:none;"></canvas>
     
 <script src="script.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>

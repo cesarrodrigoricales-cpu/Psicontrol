@@ -307,6 +307,13 @@ const selected = new Set([2, 6, 7]);
 
 function buildTags() {
   const wrap = document.getElementById('patient-tags');
+  
+  // ✅ VERIFICACIÓN que evita el error
+  if (!wrap) {
+    console.warn('❌ Elemento #patient-tags no encontrado en el HTML');
+    return;
+  }
+  
   wrap.innerHTML = patientTypes.map((t, i) => `
     <div class="tag-chip ${selected.has(i)?'selected':''}" onclick="toggleTag(${i}, this)">
       <span class="tag-dot"></span>${t}
@@ -328,7 +335,7 @@ function renderCitas() {
   const tbody = document.getElementById('citas-tbody');
   const lista = citaFiltro === 'todas' ? store.citas : store.citas.filter(c => c.estado === citaFiltro);
   if (lista.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">📅</div><div class="es-text">No hay citas para mostrar</div></div></td></tr>';
+    tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state"><div class="es-icon">📅</div><div class="es-text">No hay citas para mostrar</div></div></td></tr>`;
     return;
   }
   tbody.innerHTML = lista.map(c =>
@@ -339,9 +346,12 @@ function renderCitas() {
       <td>${c.tipo}</td>
       <td>${c.duracion}</td>
       <td>${estadoBadge(c.estado)}</td>
-      <td style="display:flex;gap:6px;">
-        ${c.estado !== 'confirmada' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="confirmarCita(${c.id})">Confirmar</button>` : ''}
-        <button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--rose);border-color:var(--rose);" onclick="eliminarCita(${c.id})">Cancelar</button>
+      <td>
+        <div class="td-actions">
+          <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="editarCita(${c.id})">Editar</button>
+          ${c.estado !== 'confirmada' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--teal);border-color:var(--teal);" onclick="confirmarCita(${c.id})">Confirmar</button>` : ''}
+          <button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--rose);border-color:var(--rose);" onclick="eliminarCita(${c.id})">Cancelar</button>
+        </div>
       </td>
     </tr>`
   ).join('');
@@ -389,6 +399,19 @@ function guardarCita() {
   toast('Cita agendada correctamente');
 }
 
+function editarCita(id) {
+  const c = store.citas.find(x => x.id === id);
+  if (!c) return;
+  document.getElementById('ec-id').value       = c.id;
+  document.getElementById('ec-paciente').value = c.paciente;
+  document.getElementById('ec-tipo').value     = c.tipo;
+  document.getElementById('ec-fecha').value    = c.fecha;
+  document.getElementById('ec-hora').value     = c.hora;
+  document.getElementById('ec-duracion').value = c.duracion;
+  document.getElementById('ec-estado').value   = capitalize(c.estado);
+  clearFieldErrors('ec-paciente','ec-fecha','ec-hora');
+  openModal('modal-editar-cita');
+}
 // ═══════════════════════════════════════════════
 // NUEVO REGISTRO
 // ═══════════════════════════════════════════════
@@ -457,13 +480,95 @@ function renderReportes() {
 }
 
 function generarReporte() {
-  store.reportes++;
-  agregarActividad('amber', '📊', 'Reporte generado por <strong>Ana López</strong>', 'Ahora');
-  renderDashboard();
-  toast('Reporte generado exitosamente');
-  navigateTo('reportes');
-}
+  const { jsPDF } = window.jspdf;
 
+  // 📅 MESES
+  const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const conteoMeses = new Array(12).fill(0);
+
+  // 📊 CONTAR PERSONAS POR MES (usa citas o pacientes)
+  store.citas.forEach(c => {
+    if (c.fecha) {
+      const mes = new Date(c.fecha).getMonth();
+      conteoMeses[mes]++;
+    }
+  });
+
+  // 🎨 CREAR GRÁFICO LINEAL
+  const canvas = document.getElementById('graficoPDF');
+  const ctx = canvas.getContext('2d');
+
+  if (window.miGrafico) {
+    window.miGrafico.destroy();
+  }
+
+  window.miGrafico = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: meses,
+      datasets: [{
+        label: 'Personas por mes',
+        data: conteoMeses,
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99,102,241,0.2)',
+        tension: 0.4, // curva suave 🔥
+        fill: true,
+        pointRadius: 4,
+        pointBackgroundColor: '#6366f1'
+      }]
+    },
+    options: {
+      responsive: false,
+      plugins: {
+        legend: { display: true }
+      },
+      scales: {
+        y: {
+          beginAtZero: true
+        }
+      }
+    }
+  });
+
+  // ⏳ Esperar render
+  setTimeout(() => {
+    const imgData = canvas.toDataURL('image/png');
+
+    const doc = new jsPDF();
+
+    // HEADER
+    doc.setFillColor(99, 102, 241);
+    doc.rect(0, 0, 210, 30, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.text("Reporte Mensual", 20, 18);
+
+    // SUBTEXTO
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    doc.text("Cantidad de personas por mes", 20, 45);
+
+    // 📈 GRÁFICO
+    doc.addImage(imgData, 'PNG', 15, 55, 180, 100);
+
+    // FOOTER
+    doc.setFontSize(9);
+    doc.setTextColor(150);
+    doc.text("Sistema PsiControl - Análisis mensual", 20, 285);
+
+    // 💾 GUARDAR
+    doc.save("reporte_mensual.pdf");
+
+    // 🔁 tu lógica
+    store.reportes++;
+    agregarActividad('amber', '📊', 'Reporte mensual generado', 'Ahora');
+    renderDashboard();
+    toast('Reporte mensual con gráfico generado 📈');
+    navigateTo('reportes');
+
+  }, 500);
+}
 // ═══════════════════════════════════════════════
 // CONFIGURACIÓN
 // ═══════════════════════════════════════════════

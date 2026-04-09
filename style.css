@@ -172,6 +172,16 @@ textarea { resize:vertical; min-height:80px; }
 .modal-close:hover { background:var(--bg); color:var(--text-primary); }
 .modal-body { padding:20px 24px 24px; }
 
+
+/* MODAL EDITAR PACIENTE */
+.modal-edit-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.modal-edit-grid .full { grid-column:1/-1; }
+.modal-detail-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.detail-field { display:flex; flex-direction:column; gap:3px; }
+.detail-label { font-size:11px; color:var(--text-muted); }
+.detail-value { font-size:14px; font-weight:500; }
+.detail-full { grid-column:1/-1; }
+
 /* TOAST */
 .toast-container { position:fixed; bottom:28px; right:28px; z-index:2000; display:flex; flex-direction:column; gap:10px; }
 .toast { background:var(--sidebar-bg); color:white; padding:12px 18px; border-radius:10px; font-size:13px; display:flex; align-items:center; gap:10px; box-shadow:0 8px 24px rgba(0,0,0,0.2); animation:slideIn .3s ease; min-width:240px; }
