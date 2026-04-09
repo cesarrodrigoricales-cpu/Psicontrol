@@ -257,6 +257,70 @@ function eliminarPaciente(id) {
   toast('Registro eliminado', 'warning');
 }
 
+const days = [
+  { key: 'lun', label: 'Lunes',     active: true,  from: '08:00', to: '17:00' },
+  { key: 'mar', label: 'Martes',    active: true,  from: '08:00', to: '17:00' },
+  { key: 'mie', label: 'Miércoles', active: true,  from: '08:00', to: '17:00' },
+  { key: 'jue', label: 'Jueves',    active: true,  from: '08:00', to: '17:00' },
+  { key: 'vie', label: 'Viernes',   active: true,  from: '08:00', to: '14:00' },
+  { key: 'sab', label: 'Sábado',    active: false, from: '09:00', to: '12:00' },
+  { key: 'dom', label: 'Domingo',   active: false, from: '09:00', to: '12:00' },
+];
+
+function buildSchedule() {
+  const wrap = document.getElementById('schedule-rows');
+  wrap.innerHTML = days.map((d, i) => `
+    <div class="schedule-row" style="background:${i%2===0?'var(--bg)':'transparent'};border-radius:8px;padding:4px 0;">
+      <span class="day-label">${d.label}</span>
+      <input type="time" value="${d.from}" id="from-${d.key}"
+        style="border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;background:var(--surface);outline:none;${!d.active?'opacity:.35;pointer-events:none;':''}">
+      <input type="time" value="${d.to}" id="to-${d.key}"
+        style="border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;background:var(--surface);outline:none;${!d.active?'opacity:.35;pointer-events:none;':''}">
+      <div class="toggle-switch ${d.active?'on':''}" id="tog-${d.key}" onclick="toggleDay('${d.key}',${i})"></div>
+    </div>
+  `).join('');
+}
+
+function toggleDay(key, i) {
+  days[i].active = !days[i].active;
+  const tog = document.getElementById('tog-'+key);
+  const from = document.getElementById('from-'+key);
+  const to   = document.getElementById('to-'+key);
+  tog.classList.toggle('on', days[i].active);
+  const dis = !days[i].active;
+  [from, to].forEach(el => {
+    el.style.opacity = dis ? '.35' : '1';
+    el.style.pointerEvents = dis ? 'none' : '';
+  });
+}
+
+buildSchedule();
+
+// ── TIPO DE PACIENTES ──
+const patientTypes = [
+  'Niños (4–12 años)', 'Adolescentes (13–17)', 'Adultos', 'Adultos mayores',
+  'Parejas', 'Familias', 'Ansiedad y estrés', 'Depresión',
+  'Trauma y PTSD', 'Trastornos alimentarios', 'TDAH', 'Habilidades sociales',
+  'Duelo y pérdida', 'Adicciones', 'Orientación vocacional',
+];
+const selected = new Set([2, 6, 7]);
+
+function buildTags() {
+  const wrap = document.getElementById('patient-tags');
+  wrap.innerHTML = patientTypes.map((t, i) => `
+    <div class="tag-chip ${selected.has(i)?'selected':''}" onclick="toggleTag(${i}, this)">
+      <span class="tag-dot"></span>${t}
+    </div>
+  `).join('');
+}
+
+function toggleTag(i, el) {
+  if (selected.has(i)) { selected.delete(i); el.classList.remove('selected'); }
+  else { selected.add(i); el.classList.add('selected'); }
+}
+
+buildTags();
+
 // ═══════════════════════════════════════════════
 // CITAS
 // ═══════════════════════════════════════════════
