@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PsiControl — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-tag">Sistema</div>
+    <div class="logo-name">Psi<span>Control</span></div>
+  </div>
+  <nav class="nav-section">
+    <div class="nav-label">Principal</div>
+    <div class="nav-item active" data-page="dashboard">
+      <span class="nav-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></span>
+      Dashboard
+    </div>
+    <div class="nav-item" data-page="historial">
+      <span class="nav-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12h6M9 16h6M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/></svg></span>
+      Historial de registros
+      <span class="badge" id="badge-historial">0</span>
+    </div>
+    <div class="nav-item" data-page="citas">
+      <span class="nav-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
+      Citas
+      <span class="badge" id="badge-citas">0</span>
+    </div>
+    <div class="nav-item" data-page="nuevo">
+      <span class="nav-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>
+      Nuevo registro
+    </div>
+    <div class="nav-label" style="margin-top:20px;">Análisis</div>
+    <div class="nav-item" data-page="reportes">
+      <span class="nav-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg></span>
+      Reportes
+    </div>
+    <div class="nav-label" style="margin-top:20px;">Configuración</div>
+    <div class="nav-item" data-page="config">
+      <span class="nav-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06A1.65 1.65 0 0015 19.4a1.65 1.65 0 00-1.65 1.65V21a2 2 0 01-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 010-2.83 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.6 12a1.65 1.65 0 00-1.65-1.65H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 5.1l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 2.6a1.65 1.65 0 001.65-1.65V1a2 2 0 014 0v.09a1.65 1.65 0 001.65 1.65z"/></svg></span>
+      Configuración
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="profile-pill">
+      <div class="avatar">AL</div>
+      <div class="profile-info">
+        <div class="profile-name">Ana López</div>
+        <div class="profile-role">Administradora</div>
+      </div>
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.3)" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div class="breadcrumb">
+      <strong id="breadcrumb-text">inicio</strong>
+    </div>
+    <div class="search-wrap" id="search-wrap">
+      <span class="search-icon"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></span>
+      <input type="text" class="search" id="global-search" placeholder="Buscar paciente, cita..." autocomplete="off">
+      <div class="search-results" id="search-results" style="display:none;"></div>
+    </div>
+    <button class="topbar-btn" id="notif-btn" title="Notificaciones">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+      <span class="notif-dot" id="notif-dot"></span>
+    </button>
+    <button class="topbar-btn" title="Perfil">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+    </button>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══ DASHBOARD ═══ -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Panel de control</div>
+          <div class="page-subtitle" id="fecha-hoy"></div>
+        </div>
+        <button class="btn-primary" onclick="navigateTo('nuevo')">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Nuevo registro
+        </button>
+      </div>
+
+      <div class="stat-strip">
+        <div class="stat-card">
+          <div class="stat-icon c-purple">📋</div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-registros">0</div>
+            <div class="stat-label">Registros totales</div>
+            <div class="stat-delta delta-up" id="stat-reg-delta">↑ 0 este mes</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon c-teal">📅</div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-citas">0</div>
+            <div class="stat-label">Citas pendientes</div>
+            <div class="stat-delta delta-up" id="stat-cita-delta">↑ 0 hoy</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon c-amber">👤</div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-pacientes">0</div>
+            <div class="stat-label">Pacientes activos</div>
+            <div class="stat-delta delta-up">↑ Activos</div>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon c-rose">📊</div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-reportes">0</div>
+            <div class="stat-label">Reportes generados</div>
+            <div class="stat-delta delta-up">Este mes</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="main-grid">
+        <div style="display:flex;flex-direction:column;gap:20px;">
+          <div class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">Próximas citas</div>
+                <div class="card-meta" id="fecha-citas-hoy"></div>
+              </div>
+              <button class="card-link" onclick="navigateTo('citas')">Ver todas →</button>
+            </div>
+            <div class="appt-list" id="appt-list-dash"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Acciones rápidas</div></div>
+            <div class="quick-grid">
+              <div class="quick-btn" onclick="navigateTo('nuevo')"><span class="quick-btn-icon">📄</span><span class="quick-btn-label">Nuevo registro</span></div>
+              <div class="quick-btn" onclick="openModal('modal-cita')"><span class="quick-btn-icon">📅</span><span class="quick-btn-label">Agendar cita</span></div>
+              <div class="quick-btn" onclick="generarReporte()"><span class="quick-btn-icon">📊</span><span class="quick-btn-label">Generar reporte</span></div>
+              <div class="quick-btn" onclick="navigateTo('historial')"><span class="quick-btn-icon">👤</span><span class="quick-btn-label">Ver pacientes</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:20px;">
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title">Actividad reciente</div>
+              <button class="card-link" onclick="navigateTo('historial')">Ver todo</button>
+            </div>
+            <div class="activity-list" id="activity-feed"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><div class="card-title">Resumen del mes</div></div>
+            <div class="prog-wrap" id="prog-wrap"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ HISTORIAL ═══ -->
+    <div class="page" id="page-historial">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Historial de registros</div>
+          <div class="page-subtitle">Todos los pacientes registrados</div>
+        </div>
+        <button class="btn-primary" onclick="navigateTo('nuevo')">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Agregar paciente
+        </button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Pacientes registrados</div>
+          <input type="text" id="hist-search" placeholder="Filtrar..." style="padding:6px 10px;border:1.5px solid var(--border);border-radius:7px;font-family:inherit;font-size:12px;background:var(--bg);outline:none;width:180px;" oninput="filterHistorial()">
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Paciente</th>
+                <th>Edad</th>
+                <th>Teléfono</th>
+                <th>Motivo</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="hist-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CITAS ═══ -->
+    <div class="page" id="page-citas">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Citas</div>
+          <div class="page-subtitle">Gestión de citas y horarios</div>
+        </div>
+        <button class="btn-primary" onclick="openModal('modal-cita')">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Agendar cita
+        </button>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Próximas citas</div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-secondary" onclick="filterCitas('todas')" id="fc-todas" style="font-size:11px;padding:5px 12px;">Todas</button>
+            <button class="btn-secondary" onclick="filterCitas('pendiente')" id="fc-pend" style="font-size:11px;padding:5px 12px;">Pendientes</button>
+            <button class="btn-secondary" onclick="filterCitas('confirmada')" id="fc-conf" style="font-size:11px;padding:5px 12px;">Confirmadas</button>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Paciente</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Tipo</th>
+                <th>Duración</th>
+                <th>Estado</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="citas-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ NUEVO REGISTRO ═══ -->
+    <div class="page" id="page-nuevo">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Nuevo registro</div>
+          <div class="page-subtitle">Ingrese los datos del paciente</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Información del paciente</div></div>
+        <div class="form-grid" id="form-nuevo">
+          <div class="form-group">
+            <label>Nombres *</label>
+            <input type="text" id="f-nombres" placeholder="Ej: María Elena">
+          </div>
+          <div class="form-group">
+            <label>Apellidos *</label>
+            <input type="text" id="f-apellidos" placeholder="Ej: Ríos Mendoza">
+          </div>
+          <div class="form-group">
+            <label>Edad *</label>
+            <input type="text" id="f-edad" placeholder="Ej: 28">
+          </div>
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="tel" id="f-tel" placeholder="Ej: 987 654 321">
+          </div>
+          <div class="form-group">
+            <label>Correo electrónico</label>
+            <input type="email" id="f-email" placeholder="correo@ejemplo.com">
+          </div>
+          <div class="form-group">
+            <label>Fecha de registro</label>
+            <input type="date" id="f-fecha">
+          </div>
+          <div class="form-group full">
+            <label>Motivo de consulta *</label>
+            <input type="text" id="f-motivo" placeholder="Ej: Ansiedad generalizada, estrés laboral...">
+          </div>
+          <div class="form-group full">
+            <label>Notas adicionales</label>
+            <textarea id="f-notas" placeholder="Observaciones, antecedentes relevantes..."></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-secondary" onclick="limpiarFormulario()">Limpiar</button>
+          <button class="btn-primary" onclick="guardarRegistro()">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Guardar registro
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ REPORTES ═══ -->
+    <div class="page" id="page-reportes">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Reportes</div>
+          <div class="page-subtitle">Estadísticas y análisis del sistema</div>
+        </div>
+        <button class="btn-primary" onclick="generarReporte()">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Generar reporte
+        </button>
+      </div>
+      <div class="stat-strip" id="rep-stats"></div>
+      <div class="main-grid">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Registros por mes</div></div>
+          <div style="padding:16px 22px 22px;" id="chart-area"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Indicadores generales</div></div>
+          <div class="prog-wrap" id="rep-prog"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ CONFIGURACIÓN ═══ -->
+    <div class="page" id="page-config">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Configuración</div>
+          <div class="page-subtitle">Preferencias del sistema</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Datos del consultorio</div></div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Nombre del consultorio</label>
+            <input type="text" id="cfg-nombre" placeholder="Ej: Consultorio PsiControl">
+          </div>
+          <div class="form-group">
+            <label>Psicólogo/a responsable</label>
+            <input type="text" id="cfg-psicologo" placeholder="Ej: Dra. Ana López">
+          </div>
+          <div class="form-group">
+            <label>Teléfono de contacto</label>
+            <input type="tel" id="cfg-tel" placeholder="Ej: 01 234 5678">
+          </div>
+          <div class="form-group">
+            <label>Correo</label>
+            <input type="email" id="cfg-email" placeholder="consultorio@email.com">
+          </div>
+          <div class="form-group full">
+            <label>Dirección</label>
+            <input type="text" id="cfg-dir" placeholder="Av. Principal 123, Piso 2">
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="guardarConfig()">Guardar cambios</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end content -->
+</div><!-- end main -->
+
+<!-- MODAL NUEVA CITA -->
+<div class="modal-overlay" id="modal-cita">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Agendar cita</div>
+      <button class="modal-close" onclick="closeModal('modal-cita')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <div class="form-group">
+          <label>Paciente *</label>
+          <input type="text" id="mc-paciente" placeholder="Nombre del paciente" list="pacientes-list">
+          <datalist id="pacientes-list"></datalist>
+        </div>
+        <div class="form-group">
+          <label>Tipo de sesión</label>
+          <select id="mc-tipo">
+            <option>Primera consulta</option>
+            <option>Sesión de seguimiento</option>
+            <option>Evaluación psicológica</option>
+            <option>Terapia cognitiva</option>
+            <option>Terapia familiar</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Fecha *</label>
+          <input type="date" id="mc-fecha">
+        </div>
+        <div class="form-group">
+          <label>Hora *</label>
+          <input type="text" id="mc-hora" placeholder="Ej: 10:00">
+        </div>
+        <div class="form-group">
+          <label>Duración</label>
+          <select id="mc-duracion">
+            <option>30 min</option>
+            <option selected>50 min</option>
+            <option>60 min</option>
+            <option>90 min</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Estado</label>
+          <select id="mc-estado">
+            <option>Pendiente</option>
+            <option>Confirmada</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
+        <button class="btn-secondary" onclick="closeModal('modal-cita')">Cancelar</button>
+        <button class="btn-primary" onclick="guardarCita()">Guardar cita</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL VER PACIENTE -->
+<div class="modal-overlay" id="modal-paciente">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="mp-titulo">Detalle del paciente</div>
+      <button class="modal-close" onclick="closeModal('modal-paciente')">✕</button>
+    </div>
+    <div class="modal-body" id="mp-body"></div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-container"></div>
+
+    
+<script src="script.js"></script>
+
+</body>
+</html>
