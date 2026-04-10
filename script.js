@@ -1,6 +1,4 @@
-// ═══════════════════════════════════════════════
 // DATA STORE
-// ═══════════════════════════════════════════════
 let store = {
   pacientes: [
     { id:1, nombres:'María', apellidos:'Ríos', edad:28, tel:'987 654 001', email:'maria@email.com', motivo:'Ansiedad generalizada', notas:'Sin antecedentes relevantes.', fecha:'2026-03-10', estado:'Activo' },
@@ -8,12 +6,11 @@ let store = {
     { id:3, nombres:'Lucía', apellidos:'Sarmiento', edad:42, tel:'987 654 003', email:'lucia@email.com', motivo:'Depresión leve', notas:'Evaluación pendiente.', fecha:'2026-03-20', estado:'Activo' },
     { id:4, nombres:'Carlos', apellidos:'Rojas', edad:31, tel:'987 654 004', email:'carlos@email.com', motivo:'Terapia cognitiva', notas:'Sesiones semanales.', fecha:'2026-03-22', estado:'Activo' },
   ],
-  citas: [
-    { id:1, paciente:'María Ríos', tipo:'Sesión de seguimiento', fecha:'2026-03-31', hora:'09:00', duracion:'50 min', estado:'confirmada' },
-    { id:2, paciente:'Juan Pacheco', tipo:'Primera consulta', fecha:'2026-03-31', hora:'11:30', duracion:'60 min', estado:'pendiente' },
-    { id:3, paciente:'Lucía Sarmiento', tipo:'Evaluación psicológica', fecha:'2026-03-31', hora:'15:00', duracion:'90 min', estado:'confirmada' },
-    { id:4, paciente:'Carlos Rojas', tipo:'Terapia cognitiva', fecha:'2026-03-31', hora:'17:00', duracion:'50 min', estado:'por confirmar' },
-  ],
+ citas: [
+  { id:1, paciente:'María Ríos', tipo:'Sesión de seguimiento', fecha:'2026-03-31', hora:'09:00', duracion:'50 min', estado:'confirmada', nivel:'verde' },
+  { id:2, paciente:'Juan Pacheco', tipo:'Primera consulta', fecha:'2026-03-31', hora:'11:30', duracion:'60 min', estado:'pendiente', nivel:'amarillo' },
+  { id:3, paciente:'Lucía Sarmiento', tipo:'Evaluación psicológica', fecha:'2026-03-31', hora:'15:00', duracion:'90 min', estado:'confirmada', nivel:'rojo' },
+],
   actividad: [
     { tipo:'purple', icon:'📝', texto:'Registro nuevo creado para <strong>María Ríos</strong>', tiempo:'Hace 15 minutos' },
     { tipo:'teal',   icon:'✅', texto:'Cita de <strong>Juan Pacheco</strong> confirmada',        tiempo:'Hace 1 hora' },
@@ -28,9 +25,7 @@ let store = {
 
 let citaFiltro = 'todas';
 
-// ═══════════════════════════════════════════════
 // NAVIGATION
-// ═══════════════════════════════════════════════
 const pageLabels = { dashboard:'Dashboard', historial:'Historial de registros', citas:'Citas', nuevo:'Nuevo registro', reportes:'Reportes', config:'Configuración' };
 
 function navigateTo(page) {
@@ -53,13 +48,52 @@ document.querySelectorAll('.nav-item').forEach(item => {
   item.addEventListener('click', () => navigateTo(item.dataset.page));
 });
 
-// ═══════════════════════════════════════════════
 // UTILS
-// ═══════════════════════════════════════════════
+
 function hoy() {
   return new Date().toISOString().split('T')[0];
 }
 
+function horaAMinutos(hora) {
+  const [h, m] = hora.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function duracionAMinutos(duracion) {
+  return parseInt(duracion); // "50 min" → 50
+}
+
+function hayConflicto(fecha, hora, duracion, citaId = null) {
+  const inicioNueva = horaAMinutos(hora);
+  const finNueva = inicioNueva + duracionAMinutos(duracion);
+
+  return store.citas.some(c => {
+    if (c.fecha !== fecha) return false;
+    if (c.id === citaId) return false;
+
+    const inicioExistente = horaAMinutos(c.hora);
+    const finExistente = inicioExistente + duracionAMinutos(c.duracion);
+
+    // 🔥 choque de horarios
+    return inicioNueva < finExistente && finNueva > inicioExistente;
+  });
+}
+
+function sugerirHora(fecha, hora, duracion) {
+  let nuevaHora = horaAMinutos(hora);
+
+  while (hayConflicto(fecha, minutosAHora(nuevaHora), duracion)) {
+    nuevaHora += 10; // avanza de 10 en 10 min
+  }
+
+  return minutosAHora(nuevaHora);
+}
+
+function minutosAHora(min) {
+  const h = String(Math.floor(min / 60)).padStart(2, '0');
+  const m = String(min % 60).padStart(2, '0');
+  return `${h}:${m}`;
+}
 function fmtFecha(iso) {
   if (!iso) return '—';
   const [y, m, d] = iso.split('-');
@@ -83,11 +117,18 @@ function estadoBadge(e) {
   return '<span class="appt-badge ' + (m[e] || 'c-amber') + '">' + capitalize(e) + '</span>';
 }
 
+function nivelBadge(n) {
+  const map = {
+    verde: '🟢',
+    amarillo: '🟡',
+    rojo: '🔴'
+  };
+  return `<span title="${n}">${map[n] || '⚪'}</span>`;
+}
+
 function capitalize(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
 
-// ═══════════════════════════════════════════════
 // TOAST
-// ═══════════════════════════════════════════════
 function toast(msg, tipo = 'success') {
   const c = document.getElementById('toast-container');
   const t = document.createElement('div');
@@ -97,9 +138,8 @@ function toast(msg, tipo = 'success') {
   setTimeout(() => t.remove(), 3000);
 }
 
-// ═══════════════════════════════════════════════
 // MODALS
-// ═══════════════════════════════════════════════
+
 function openModal(id) {
   document.getElementById(id).classList.add('open');
   if (id === 'modal-cita') {
@@ -121,9 +161,7 @@ function actualizarDatalist() {
   dl.innerHTML = store.pacientes.map(p => '<option value="' + p.nombres + ' ' + p.apellidos + '">').join('');
 }
 
-// ═══════════════════════════════════════════════
 // DASHBOARD
-// ═══════════════════════════════════════════════
 function renderDashboard() {
   // fecha
   const now = new Date();
@@ -200,9 +238,8 @@ function renderProgBars(id, items) {
   ).join('');
 }
 
-// ═══════════════════════════════════════════════
 // HISTORIAL
-// ═══════════════════════════════════════════════
+
 function renderHistorial(filtro = '') {
   const tbody = document.getElementById('hist-tbody');
   const lista = store.pacientes.filter(p => {
@@ -221,7 +258,6 @@ function renderHistorial(filtro = '') {
       <td>${p.motivo}</td>
       <td>${fmtFecha(p.fecha)}</td>
       <td><span class="appt-badge c-teal">${p.estado}</span></td>
-      <td><button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();eliminarPaciente(${p.id})">Eliminar</button></td>
     </tr>`
   ).join('');
 }
@@ -249,13 +285,7 @@ function verPaciente(id) {
   openModal('modal-paciente');
 }
 
-function eliminarPaciente(id) {
-  if (!confirm('¿Eliminar este registro?')) return;
-  store.pacientes = store.pacientes.filter(p => p.id !== id);
-  renderHistorial(document.getElementById('hist-search').value);
-  renderDashboard();
-  toast('Registro eliminado', 'warning');
-}
+
 
 const days = [
   { key: 'lun', label: 'Lunes',     active: true,  from: '08:00', to: '17:00' },
@@ -346,6 +376,7 @@ function renderCitas() {
       <td>${c.tipo}</td>
       <td>${c.duracion}</td>
       <td>${estadoBadge(c.estado)}</td>
+      <td>${nivelBadge(c.nivel)}</td>
       <td>
         <div class="td-actions">
           <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="editarCita(${c.id})">Editar</button>
@@ -384,20 +415,37 @@ function guardarCita() {
   const pac = document.getElementById('mc-paciente').value.trim();
   const fecha = document.getElementById('mc-fecha').value;
   const hora = document.getElementById('mc-hora').value.trim();
-  if (!pac || !fecha || !hora) { toast('Completa los campos obligatorios', 'warning'); return; }
+  const duracion = document.getElementById('mc-duracion').value;
+
+  if (!pac || !fecha || !hora) {
+    toast('Completa los campos obligatorios', 'warning');
+    return;
+  }
+
+  // 🔥 VALIDACIÓN PRO
+  if (hayConflicto(fecha, hora, duracion)) {
+    toast('⛔ Ya existe una cita en ese horario o se superpone', 'warning');
+    return;
+  }
+
   const nueva = {
     id: store.nextId++,
-    paciente: pac, tipo: document.getElementById('mc-tipo').value,
-    fecha, hora, duracion: document.getElementById('mc-duracion').value,
+    paciente: pac,
+    tipo: document.getElementById('mc-tipo').value,
+    fecha,
+    hora,
+    duracion,
     estado: document.getElementById('mc-estado').value.toLowerCase()
   };
+
   store.citas.push(nueva);
   agregarActividad('teal', '📅', 'Cita agendada para <strong>' + pac + '</strong>', 'Ahora');
   closeModal('modal-cita');
   renderDashboard();
-  if (document.getElementById('page-citas').classList.contains('active')) renderCitas();
+  renderCitas();
   toast('Cita agendada correctamente');
 }
+
 
 function editarCita(id) {
   const c = store.citas.find(x => x.id === id);
@@ -444,9 +492,7 @@ function limpiarFormulario() {
   document.getElementById('f-fecha').value = hoy();
 }
 
-// ═══════════════════════════════════════════════
 // REPORTES
-// ═══════════════════════════════════════════════
 function renderReportes() {
   const total = store.pacientes.length;
   const conf = store.citas.filter(c => c.estado === 'confirmada').length;
@@ -569,9 +615,8 @@ function generarReporte() {
 
   }, 500);
 }
-// ═══════════════════════════════════════════════
+
 // CONFIGURACIÓN
-// ═══════════════════════════════════════════════
 function cargarConfig() {
   document.getElementById('cfg-nombre').value = store.config.nombre;
   document.getElementById('cfg-psicologo').value = store.config.psicologo;
@@ -620,13 +665,13 @@ document.addEventListener('click', e => {
   }
 });
 
-// Fix inline onclick in search results
 document.getElementById('search-results').addEventListener('click', function(e) {
   const item = e.target.closest('.search-result-item');
   if (!item) return;
   searchInput.value = '';
   searchResults.style.display = 'none';
 });
+
 
 // NOTIFICACIONES
 document.getElementById('notif-btn').addEventListener('click', function() {

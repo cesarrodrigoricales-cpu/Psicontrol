@@ -189,7 +189,7 @@
           <table>
             <thead>
               <tr>
-                <th>Paciente</th><th>Edad</th><th>Teléfono</th><th>Motivo</th><th>Fecha</th><th>Estado</th><th>Acciones</th>
+                <th>Paciente</th><th>Edad</th><th>Teléfono</th><th>Motivo</th><th>Fecha</th><th>Estado</th>
               </tr>
             </thead>
             <tbody id="hist-tbody"></tbody>
@@ -223,9 +223,16 @@
           <table>
             <thead>
               <tr>
-                <th>Paciente</th><th>Fecha</th><th>Hora</th><th>Tipo</th><th>Duración</th><th>Estado</th><th>Acciones</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Tipo</th>
+                <th>Duración</th>
+                <th>Nivel</th> 
+                <th>Estado</th>
+                <th>Paciente</th>
+                <th>Acciones</th>              
               </tr>
-            </thead>
+              </thead>
             <tbody id="citas-tbody"></tbody>
           </table>
         </div>
@@ -418,6 +425,15 @@
             <option>Confirmada</option>
           </select>
         </div>
+
+        <div class="form-group">
+        <label>Prioridad</label>
+        <select id="mc-prioridad">
+          <option value="baja">🟢 Baja</option>
+          <option value="media" selected>🟡 Media</option>
+          <option value="alta">🔴 Alta</option>
+        </select>
+      </div>
       </div>
       <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
         <button class="btn-secondary" onclick="closeModal('modal-cita')">Cancelar</button>
