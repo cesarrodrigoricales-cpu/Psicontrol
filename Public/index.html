@@ -6,7 +6,6 @@
 <title>PsiControl — Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
-
 </head>
 <body>
 
@@ -29,12 +28,12 @@
     </div>
     <div class="nav-item" data-page="citas">
       <span class="nav-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></span>
-      Citas
+      Atenciones
       <span class="badge" id="badge-citas">0</span>
     </div>
     <div class="nav-item" data-page="nuevo">
       <span class="nav-icon"><svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg></span>
-      Nuevo registro
+      Nueva atención
     </div>
     <div class="nav-label" style="margin-top:20px;">Análisis</div>
     <div class="nav-item" data-page="reportes">
@@ -67,7 +66,7 @@
     </div>
     <div class="search-wrap" id="search-wrap">
       <span class="search-icon"><svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg></span>
-      <input type="text" class="search" id="global-search" placeholder="Buscar paciente, cita..." autocomplete="off">
+      <input type="text" class="search" id="global-search" placeholder="Buscar estudiante..." autocomplete="off">
       <div class="search-results" id="search-results" style="display:none;"></div>
     </div>
     <button class="topbar-btn" id="notif-btn" title="Notificaciones">
@@ -90,7 +89,7 @@
         </div>
         <button class="btn-primary" onclick="navigateTo('nuevo')">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Nuevo registro
+          Nueva atención
         </button>
       </div>
 
@@ -99,23 +98,23 @@
           <div class="stat-icon c-purple">📋</div>
           <div class="stat-body">
             <div class="stat-value" id="stat-registros">0</div>
-            <div class="stat-label">Registros totales</div>
-            <div class="stat-delta delta-up" id="stat-reg-delta">↑ 0 este mes</div>
+            <div class="stat-label">Estudiantes registrados</div>
+            <div class="stat-delta delta-up" id="stat-reg-delta">↑ 0 registros</div>
           </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon c-teal">📅</div>
           <div class="stat-body">
             <div class="stat-value" id="stat-citas">0</div>
-            <div class="stat-label">Citas pendientes</div>
-            <div class="stat-delta delta-up" id="stat-cita-delta">↑ 0 hoy</div>
+            <div class="stat-label">Atenciones pendientes</div>
+            <div class="stat-delta delta-up" id="stat-cita-delta">↑ 0 pendientes</div>
           </div>
         </div>
         <div class="stat-card">
           <div class="stat-icon c-amber">👤</div>
           <div class="stat-body">
             <div class="stat-value" id="stat-pacientes">0</div>
-            <div class="stat-label">Pacientes activos</div>
+            <div class="stat-label">Estudiantes activos</div>
             <div class="stat-delta delta-up">↑ Activos</div>
           </div>
         </div>
@@ -134,7 +133,7 @@
           <div class="card">
             <div class="card-header">
               <div>
-                <div class="card-title">Próximas citas</div>
+                <div class="card-title">Atenciones recientes</div>
                 <div class="card-meta" id="fecha-citas-hoy"></div>
               </div>
               <button class="card-link" onclick="navigateTo('citas')">Ver todas →</button>
@@ -144,10 +143,10 @@
           <div class="card">
             <div class="card-header"><div class="card-title">Acciones rápidas</div></div>
             <div class="quick-grid">
-              <div class="quick-btn" onclick="navigateTo('nuevo')"><span class="quick-btn-icon">📄</span><span class="quick-btn-label">Nuevo registro</span></div>
-              <div class="quick-btn" onclick="openModal('modal-cita')"><span class="quick-btn-icon">📅</span><span class="quick-btn-label">Agendar cita</span></div>
+              <div class="quick-btn" onclick="navigateTo('nuevo')"><span class="quick-btn-icon">📄</span><span class="quick-btn-label">Nueva atención</span></div>
+              <div class="quick-btn" onclick="navigateTo('citas')"><span class="quick-btn-icon">📅</span><span class="quick-btn-label">Ver atenciones</span></div>
               <div class="quick-btn" onclick="generarReporte()"><span class="quick-btn-icon">📊</span><span class="quick-btn-label">Generar PDF reporte</span></div>
-              <div class="quick-btn" onclick="navigateTo('historial')"><span class="quick-btn-icon">👤</span><span class="quick-btn-label">Ver pacientes</span></div>
+              <div class="quick-btn" onclick="navigateTo('historial')"><span class="quick-btn-icon">👤</span><span class="quick-btn-label">Ver estudiantes</span></div>
             </div>
           </div>
         </div>
@@ -169,27 +168,28 @@
     </div>
 
     <!-- ═══ HISTORIAL ═══ -->
-       <div class="page" id="page-historial">
+    <div class="page" id="page-historial">
       <div class="page-header">
         <div>
           <div class="page-title">Historial de registros</div>
-          <div class="page-subtitle">Todos los pacientes registrados</div>
+          <div class="page-subtitle">Todos los estudiantes registrados</div>
         </div>
-        <button class="btn-primary" onclick="navigateTo('nuevo')">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Agregar paciente
-        </button>
       </div>
       <div class="card">
         <div class="card-header">
-          <div class="card-title">Pacientes registrados</div>
-          <input type="text" id="hist-search" class="filter-input" placeholder="Filtrar por nombre, motivo..." oninput="filterHistorial()">
+          <div class="card-title">Estudiantes registrados</div>
+          <input type="text" id="hist-search" class="filter-input" placeholder="Filtrar por nombre, matrícula..." oninput="filterHistorial()">
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Paciente</th><th>Edad</th><th>Teléfono</th><th>Motivo</th><th>Fecha</th><th>Estado</th>
+                <th>Estudiante</th>
+                <th>Matrícula</th>
+                <th>Teléfono</th>
+                <th>Condición</th>
+                <th>Nacimiento</th>
+                <th>Género</th>
               </tr>
             </thead>
             <tbody id="hist-tbody"></tbody>
@@ -198,25 +198,26 @@
       </div>
     </div>
 
-    <!-- ═══ CITAS ═══ -->
-  <div class="page" id="page-citas">
+    <!-- ═══ ATENCIONES ═══ -->
+    <div class="page" id="page-citas">
       <div class="page-header">
         <div>
-          <div class="page-title">Citas</div>
-          <div class="page-subtitle">Gestión de citas y horarios</div>
+          <div class="page-title">Atenciones</div>
+          <div class="page-subtitle">Gestión de atenciones y seguimientos</div>
         </div>
         <button class="btn-primary" onclick="openModal('modal-cita')">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Agendar cita
+          Nueva sesión
         </button>
       </div>
       <div class="card">
         <div class="card-header">
-          <div class="card-title">Próximas citas</div>
+          <div class="card-title">Listado de atenciones</div>
           <div style="display:flex;gap:8px;">
-            <button class="btn-secondary" onclick="filterCitas('todas')"      id="fc-todas" style="font-size:11px;padding:5px 12px;">Todas</button>
-            <button class="btn-secondary" onclick="filterCitas('pendiente')"  id="fc-pend"  style="font-size:11px;padding:5px 12px;">Pendientes</button>
-            <button class="btn-secondary" onclick="filterCitas('confirmada')" id="fc-conf"  style="font-size:11px;padding:5px 12px;">Confirmadas</button>
+            <button class="btn-secondary" onclick="filterCitas('todas')"     style="font-size:11px;padding:5px 12px;">Todas</button>
+            <button class="btn-secondary" onclick="filterCitas('pendiente')" style="font-size:11px;padding:5px 12px;">Pendientes</button>
+            <button class="btn-secondary" onclick="filterCitas('activo')"    style="font-size:11px;padding:5px 12px;">Activas</button>
+            <button class="btn-secondary" onclick="filterCitas('cerrado')"   style="font-size:11px;padding:5px 12px;">Cerradas</button>
           </div>
         </div>
         <div class="table-wrap">
@@ -225,74 +226,141 @@
               <tr>
                 <th>Fecha</th>
                 <th>Hora</th>
-                <th>Tipo</th>
-                <th>Duración</th>
-                <th>Nivel</th> 
+                <th>Motivo</th>
+                <th>Grado</th>
+                <th>Nivel</th>
                 <th>Estado</th>
-                <th>Paciente</th>
-                <th>Acciones</th>              
+                <th>Estudiante</th>
+                <th>Acciones</th>
               </tr>
-              </thead>
+            </thead>
             <tbody id="citas-tbody"></tbody>
           </table>
         </div>
       </div>
     </div>
 
-
-    <!-- ═══ NUEVO REGISTRO ═══ -->
+    <!-- ═══ NUEVA ATENCIÓN ═══ -->
     <div class="page" id="page-nuevo">
       <div class="page-header">
         <div>
-          <div class="page-title">Nuevo registro</div>
-          <div class="page-subtitle">Ingrese los datos del paciente</div>
+          <div class="page-title">Nueva atención</div>
+          <div class="page-subtitle">Registra un nuevo estudiante y su primera sesión</div>
         </div>
       </div>
+
+      <!-- PASO INDICADOR -->
       <div class="card">
-        <div class="card-header"><div class="card-title">Información del paciente</div></div>
-        <div class="form-grid" id="form-nuevo">
+        <div style="padding:20px 22px;display:flex;align-items:center;gap:0;">
+          <div class="paso-item active" id="paso-ind-1">
+            <div class="paso-circle">1</div>
+            <div class="paso-label">Datos del estudiante</div>
+          </div>
+          <div class="paso-linea" id="paso-linea"></div>
+          <div class="paso-item" id="paso-ind-2">
+            <div class="paso-circle">2</div>
+            <div class="paso-label">Primera sesión</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASO 1: DATOS DEL ESTUDIANTE -->
+      <div class="card" id="paso-1">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📋 Datos del estudiante</div>
+            <div class="card-meta">Información personal del nuevo estudiante</div>
+          </div>
+        </div>
+        <div class="form-grid">
           <div class="form-group">
             <label>Nombres *</label>
-            <input type="text" id="f-nombres" placeholder="Ej: María Elena">
+            <input type="text" id="na-nombres" placeholder="Ej: Juan Carlos">
           </div>
           <div class="form-group">
             <label>Apellidos *</label>
-            <input type="text" id="f-apellidos" placeholder="Ej: Ríos Mendoza">
-          </div>
-          <div class="form-group">
-            <label>Edad *</label>
-            <input type="text" id="f-edad" placeholder="Ej: 28">
+            <input type="text" id="na-apellidos" placeholder="Ej: García López">
           </div>
           <div class="form-group">
             <label>Teléfono</label>
-            <input type="tel" id="f-tel" placeholder="Ej: 987 654 321">
+            <input type="tel" id="na-telefono" placeholder="Ej: 987654321" maxlength="9" minlength="9" >
           </div>
           <div class="form-group">
-            <label>Correo electrónico</label>
-            <input type="email" id="f-email" placeholder="correo@ejemplo.com">
+            <label>Fecha de nacimiento</label>
+            <input type="date" id="na-fechanac">
           </div>
           <div class="form-group">
-            <label>Fecha de registro</label>
-            <input type="date" id="f-fecha">
+            <label>Género</label>
+            <select id="na-genero">
+              <option value="">-- Selecciona --</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Femenino">Femenino</option>
+              <option value="Otro">Otro</option>
+            </select>
           </div>
-          <div class="form-group full">
-            <label>Motivo de consulta *</label>
-            <input type="text" id="f-motivo" placeholder="Ej: Ansiedad generalizada, estrés laboral...">
+          <div class="form-group">
+            <label>Grado</label>
+            <input type="text" id="na-grado" placeholder="Ej: 4to A">
           </div>
-          <div class="form-group full">
-            <label>Notas adicionales</label>
-            <textarea id="f-notas" placeholder="Observaciones, antecedentes relevantes..."></textarea>
+          <div class="form-group">
+            <label>Condición / Observación inicial</label>
+            <input type="text" id="na-condicion" placeholder="Ej: Ninguna, Discapacidad auditiva...">
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn-secondary" onclick="limpiarFormulario()">Limpiar</button>
-          <button class="btn-primary" onclick="guardarRegistro()">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            Guardar registro
+          <button class="btn-primary" onclick="irPaso2()">
+            Continuar → Primera sesión
           </button>
         </div>
       </div>
-    </div>
+
+      <!-- PASO 2: PRIMERA SESIÓN (oculto al inicio) -->
+      <div class="card" id="paso-2" style="display:none;">
+        <div class="card-header">
+          <div>
+            <div class="card-title">📅 Primera sesión</div>
+            <div class="card-meta" id="paso2-subtitulo">Datos de la primera sesión</div>
+          </div>
+          <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="volverPaso1()">← Volver</button>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Motivo de consulta *</label>
+            <select id="na-motivo">
+              <option value="">-- Selecciona --</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nivel de atención</label>
+            <select id="na-nivel">
+              <option value="leve">🟢 Leve</option>
+              <option value="moderado" selected>🟡 Moderado</option>
+              <option value="grave">🔴 Grave</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fecha de la sesión *</label>
+            <input type="date" id="na-fecha">
+          </div>
+          <div class="form-group">
+            <label>Hora *</label>
+            <input type="time" id="na-hora">
+          </div>
+          <div class="form-group full">
+            <label>Observaciones</label>
+            <textarea id="na-observaciones" placeholder="Observaciones adicionales sobre la primera sesión..."></textarea>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-secondary" onclick="volverPaso1()">← Volver</button>
+          <button class="btn-primary" onclick="guardarNuevaAtencion()">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+            Registrar atención
+          </button>
+        </div>
+      </div>
+
+    </div><!-- fin page-nuevo -->
 
     <!-- ═══ REPORTES ═══ -->
     <div class="page" id="page-reportes">
@@ -303,13 +371,13 @@
         </div>
         <button class="btn-primary" onclick="generarReporte()">
           <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Generar PDF Reporte
+          Generar PDF
         </button>
       </div>
       <div class="stat-strip" id="rep-stats"></div>
       <div class="main-grid">
         <div class="card">
-          <div class="card-header"><div class="card-title">Registros por mes</div></div>
+          <div class="card-header"><div class="card-title">Atenciones por mes</div></div>
           <div style="padding:16px 22px 22px;" id="chart-area"></div>
         </div>
         <div class="card">
@@ -355,46 +423,52 @@
           <button class="btn-primary" onclick="guardarConfig()">Guardar cambios</button>
         </div>
       </div>
-     <!-- HORARIO Y DISPONIBILIDAD -->
       <div class="card">
-  <div class="card-header">
-    <div>
-      <div class="card-title">Horario y disponibilidad</div>
-      <div class="card-meta">Configura los días y horas de atención</div>
-    </div>
-  </div>
-  <div class="schedule-grid">
-    <div class="schedule-row" style="color:var(--text-muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">
-      <span>Día</span><span>Desde</span><span>Hasta</span><span>Activo</span>
-    </div>
-    <div id="schedule-rows"></div>
-  </div>
-  <div class="form-actions">
-    <button class="btn-primary" onclick="toast('✓ Horario guardado')">Guardar horario</button>
-  </div>
+        <div class="card-header">
+          <div>
+            <div class="card-title">Horario y disponibilidad</div>
+            <div class="card-meta">Configura los días y horas de atención</div>
+          </div>
+        </div>
+        <div class="schedule-grid">
+          <div class="schedule-row" style="color:var(--text-muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;">
+            <span>Día</span><span>Desde</span><span>Hasta</span><span>Activo</span>
+          </div>
+          <div id="schedule-rows"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-primary" onclick="toast('✓ Horario guardado')">Guardar horario</button>
+        </div>
       </div>
     </div>
+
   </div><!-- end content -->
 </div><!-- end main -->
 
-<!-- MODAL NUEVA CITA -->
+<!-- ═══ MODAL SESIÓN (para atenciones ya registradas) ═══ -->
 <div class="modal-overlay" id="modal-cita">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title">Agendar cita</div>
+      <div class="modal-title">Registrar sesión</div>
       <button class="modal-close" onclick="closeModal('modal-cita')">✕</button>
     </div>
     <div class="modal-body">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
         <div class="form-group">
-          <label>Paciente *</label>
-          <input type="text" id="mc-paciente" placeholder="Nombre del paciente" list="pacientes-list">
-          <datalist id="pacientes-list"></datalist>
+          <label>Estudiante *</label>
+          <select id="mc-paciente">
+            <option value="">-- Selecciona un estudiante --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Motivo de consulta *</label>
+          <select id="mc-motivo">
+            <option value="">-- Selecciona --</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Tipo de sesión</label>
           <select id="mc-tipo">
-            <option>Primera consulta</option>
             <option>Sesión de seguimiento</option>
             <option>Evaluación psicológica</option>
             <option>Terapia cognitiva</option>
@@ -407,121 +481,55 @@
         </div>
         <div class="form-group">
           <label>Hora *</label>
-          <input type="text" id="mc-hora" placeholder="Ej: 10:00">
-        </div>
-        <div class="form-group">
-          <label>Duración</label>
-          <select id="mc-duracion">
-            <option>30 min</option>
-            <option selected>50 min</option>
-            <option>60 min</option>
-            <option>90 min</option>
-          </select>
+          <input type="time" id="mc-hora">
         </div>
         <div class="form-group">
           <label>Estado</label>
           <select id="mc-estado">
-            <option>Pendiente</option>
-            <option>Confirmada</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="activo">Activo</option>
           </select>
         </div>
-
         <div class="form-group">
-        <label>Prioridad</label>
-        <select id="mc-prioridad">
-          <option value="baja">🟢 Baja</option>
-          <option value="media" selected>🟡 Media</option>
-          <option value="alta">🔴 Alta</option>
-        </select>
-      </div>
+          <label>Nivel de atención</label>
+          <select id="mc-prioridad">
+            <option value="baja">🟢 Leve</option>
+            <option value="media" selected>🟡 Moderado</option>
+            <option value="alta">🔴 Grave</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Grado</label>
+          <input type="text" id="mc-grado" placeholder="Ej: 4to">
+        </div>
+        <div class="form-group full">
+          <label>Observaciones</label>
+          <textarea id="mc-observaciones" placeholder="Observaciones adicionales..." style="min-height:70px;"></textarea>
+        </div>
       </div>
       <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
         <button class="btn-secondary" onclick="closeModal('modal-cita')">Cancelar</button>
-        <button class="btn-primary" onclick="guardarCita()">Guardar cita</button>
+        <button class="btn-primary" onclick="guardarCita()">Guardar sesión</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- MODAL VER PACIENTE -->
+<!-- ═══ MODAL VER ESTUDIANTE ═══ -->
 <div class="modal-overlay" id="modal-paciente">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title" id="mp-titulo">Detalle del paciente</div>
+      <div class="modal-title" id="mp-titulo">Detalle del estudiante</div>
       <button class="modal-close" onclick="closeModal('modal-paciente')">✕</button>
     </div>
     <div class="modal-body" id="mp-body"></div>
   </div>
 </div>
 
-    <!-- MODAL: EDITAR PACIENTE  -->
-  <div class="modal-overlay" id="modal-editar-paciente">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">Editar paciente</div>
-      <button class="modal-close" onclick="closeModal('modal-editar-paciente')">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="ep-id">
-      <div class="modal-edit-grid">
-        <div class="form-group">
-          <label>Nombres *</label>
-          <input type="text" id="ep-nombres">
-          <span class="field-hint"></span>
-        </div>
-        <div class="form-group">
-          <label>Apellidos *</label>
-          <input type="text" id="ep-apellidos">
-          <span class="field-hint"></span>
-        </div>
-        <div class="form-group">
-          <label>Edad *</label>
-          <input type="number" id="ep-edad" min="1" max="129">
-          <span class="field-hint"></span>
-        </div>
-        <div class="form-group">
-          <label>Teléfono</label>
-          <input type="tel" id="ep-tel">
-        </div>
-        <div class="form-group">
-          <label>Correo electrónico</label>
-          <input type="email" id="ep-email">
-          <span class="field-hint"></span>
-        </div>
-        <div class="form-group">
-          <label>Fecha de registro</label>
-          <input type="date" id="ep-fecha">
-        </div>
-        <div class="form-group">
-          <label>Estado</label>
-          <select id="ep-estado">
-            <option>Activo</option>
-            <option>Inactivo</option>
-            <option>Alta</option>
-          </select>
-        </div>
-        <div class="form-group full">
-          <label>Motivo de consulta *</label>
-          <input type="text" id="ep-motivo">
-          <span class="field-hint"></span>
-        </div>
-        <div class="form-group full">
-          <label>Notas adicionales</label>
-          <textarea id="ep-notas"></textarea>
-        </div>
-      </div>
-      <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
-        <button class="btn-secondary" onclick="closeModal('modal-editar-paciente')">Cancelar</button>
-        <button class="btn-primary" onclick="guardarEdicionPaciente()">Guardar cambios</button>
-      </div>
-    </div>
-  </div>
-  </div>
-
 <!-- TOAST CONTAINER -->
 <div class="toast-container" id="toast-container"></div>
 <canvas id="graficoPDF" width="400" height="200" style="display:none;"></canvas>
-    
+
 <script src="script.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>

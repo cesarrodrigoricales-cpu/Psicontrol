@@ -3,9 +3,9 @@ module.exports = {
   async up(queryInterface) {
     await queryInterface.bulkInsert('atenciones', [
       {
-        idespecialista: 2,
-        idprofesor:     3,
-        idestudiante:   1,
+        idespecialista: 1,
+        idprofesor:     2,
+        idestudiante:   7,
         fechahora:      new Date('2024-03-10 09:00:00'),
         grado:          '4to',
         seccion:        'A',
@@ -16,14 +16,14 @@ module.exports = {
         created_at:     new Date()
       },
       {
-        idespecialista: 2,
-        idprofesor:     3,
-        idestudiante:   2,
+        idespecialista: 1,
+        idprofesor:     2,
+        idestudiante:   8,
         fechahora:      new Date('2024-03-12 10:30:00'),
         grado:          '5to',
         seccion:        'B',
         nivelatencion:  'moderado',
-        idmotivo:       3,
+        idmotivo:       2,
         observaciones:  'Notas bajas en matemáticas y comunicación.',
         estado:         'pendiente',
         created_at:     new Date()
