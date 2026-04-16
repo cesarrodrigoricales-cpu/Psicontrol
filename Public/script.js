@@ -119,8 +119,16 @@ function fmtFecha(iso) {
 
 function fmtHora(iso) {
   if (!iso) return '—';
+
   const d = new Date(iso);
-  return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  let h = d.getHours();
+  const m = String(d.getMinutes()).padStart(2, '0');
+  const period = h >= 12 ? 'PM' : 'AM';
+
+  h = h % 12;
+  if (h === 0) h = 12;
+
+  return `${String(h).padStart(2, '0')}:${m} ${period}`;
 }
 
 function colorAvatar(nombre) {
@@ -159,6 +167,14 @@ async function validarHorarioUnico(fecha, hora) {
     console.error('Error validando horario:', err);
     return false;
   }
+}
+function yaExisteHorario(fecha, hora) {
+  const fechahora = `${fecha}T${hora}:00`;
+
+  return store.atenciones.some(a =>
+    a.fechahora === fechahora &&
+    a.estado !== 'cerrado'
+  );
 }
 
 // ═══════════════════════════════════════════════
@@ -213,9 +229,10 @@ function actualizarSelectEstudiantes() {
   if (!sel) return;
   
   sel.innerHTML = '<option value="">-- Selecciona un estudiante --</option>' +
-    store.estudiantes.map(e =>
-      `<option value="${e.idestudiante}">${e.nombres} ${e.apellidos} — ${e.codigomatricula}</option>`
-    ).join('');
+    store.estudiantes.map(e => {
+  const label = `${e.codigomatricula || '—'} | ${e.nombres} ${e.apellidos}`;
+  return `<option value="${e.idestudiante}">${label}</option>`;
+})
 }
 
 // Carga motivos de consulta en cualquier select dado su id
@@ -344,7 +361,7 @@ async function renderHistorial(filtro = '') {
     const filtrados = lista.filter(p => {
       const f = filtro.toLowerCase();
       return !f || 
-        (p.nombres + ' ' + p.apellidos).toLowerCase().includes(f) || 
+        (p.idestudiante).toLowerCase().includes(f) || 
         p.codigomatricula?.toLowerCase().includes(f);
     });
     
@@ -382,7 +399,7 @@ function verEstudiante(id) {
   const bodyEl = document.getElementById('mp-body');
   if (!tituloEl || !bodyEl) return;
   
-  tituloEl.textContent = p.nombres + ' ' + p.apellidos;
+  tituloEl.textContent = p.idestudiante
   bodyEl.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">Matrícula</div><div style="font-size:14px;font-weight:500;">${p.codigomatricula || '—'}</div></div>
@@ -495,24 +512,26 @@ function verAtencionDetalle(id) {
 // GUARDAR SESIÓN (modal de atenciones existentes)
 // ═══════════════════════════════════════════════
 async function guardarCita() {
-  const idestudiante  = document.getElementById('mc-paciente')?.value?.trim();
-  const fecha         = document.getElementById('mc-fecha')?.value;
-  const hora          = document.getElementById('mc-hora')?.value?.trim();
-  const tipo          = document.getElementById('mc-tipo')?.value;
-  const estado        = document.getElementById('mc-estado')?.value?.toLowerCase();
-  const prioridadEl   = document.getElementById('mc-prioridad');
-  const nivelatencion = prioridadEl?.value === 'alta' ? 'grave'
-                      : prioridadEl?.value === 'media' ? 'moderado' : 'leve';
+  const idestudiante = document.getElementById('mc-paciente')?.value?.trim();
+  const fecha = document.getElementById('mc-fecha')?.value;
+  const hora = document.getElementById('mc-hora')?.value?.trim();
+  const estado = document.getElementById('mc-estado')?.value?.toLowerCase();
 
   if (!idestudiante || !fecha || !hora) {
     toast('Completa los campos obligatorios', 'warning');
     return;
   }
 
+  // 🔴 BLOQUEO LOCAL (rápido)
+  if (yaExisteHorario(fecha, hora)) {
+    toast('❌ Este horario ya está ocupado', 'warning');
+    return;
+  }
+
+  // 🔴 BLOQUEO BACKEND (seguridad)
   const disponible = await validarHorarioUnico(fecha, hora);
   if (!disponible) {
-    toast('❌ Este horario ya está ocupado. Elige otra hora.', 'warning');
-    document.getElementById('mc-hora').focus();
+    toast('❌ Este horario ya está ocupado', 'warning');
     return;
   }
 
@@ -530,32 +549,39 @@ async function guardarCita() {
       method: 'POST',
       body: JSON.stringify({
         idestudiante: parseInt(idestudiante),
-        fechahora, 
-        nivelatencion, 
-        idmotivo, 
+        fechahora,
         estado: estado || 'pendiente',
-        grado: document.getElementById('mc-grado')?.value || null,
-        seccion: null,
-        observaciones: document.getElementById('mc-observaciones')?.value || tipo,
-        idespecialista: null,
-        idprofesor: null
+        idmotivo
       })
     });
 
-    const est = store.estudiantes.find(e => e.idestudiante == parseInt(idestudiante));
-    const nombre = est ? `${est.nombres} ${est.apellidos}` : 'Estudiante';
-    agregarActividad('teal', '📅', `Sesión agendada para <strong>${nombre}</strong>`, 'Ahora');
-    
+    toast('✅ Cita registrada correctamente');
+
     closeModal('modal-cita');
     await cargarDatos();
     renderCitas();
-    toast('✅ Sesión registrada correctamente');
+    renderDashboard();
+
   } catch (err) {
-    console.error('Error guardando sesión:', err);
-    toast('Error al guardar. Intenta de nuevo.', 'warning');
+    console.error(err);
+    toast('Error al guardar cita', 'warning');
   }
 }
+function actualizarHorasDisponibles(fecha) {
+  const sel = document.getElementById('mc-hora');
+  if (!sel) return;
 
+  const disponibles = generarHorasDisponibles(fecha);
+
+  sel.innerHTML =
+    '<option value="">-- Selecciona hora --</option>' +
+    disponibles.map(h =>
+      `<option value="${h}">${h}</option>`
+    ).join('');
+}
+document.getElementById('mc-fecha')?.addEventListener('change', (e) => {
+  actualizarHorasDisponibles(e.target.value);
+});
 // ═══════════════════════════════════════════════
 // NUEVA ATENCIÓN — PASO A PASO
 // ═══════════════════════════════════════════════
@@ -766,7 +792,41 @@ function renderReportes() {
     { label:'Atenciones cerradas',      val: Math.round(cerrados / Math.max(store.atenciones.length,1)*100), color:'var(--amber)' },
   ]);
 }
+function generarHorasDisponibles(fecha) {
+  const horas = [];
 
+  for (let h = 8; h <= 17; h++) {
+    for (let m of ['00', '30']) {
+      const hora = `${String(h).padStart(2,'0')}:${m}`;
+
+      const ocupado = store.atenciones.some(a =>
+        a.fechahora === `${fecha}T${hora}:00` &&
+        a.estado !== 'cerrado'
+      );
+
+      if (!ocupado) {
+        horas.push(hora);
+      }
+    }
+  }
+
+  return horas;
+}
+async function validarHorarioUnico(fecha, hora) {
+  try {
+    const fechahora = `${fecha}T${hora}:00`;
+
+    const res = await apiFetch(`${API}/atenciones`);
+
+    return !res.some(a =>
+      a.fechahora === fechahora &&
+      a.estado !== 'cerrado'
+    );
+  } catch (err) {
+    console.error(err);
+    return false;
+  }
+}
 async function generarReporte() {
   if (typeof window.jspdf === 'undefined') {
     toast('jsPDF no está cargado. Verifica la librería.', 'warning');
@@ -909,7 +969,7 @@ function performGlobalSearch(q, searchResultsEl) {
   }
   
   const res = store.estudiantes.filter(p =>
-    (p.nombres + ' ' + p.apellidos).toLowerCase().includes(query) ||
+    (p.idestudiante).toLowerCase().includes(query) ||
     p.codigomatricula?.toLowerCase().includes(query)
   ).slice(0, 5);
   
