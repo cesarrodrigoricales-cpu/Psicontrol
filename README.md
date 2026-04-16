@@ -59,10 +59,10 @@ Crea un archivo `.env` en la raíz del proyecto con tus datos de MySQL:
 
 ```env
 DB_HOST=localhost
-DB_PORT=3306
+DB_PORT=
 DB_NAME=psicontrol
-DB_USER=root
-DB_PASS=tu_contraseña
+DB_USER=
+DB_PASS=
 ```
 
 > ⚠️ **Importante:** Nunca subas el archivo `.env` a Git. Ya está incluido en el `.gitignore`.
