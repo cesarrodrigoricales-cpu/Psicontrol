@@ -7,7 +7,80 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.css" rel="stylesheet">
+<style>
+  /* ── Historial expandible ── */
+  .hist-row { cursor: pointer; transition: background .15s; }
+  .hist-row:hover { background: var(--accent-soft) !important; }
+  .hist-row-open { background: var(--accent-soft) !important; }
 
+  .hist-detail-row td { background: var(--bg); }
+  .hist-detail-panel {
+    border-left: 3px solid var(--accent);
+    margin: 0;
+    animation: slideDown .2s ease;
+  }
+  @keyframes slideDown {
+    from { opacity:0; transform:translateY(-6px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .hist-detail-content {
+    padding: 20px 24px;
+  }
+  .hist-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .hist-detail-avatar {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; color: #fff;
+    flex-shrink: 0;
+  }
+  .hist-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .hist-info-block {
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .hist-info-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-bottom: 3px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .hist-info-value {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+  }
+  .hist-atencion-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .hist-atencion-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: var(--surface);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    transition: border-color .15s;
+  }
+  .hist-atencion-item:hover { border-color: var(--accent); }
+</style>
 </head>
 <body>
 
@@ -174,24 +247,24 @@
       <div class="page-header">
         <div>
           <div class="page-title">Historial de registros</div>
-          <div class="page-subtitle">Todos los estudiantes registrados</div>
+          <div class="page-subtitle">Haz clic en un estudiante para ver su historial completo</div>
         </div>
       </div>
       <div class="card">
         <div class="card-header">
           <div class="card-title">Estudiantes registrados</div>
-          <input type="text" id="hist-search" class="filter-input" placeholder="Filtrar por nombre, matrícula..." oninput="filterHistorial()">
+          <input type="text" id="hist-search" class="filter-input" placeholder="Buscar por nombre, teléfono..." oninput="filterHistorial()">
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
                 <th>Estudiante</th>
-                <th>Matrícula</th>
                 <th>Teléfono</th>
                 <th>Condición</th>
-                <th>Nacimiento</th>
                 <th>Género</th>
+                <th>Nacimiento</th>
+                <th>Acción</th>
               </tr>
             </thead>
             <tbody id="hist-tbody"></tbody>
@@ -285,7 +358,7 @@
           </div>
           <div class="form-group">
             <label>Teléfono</label>
-            <input type="tel" id="na-telefono" placeholder="Ej: 987654321" maxlength="9" minlength="9" >
+            <input type="tel" id="na-telefono" placeholder="Ej: 987654321" maxlength="9" minlength="9">
           </div>
           <div class="form-group">
             <label>Fecha de nacimiento</label>
@@ -300,9 +373,12 @@
               <option value="Otro">Otro</option>
             </select>
           </div>
+          <!-- CAMBIO: grado ahora es select de secundaria -->
           <div class="form-group">
-            <label>Grado</label>
-            <input type="text" id="na-grado" placeholder="Ej: 4to A">
+            <label>Grado (Secundaria)</label>
+            <select id="na-grado">
+              <option value="">-- Selecciona grado --</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Condición / Observación inicial</label>
@@ -316,7 +392,7 @@
         </div>
       </div>
 
-      <!-- PASO 2: PRIMERA SESIÓN (oculto al inicio) -->
+      <!-- PASO 2: PRIMERA SESIÓN -->
       <div class="card" id="paso-2" style="display:none;">
         <div class="card-header">
           <div>
@@ -326,11 +402,10 @@
           <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="volverPaso1()">← Volver</button>
         </div>
         <div class="form-grid">
+          <!-- CAMBIO: motivo ahora es input de texto libre -->
           <div class="form-group">
             <label>Motivo de consulta *</label>
-            <select id="na-motivo">
-              <option value="">-- Selecciona --</option>
-            </select>
+            <input type="text" id="na-motivo-texto" placeholder="Ej: Ansiedad, problemas de conducta, acoso escolar...">
           </div>
           <div class="form-group">
             <label>Nivel de atención</label>
@@ -342,11 +417,14 @@
           </div>
           <div class="form-group">
             <label>Fecha de la sesión *</label>
-            <input type="date" id="na-fecha">
+            <input type="date" id="na-fecha" onchange="actualizarHorasSelect('na-hora', this.value)">
           </div>
-         <select id="na-hora" class="form-control">
-  <option value="">Selecciona hora</option>
-</select>
+          <div class="form-group">
+            <label>Hora disponible *</label>
+            <select id="na-hora">
+              <option value="">-- Selecciona hora --</option>
+            </select>
+          </div>
           <div class="form-group full">
             <label>Observaciones</label>
             <textarea id="na-observaciones" placeholder="Observaciones adicionales sobre la primera sesión..."></textarea>
@@ -446,7 +524,7 @@
   </div><!-- end content -->
 </div><!-- end main -->
 
-<!-- ═══ MODAL SESIÓN (para atenciones ya registradas) ═══ -->
+<!-- ═══ MODAL SESIÓN ═══ -->
 <div class="modal-overlay" id="modal-cita">
   <div class="modal">
     <div class="modal-header">
@@ -463,9 +541,7 @@
         </div>
         <div class="form-group">
           <label>Motivo de consulta *</label>
-          <select id="mc-motivo">
-            <option value="">-- Selecciona --</option>
-          </select>
+          <input type="text" id="mc-motivo" placeholder="Ej: Seguimiento, ansiedad...">
         </div>
         <div class="form-group">
           <label>Tipo de sesión</label>
@@ -478,11 +554,13 @@
         </div>
         <div class="form-group">
           <label>Fecha *</label>
-          <input type="date" id="mc-fecha">
+          <input type="date" id="mc-fecha" onchange="actualizarHorasDisponibles(this.value)">
         </div>
         <div class="form-group">
           <label>Hora *</label>
-          <input type="time" id="mc-hora">
+          <select id="mc-hora">
+            <option value="">-- Selecciona hora --</option>
+          </select>
         </div>
         <div class="form-group">
           <label>Estado</label>
@@ -494,14 +572,22 @@
         <div class="form-group">
           <label>Nivel de atención</label>
           <select id="mc-prioridad">
-            <option value="baja">🟢 Leve</option>
-            <option value="media" selected>🟡 Moderado</option>
+            <option value="leve">🟢 Leve</option>
+            <option value="moderado" selected>🟡 Moderado</option>
             <option value="alta">🔴 Grave</option>
           </select>
         </div>
+        <!-- CAMBIO: grado como select de secundaria en modal -->
         <div class="form-group">
-          <label>Grado</label>
-          <input type="text" id="mc-grado" placeholder="Ej: 4to">
+          <label>Grado (Secundaria)</label>
+          <select id="mc-grado">
+            <option value="">-- Selecciona --</option>
+            <option>1° A</option><option>1° B</option><option>1° C</option><option>1° D</option>
+            <option>2° A</option><option>2° B</option><option>2° C</option><option>2° D</option>
+            <option>3° A</option><option>3° B</option><option>3° C</option><option>3° D</option>
+            <option>4° A</option><option>4° B</option><option>4° C</option><option>4° D</option>
+            <option>5° A</option><option>5° B</option><option>5° C</option><option>5° D</option>
+          </select>
         </div>
         <div class="form-group full">
           <label>Observaciones</label>
