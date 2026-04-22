@@ -19,8 +19,7 @@ async function apiFetch(url, options = {}) {
 }
 
 // ═══════════════════════════════════════════════
-// CONSTANTE DE DURACIÓN DE SESIÓN
-// Cambia este valor si la duración de cada sesión es diferente (en minutos)
+// CONSTANTE DE DURACIÓN DE SESIÓN (en minutos)
 // ═══════════════════════════════════════════════
 const DURACION_SESION_MIN = 30;
 const DURACION_SESION_MS  = DURACION_SESION_MIN * 60 * 1000;
@@ -154,82 +153,132 @@ function capitalize(s) {
   return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; 
 }
 
-function normalizarFechaHora(fh) {
-  return new Date(fh).getTime();
+// ═══════════════════════════════════════════════
+// VALIDACIÓN DNI
+// ═══════════════════════════════════════════════
+function validarDNI(dni) {
+  if (!dni) return true; // opcional
+  return /^\d{8}$/.test(dni.trim());
 }
 
 // ═══════════════════════════════════════════════
-// VALIDACIÓN DE HORARIO
-// Verifica contra la API en tiempo real si el slot está ocupado.
-// Dos atenciones chocan si están a menos de DURACION_SESION_MS entre sí.
+// VALIDACIÓN DE HORARIO — FIX PRINCIPAL
+//
+// Lógica correcta:
+//   Un slot de 30 min está OCUPADO si ya existe una atención
+//   cuya fechahora cae dentro del mismo bloque de 30 minutos.
+//   Se compara normalizando ambas horas al inicio del bloque
+//   de 30 min al que pertenecen (floor al múltiplo de 30).
+//
+// Ejemplo: slot 09:00 → bloquea 09:00–09:29
+//          slot 09:30 → bloquea 09:30–09:59
+//   Si ya hay cita a las 09:00, el bloque 09:00 está ocupado.
+//   Si ya hay cita a las 09:15 (por error de BD), también bloquea 09:00.
 // ═══════════════════════════════════════════════
+
+/**
+ * Normaliza un timestamp al inicio del bloque de 30 min al que pertenece.
+ * Así, 09:00, 09:10 y 09:29 se mapean todos al mismo bloque.
+ */
+function slotBase(ms) {
+  return Math.floor(ms / DURACION_SESION_MS) * DURACION_SESION_MS;
+}
+
+/**
+ * Verifica en tiempo real (contra la API fresca) si el slot fecha+hora
+ * está libre. Excluye atenciones cerradas y, opcionalmente, una atención
+ * en edición (idAtencionExcluir).
+ * 
+ * @returns {Promise<boolean>} true = disponible, false = ocupado
+ */
 async function validarHorarioUnico(fecha, hora, idAtencionExcluir = null) {
+  // Siempre consultar la API fresca para evitar colisiones con datos obsoletos del store
+  let atenciones;
   try {
-    const res = await apiFetch(`${API}/atenciones`);
-    const nuevaDatetime = `${fecha}T${hora}:00`;
-    const nuevaMs = normalizarFechaHora(nuevaDatetime);
-    
-    const choca = (res || []).some(a => {
-      // Ignorar atenciones cerradas
-      if (!a.fechahora || a.estado === 'cerrado') return false;
-      // Ignorar la propia atención si se está editando
-      if (idAtencionExcluir && a.idatencion == idAtencionExcluir) return false;
-      
-      const existMs = normalizarFechaHora(a.fechahora);
-      
-      // 🎯 SOLO comparar MISMA HORA del MISMO DÍA (diferencia < 30 minutos)
-      return Math.abs(existMs - nuevaMs) < (15 * 60 * 1000); // 15 minutos de tolerancia
-    });
-    
-    return !choca;
+    atenciones = await apiFetch(`${API}/atenciones`);
   } catch (err) {
-    console.error(err);
-    return true; // si la API falla, no bloquear al usuario
+    console.error('validarHorarioUnico: fallo al consultar API, se permite continuar', err);
+    return true;
   }
+
+  const nuevaMs   = new Date(`${fecha}T${hora}:00`).getTime();
+  const nuevoSlot = slotBase(nuevaMs);
+
+  const choca = (atenciones || []).some(a => {
+    if (!a.fechahora)              return false;
+    if (a.estado === 'cerrado')    return false;
+    if (idAtencionExcluir && String(a.idatencion) === String(idAtencionExcluir)) return false;
+
+    const existSlot = slotBase(new Date(a.fechahora).getTime());
+    return existSlot === nuevoSlot;
+  });
+
+  return !choca;
 }
 
 // ═══════════════════════════════════════════════
 // GENERAR HORAS DISPONIBLES
-// Filtra del store local las horas ya ocupadas para una fecha dada.
-// Se usa para poblar los <select> de hora en los formularios.
+//
+// Usa el store LOCAL para poblar los <select> de hora.
+// El store se refresca en cargarDatos(); si quieres máxima
+// precisión también podrías hacer un apiFetch aquí, pero para
+// la UI de selección el store es suficientemente fresco.
+// La validación definitiva la hace validarHorarioUnico (API real).
 // ═══════════════════════════════════════════════
-function generarHorasDisponibles(fecha) {
+function generarHorasDisponibles(fecha, idAtencionExcluir = null) {
   if (!fecha) return [];
+
   const horas = [];
+
   for (let h = 8; h <= 17; h++) {
     for (let m of ['00', '30']) {
+      // No generar el slot 17:30 (fuera de horario)
+      if (h === 17 && m === '30') continue;
+
       const hora    = `${String(h).padStart(2,'0')}:${m}`;
-      const nuevaMs = normalizarFechaHora(`${fecha}T${hora}:00`);
-      
+      const nuevaMs = new Date(`${fecha}T${hora}:00`).getTime();
+      const nuevoSlot = slotBase(nuevaMs);
+
       const ocupado = store.atenciones.some(a => {
-        if (!a.fechahora || a.estado === 'cerrado') return false;
-        const existMs = normalizarFechaHora(a.fechahora);
-        // 🎯 SOLO bloquear si es la MISMA HORA (diferencia < 15 min)
-        return Math.abs(existMs - nuevaMs) < (15 * 60 * 1000);
+        if (!a.fechahora)           return false;
+        if (a.estado === 'cerrado') return false;
+        if (idAtencionExcluir && String(a.idatencion) === String(idAtencionExcluir)) return false;
+
+        const existSlot = slotBase(new Date(a.fechahora).getTime());
+        return existSlot === nuevoSlot;
       });
-      
+
       if (!ocupado) horas.push(hora);
     }
   }
+
   return horas;
 }
 
 // ═══════════════════════════════════════════════
-// GRADOS DE SECUNDARIA
+// GRADOS Y SECCIONES — separados
 // ═══════════════════════════════════════════════
-const GRADOS_SECUNDARIA = [
-  '1° A','1° B','1° C','1° D',
-  '2° A','2° B','2° C','2° D',
-  '3° A','3° B','3° C','3° D',
-  '4° A','4° B','4° C','4° D',
-  '5° A','5° B','5° C','5° D',
-];
+const GRADOS = ['1°','2°','3°','4°','5°'];
+const SECCIONES = ['A','B','C','D','E'];
 
+/**
+ * Puebla un <select> de grado con opciones 1°–5°
+ */
 function buildGradoSelect(selectId) {
   const sel = document.getElementById(selectId);
   if (!sel) return;
-  sel.innerHTML = '<option value="">-- Selecciona grado --</option>' +
-    GRADOS_SECUNDARIA.map(g => `<option value="${g}">${g}</option>`).join('');
+  sel.innerHTML = '<option value="">-- Grado --</option>' +
+    GRADOS.map(g => `<option value="${g}">${g}</option>`).join('');
+}
+
+/**
+ * Puebla un <select> de sección con opciones A–E
+ */
+function buildSeccionSelect(selectId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.innerHTML = '<option value="">-- Sección --</option>' +
+    SECCIONES.map(s => `<option value="${s}">${s}</option>`).join('');
 }
 
 // ═══════════════════════════════════════════════
@@ -256,7 +305,6 @@ function openModal(id) {
     const fechaEl = document.getElementById('mc-fecha');
     if (fechaEl) {
       fechaEl.value = hoy();
-      // Poblar horas al abrir el modal
       actualizarHorasDisponibles(fechaEl.value);
     }
     actualizarSelectEstudiantes();
@@ -281,19 +329,19 @@ function actualizarSelectEstudiantes() {
   if (!sel) return;
   sel.innerHTML = '<option value="">-- Selecciona un estudiante --</option>' +
     store.estudiantes.map(e => {
-      const label = `${e.codigomatricula || '—'} | ${e.nombres} ${e.apellidos}`;
+      const dni   = e.dni ? ` · DNI: ${e.dni}` : '';
+      const label = `${e.codigomatricula || '—'} | ${e.nombres} ${e.apellidos}${dni}`;
       return `<option value="${e.idestudiante}">${label}</option>`;
     }).join('');
 }
 
 // ═══════════════════════════════════════════════
 // HELPER GENÉRICO: actualizar select de horas
-// Usado por nueva atención (na-hora), segunda cita (sc-hora)
 // ═══════════════════════════════════════════════
-function actualizarHorasSelect(selectId, fecha) {
+function actualizarHorasSelect(selectId, fecha, idExcluir = null) {
   const sel = document.getElementById(selectId);
   if (!sel || !fecha) return;
-  const disponibles = generarHorasDisponibles(fecha);
+  const disponibles = generarHorasDisponibles(fecha, idExcluir);
   sel.innerHTML = '<option value="">-- Selecciona hora --</option>' +
     disponibles.map(h => `<option value="${h}">${h}</option>`).join('');
 }
@@ -399,7 +447,6 @@ function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
   const fechaEl = document.getElementById('sc-fecha');
   if (fechaEl) {
     fechaEl.value = hoy();
-    // FIX: usar la función genérica actualizarHorasSelect
     fechaEl.onchange = () => actualizarHorasSelect('sc-hora', fechaEl.value);
     actualizarHorasSelect('sc-hora', fechaEl.value);
   }
@@ -417,7 +464,6 @@ function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
       return;
     }
 
-    // Validar que el horario no esté ocupado
     const disponible = await validarHorarioUnico(fecha, hora);
     if (!disponible) {
       const libres = generarHorasDisponibles(fecha);
@@ -461,22 +507,22 @@ function renderDashboard() {
   const dias   = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
   const meses  = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
   
-  const fechaHoyEl = document.getElementById('fecha-hoy');
+  const fechaHoyEl   = document.getElementById('fecha-hoy');
   const fechaCitasEl = document.getElementById('fecha-citas-hoy');
-  if (fechaHoyEl) fechaHoyEl.textContent = dias[now.getDay()] + ', ' + now.getDate() + ' de ' + meses[now.getMonth()] + ' de ' + now.getFullYear() + ' · Bienvenida';
-  if (fechaCitasEl) fechaCitasEl.textContent = 'Hoy, ' + now.getDate() + ' de ' + meses[now.getMonth()];
+  if (fechaHoyEl)   fechaHoyEl.textContent   = `${dias[now.getDay()]}, ${now.getDate()} de ${meses[now.getMonth()]} de ${now.getFullYear()} · Bienvenida`;
+  if (fechaCitasEl) fechaCitasEl.textContent = `Hoy, ${now.getDate()} de ${meses[now.getMonth()]}`;
 
   const pendientes = store.atenciones.filter(a => a.estado === 'pendiente').length;
 
   const statElements = {
-    'stat-registros': store.estudiantes.length,
-    'stat-citas': pendientes,
-    'stat-pacientes': store.estudiantes.length,
-    'stat-reportes': store.reportes,
-    'stat-reg-delta': '↑ ' + store.estudiantes.length + ' registros',
+    'stat-registros':  store.estudiantes.length,
+    'stat-citas':      pendientes,
+    'stat-pacientes':  store.estudiantes.length,
+    'stat-reportes':   store.reportes,
+    'stat-reg-delta':  '↑ ' + store.estudiantes.length + ' registros',
     'stat-cita-delta': '↑ ' + pendientes + ' pendientes',
     'badge-historial': store.estudiantes.length,
-    'badge-citas': pendientes
+    'badge-citas':     pendientes
   };
 
   Object.entries(statElements).forEach(([id, value]) => {
@@ -524,16 +570,15 @@ function renderDashboard() {
   const asist = Math.round((conf / total) * 100);
   
   renderProgBars('prog-wrap', [
-    { label:'Atenciones activas',      val: asist, color:'var(--teal)' },
-    { label:'Registros completados',   val: Math.min(Math.round(store.estudiantes.length / 20 * 100), 100), color:'var(--accent)' },
-    { label:'Satisfacción general',    val: 91,    color:'var(--amber)' },
+    { label:'Atenciones activas',    val: asist, color:'var(--teal)' },
+    { label:'Registros completados', val: Math.min(Math.round(store.estudiantes.length / 20 * 100), 100), color:'var(--accent)' },
+    { label:'Satisfacción general',  val: 91,    color:'var(--amber)' },
   ]);
 }
 
 function renderProgBars(id, items) {
   const container = document.getElementById(id);
   if (!container) return;
-  
   container.innerHTML = items.map(i =>
     `<div>
       <div class="prog-row"><span style="color:var(--text-secondary);">${i.label}</span><span style="font-weight:600;color:${i.color};">${i.val}%</span></div>
@@ -543,13 +588,13 @@ function renderProgBars(id, items) {
 }
 
 // ═══════════════════════════════════════════════
-// HISTORIAL — con perfil expandible en tabla
+// HISTORIAL — con DNI en tabla y detalle expandible
 // ═══════════════════════════════════════════════
 async function renderHistorial(filtro = '') {
   const tbody = document.getElementById('hist-tbody');
   if (!tbody) return;
   
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted);">Cargando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">Cargando...</td></tr>';
   
   try {
     const lista = store.estudiantes.length > 0 ? store.estudiantes : await apiFetch(`${API}/estudiantes`);
@@ -561,15 +606,17 @@ async function renderHistorial(filtro = '') {
           const nombre = `${p.nombres} ${p.apellidos}`.toLowerCase();
           return nombre.includes(f) ||
             p.codigomatricula?.toLowerCase().includes(f) ||
-            p.telefono?.includes(f);
+            p.telefono?.includes(f) ||
+            p.dni?.includes(f);              // ← buscar también por DNI
         })
       : lista;
     
     if (filtrados.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="es-icon">📭</div><div class="es-text">No se encontraron registros</div></div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">📭</div><div class="es-text">No se encontraron registros</div></div></td></tr>';
       return;
     }
     
+    // NOTA: si agregas la columna DNI en el <thead> del HTML, cambia colspan a 7
     tbody.innerHTML = filtrados.map(p =>
       `<tr class="hist-row" onclick="toggleHistorialPaciente(${p.idestudiante}, this)">
         <td>
@@ -578,6 +625,7 @@ async function renderHistorial(filtro = '') {
             ${p.nombres} ${p.apellidos}
           </div>
         </td>
+        <td>${p.dni || '—'}</td>
         <td>${p.telefono || '—'}</td>
         <td>${p.condicion || '—'}</td>
         <td><span class="appt-badge c-teal">${p.genero || '—'}</span></td>
@@ -589,7 +637,7 @@ async function renderHistorial(filtro = '') {
         </td>
       </tr>
       <tr class="hist-detail-row" id="hist-detail-${p.idestudiante}" style="display:none;">
-        <td colspan="6" style="padding:0;">
+        <td colspan="7" style="padding:0;">
           <div class="hist-detail-panel" id="hist-detail-panel-${p.idestudiante}">
             <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px;">Cargando historial...</div>
           </div>
@@ -598,7 +646,7 @@ async function renderHistorial(filtro = '') {
     ).join('');
   } catch (err) {
     console.error('Error renderizando historial:', err);
-    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="es-icon">⚠️</div><div class="es-text">Error cargando datos</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">⚠️</div><div class="es-text">Error cargando datos</div></div></td></tr>';
   }
 }
 
@@ -644,12 +692,17 @@ async function cargarHistorialPaciente(id) {
           <div style="font-size:16px;font-weight:700;color:var(--text-primary);">${p.nombres} ${p.apellidos}</div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Motivo principal: ${motivoTexto}</div>
         </div>
-        <button class="btn-secondary" style="margin-left:auto;font-size:11px;padding:5px 12px;" onclick="document.getElementById('hist-detail-${id}').style.display='none';document.querySelector('.hist-row-open')?.classList.remove('hist-row-open')">
+        <button class="btn-secondary" style="margin-left:auto;font-size:11px;padding:5px 12px;"
+          onclick="document.getElementById('hist-detail-${id}').style.display='none';document.querySelector('.hist-row-open')?.classList.remove('hist-row-open')">
           Cerrar ✕
         </button>
       </div>
 
       <div class="hist-detail-grid">
+        <div class="hist-info-block">
+          <div class="hist-info-label">DNI</div>
+          <div class="hist-info-value">${p.dni || '—'}</div>
+        </div>
         <div class="hist-info-block">
           <div class="hist-info-label">Teléfono</div>
           <div class="hist-info-value">${p.telefono || '—'}</div>
@@ -681,7 +734,9 @@ async function cargarHistorialPaciente(id) {
                     <div style="font-size:20px;">${a.estado === 'activo' ? '✅' : a.estado === 'pendiente' ? '⏳' : '🔒'}</div>
                     <div>
                       <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${fmtFecha(a.fechahora)} · ${fmtHora(a.fechahora)}</div>
-                      <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${a.motivoconsulta || '—'} · ${a.grado || '—'} ${a.seccion || ''}</div>
+                      <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
+                        ${a.motivoconsulta || '—'} · ${a.grado || '—'}${a.seccion ? ' ' + a.seccion : ''}
+                      </div>
                     </div>
                   </div>
                   <div style="display:flex;align-items:center;gap:8px;">
@@ -706,12 +761,13 @@ function verEstudiante(id) {
   if (!p) return;
   
   const tituloEl = document.getElementById('mp-titulo');
-  const bodyEl = document.getElementById('mp-body');
+  const bodyEl   = document.getElementById('mp-body');
   if (!tituloEl || !bodyEl) return;
   
   tituloEl.textContent = `${p.nombres} ${p.apellidos}`;
   bodyEl.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">DNI</div><div style="font-size:14px;font-weight:500;">${p.dni || '—'}</div></div>
       <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">Teléfono</div><div style="font-size:14px;font-weight:500;">${p.telefono || '—'}</div></div>
       <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">Género</div><div style="font-size:14px;font-weight:500;">${p.genero || '—'}</div></div>
       <div><div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">Fecha nacimiento</div><div style="font-size:14px;font-weight:500;">${fmtFecha(p.fechanac)}</div></div>
@@ -757,10 +813,18 @@ function renderCitas() {
       <td>${fmtFecha(a.fechahora)}</td>
       <td style="font-weight:600;">${fmtHora(a.fechahora)}</td>
       <td>${a.motivoconsulta || '—'}</td>
-      <td>${a.grado || '—'} ${a.seccion || ''}</td>
+      <td>${a.grado || '—'}${a.seccion ? ' ' + a.seccion : ''}</td>
       <td>${nivelBadge(a.nivelatencion)}</td>
       <td>${estadoBadge(a.estado)}</td>
-      <td><div class="td-name"><div class="td-avatar ${colorAvatar(a.paciente)}">${initials(a.paciente)}</div>${a.paciente}</div></td>
+      <td>
+        <div class="td-name">
+          <div class="td-avatar ${colorAvatar(a.paciente)}">${initials(a.paciente)}</div>
+          <div>
+            <div>${a.paciente}</div>
+            ${a.dni ? `<div style="font-size:11px;color:var(--text-muted);">DNI: ${a.dni}</div>` : ''}
+          </div>
+        </div>
+      </td>
       <td>
         <div class="td-actions">
           ${a.estado !== 'activo' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--teal);border-color:var(--teal);" onclick="confirmarAtencion(${a.idatencion})">Confirmar</button>` : ''}
@@ -837,7 +901,6 @@ async function guardarCita() {
     return;
   }
 
-  // Validar horario único
   const disponible = await validarHorarioUnico(fecha, hora);
   if (!disponible) {
     const libres = generarHorasDisponibles(fecha);
@@ -872,7 +935,6 @@ async function guardarCita() {
     });
 
     toast('✅ Cita registrada correctamente');
-
     closeModal('modal-cita');
     await cargarDatos();
     renderCitas();
@@ -884,45 +946,31 @@ async function guardarCita() {
   }
 }
 
-// Actualiza el select #mc-hora cuando cambia la fecha en el modal de citas
 function actualizarHorasDisponibles(fecha) {
   actualizarHorasSelect('mc-hora', fecha);
 }
 
 // ═══════════════════════════════════════════════
 // LISTENERS DE FECHA → HORA
-// Todos los inputs de fecha del sistema actualizan su select de hora
-// correspondiente al cambiar de valor.
-// ═══════════════════════════════════════════════
-
-// ═══════════════════════════════════════════════
-// LISTENERS DE FECHA → HORA
 // ═══════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
-  // Modal de citas existentes
   document.getElementById('mc-fecha')?.addEventListener('change', (e) => {
     actualizarHorasDisponibles(e.target.value);
   });
 
-  // Nueva atención paso 2
   document.getElementById('na-fecha')?.addEventListener('change', (e) => {
     actualizarHorasSelect('na-hora', e.target.value);
   });
 
-  // 🔧 SEGUNDA CITA - NUEVO LISTENER
-  const scFecha = document.getElementById('sc-fecha');
-  if (scFecha) {
-    scFecha.addEventListener('change', (e) => {
-      actualizarHorasSelect('sc-hora', e.target.value);
-    });
-  }
+  // sc-fecha se maneja dinámicamente en abrirFormularioSegundaCita
 });
 
 // ═══════════════════════════════════════════════
 // NUEVA ATENCIÓN — PASO A PASO
 // ═══════════════════════════════════════════════
 function resetNuevaAtencion() {
-  ['na-nombres','na-apellidos','na-telefono','na-fechanac','na-condicion','na-motivo-texto','na-observaciones']
+  ['na-nombres','na-apellidos','na-dni','na-telefono','na-fechanac',
+   'na-condicion','na-motivo-texto','na-observaciones']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
@@ -931,8 +979,10 @@ function resetNuevaAtencion() {
   const generoEl = document.getElementById('na-genero');
   if (generoEl) generoEl.value = '';
 
-  const gradoEl = document.getElementById('na-grado');
-  if (gradoEl) gradoEl.value = '';
+  const gradoEl   = document.getElementById('na-grado');
+  const seccionEl = document.getElementById('na-seccion');
+  if (gradoEl)   gradoEl.value   = '';
+  if (seccionEl) seccionEl.value = '';
   
   const fechaEl = document.getElementById('na-fecha');
   if (fechaEl) fechaEl.value = hoy();
@@ -940,51 +990,52 @@ function resetNuevaAtencion() {
   const nivelEl = document.getElementById('na-nivel');
   if (nivelEl) nivelEl.value = 'moderado';
 
-  // Mostrar paso 1, ocultar paso 2  
   const paso1 = document.getElementById('paso-1');
   const paso2 = document.getElementById('paso-2');
   if (paso1) paso1.style.display = '';
   if (paso2) paso2.style.display = 'none';
 
-  // Indicadores  
-  const ind1 = document.getElementById('paso-ind-1');
-  const ind2 = document.getElementById('paso-ind-2');
+  const ind1  = document.getElementById('paso-ind-1');
+  const ind2  = document.getElementById('paso-ind-2');
   const linea = document.getElementById('paso-linea');
-  if (ind1) ind1.className = 'paso-item active';
-  if (ind2) ind2.className = 'paso-item';
+  if (ind1)  ind1.className  = 'paso-item active';
+  if (ind2)  ind2.className  = 'paso-item';
   if (linea) linea.className = 'paso-linea';
 
   buildGradoSelect('na-grado');
+  buildSeccionSelect('na-seccion');
 }
 
 function irPaso2() {
   const nombres   = document.getElementById('na-nombres')?.value?.trim();
   const apellidos = document.getElementById('na-apellidos')?.value?.trim();
+  const dni       = document.getElementById('na-dni')?.value?.trim();
 
   if (!nombres || !apellidos) {
     toast('Completa los campos obligatorios: nombres y apellidos', 'warning');
     return;
   }
 
-  const ind1     = document.getElementById('paso-ind-1');
-  const ind2     = document.getElementById('paso-ind-2');
-  const linea    = document.getElementById('paso-linea');
+  if (dni && !validarDNI(dni)) {
+    toast('El DNI debe tener exactamente 8 dígitos', 'warning');
+    return;
+  }
+
+  const ind1      = document.getElementById('paso-ind-1');
+  const ind2      = document.getElementById('paso-ind-2');
+  const linea     = document.getElementById('paso-linea');
   const subtitulo = document.getElementById('paso2-subtitulo');
   
-  if (ind1) ind1.className = 'paso-item done';
-  if (ind2) ind2.className = 'paso-item active';
-  if (linea) linea.className = 'paso-linea done';
-  if (subtitulo) subtitulo.textContent = `Estudiante: ${nombres} ${apellidos}`;
+  if (ind1)      ind1.className      = 'paso-item done';
+  if (ind2)      ind2.className      = 'paso-item active';
+  if (linea)     linea.className     = 'paso-linea done';
+  if (subtitulo) subtitulo.textContent = `Estudiante: ${nombres} ${apellidos}${dni ? ' · DNI: ' + dni : ''}`;
 
-    // Mostrar/ocultar pasos
   const paso1 = document.getElementById('paso-1');
-
   const paso2 = document.getElementById('paso-2');
   if (paso1) paso1.style.display = 'none';
-
   if (paso2) paso2.style.display = '';
 
-  // FIX: garantizar fecha y poblar horas al entrar al paso 2
   const fechaEl = document.getElementById('na-fecha');
   if (fechaEl) {
     if (!fechaEl.value) fechaEl.value = hoy();
@@ -1004,18 +1055,20 @@ function volverPaso1() {
   
   if (paso1) paso1.style.display = '';
   if (paso2) paso2.style.display = 'none';
-  if (ind1) ind1.className = 'paso-item active';
-  if (ind2) ind2.className = 'paso-item';
+  if (ind1)  ind1.className  = 'paso-item active';
+  if (ind2)  ind2.className  = 'paso-item';
   if (linea) linea.className = 'paso-linea';
 }
 
 async function guardarNuevaAtencion() {
   const nombres       = document.getElementById('na-nombres')?.value?.trim();
   const apellidos     = document.getElementById('na-apellidos')?.value?.trim();
+  const dni           = document.getElementById('na-dni')?.value?.trim();
   const telefono      = document.getElementById('na-telefono')?.value?.trim();
   const fechanac      = document.getElementById('na-fechanac')?.value;
   const genero        = document.getElementById('na-genero')?.value;
-  const grado         = document.getElementById('na-grado')?.value;
+  const grado         = document.getElementById('na-grado')?.value;      // ej: "3°"
+  const seccion       = document.getElementById('na-seccion')?.value;    // ej: "B"
   const condicion     = document.getElementById('na-condicion')?.value?.trim();
   const motivoTexto   = document.getElementById('na-motivo-texto')?.value?.trim();
   const nivelatencion = document.getElementById('na-nivel')?.value;
@@ -1031,8 +1084,12 @@ async function guardarNuevaAtencion() {
     toast('Escribe el motivo de consulta', 'warning');
     return;
   }
+  if (dni && !validarDNI(dni)) {
+    toast('El DNI debe tener exactamente 8 dígitos', 'warning');
+    return;
+  }
 
-  // Validar horario único contra la API
+  // Validación de horario contra la API (fuente de verdad)
   const disponible = await validarHorarioUnico(fecha, hora);
   if (!disponible) {
     const libres = generarHorasDisponibles(fecha);
@@ -1044,23 +1101,25 @@ async function guardarNuevaAtencion() {
   }
 
   try {
-    // 1. Registrar estudiante
+    // 1. Registrar estudiante (ahora incluye DNI)
     const nuevoEst = await apiFetch(`${API}/estudiantes`, {
       method: 'POST',
       body: JSON.stringify({
-        nombres, apellidos,
+        nombres,
+        apellidos,
+        dni:            dni || null,
         codigomatricula: null,
-        telefono: telefono || null,
-        fechanac: fechanac || null,
-        genero: genero || null,
-        condicion: condicion || null,
+        telefono:       telefono || null,
+        fechanac:       fechanac || null,
+        genero:         genero || null,
+        condicion:      condicion || null,
       })
     });
 
     const idestudiante = nuevoEst.idestudiante || nuevoEst.id;
     agregarActividad('purple', '👤', `Estudiante <strong>${nombres} ${apellidos}</strong> registrado`, 'Ahora');
 
-    // Buscar idmotivo por texto o usar el primero
+    // 2. Resolver idmotivo
     let idmotivo = 1;
     try {
       const motivos = await apiFetch(`${API}/motivosconsulta`);
@@ -1070,31 +1129,31 @@ async function guardarNuevaAtencion() {
       idmotivo = encontrado ? encontrado.idmotivo : (motivos[0]?.idmotivo || 1);
     } catch (_) {}
 
-    // 2. Registrar primera sesión
+    // 3. Registrar primera sesión (grado y sección separados)
     const fechahora = `${fecha}T${hora}:00`;
     await apiFetch(`${API}/atenciones`, {
       method: 'POST',
       body: JSON.stringify({
-        idestudiante: parseInt(idestudiante),
+        idestudiante:  parseInt(idestudiante),
         fechahora,
         nivelatencion,
         idmotivo,
-        estado: 'pendiente',
-        grado: grado || null,
-        seccion: null,
+        estado:        'pendiente',
+        grado:         grado   || null,
+        seccion:       seccion || null,
         observaciones: observaciones || null,
         idespecialista: null,
-        idprofesor: null
+        idprofesor:     null
       })
     });
 
     agregarActividad('teal', '📅', `Primera sesión registrada para <strong>${nombres} ${apellidos}</strong>`, 'Ahora');
 
-    // 3. Recargar datos
+    // 4. Recargar datos
     await cargarDatos();
     toast(`✓ ${nombres} ${apellidos} registrado`);
 
-    // 4. Preguntar si quiere agendar segunda cita
+    // 5. Preguntar si quiere agendar segunda cita
     mostrarModalSegundaCita((quiereSegunda) => {
       if (quiereSegunda) {
         abrirFormularioSegundaCita(idestudiante, `${nombres} ${apellidos}`);
@@ -1136,7 +1195,7 @@ function renderReportes() {
     }
   });
   
-  const max = Math.max(...vals, 1);
+  const max     = Math.max(...vals, 1);
   const chartEl = document.getElementById('chart-area');
   if (chartEl) {
     chartEl.innerHTML = `
@@ -1158,7 +1217,7 @@ function renderReportes() {
 }
 
 async function generarReporte() {
- if (typeof window.jspdf === 'undefined') {  // ✅ CORREGIDO
+  if (typeof window.jspdf === 'undefined') {
     toast('jsPDF no está cargado. Verifica la librería.', 'warning');
     return;
   }
@@ -1236,13 +1295,12 @@ async function generarReporte() {
 // ═══════════════════════════════════════════════
 function cargarConfig() {
   const configFields = {
-    'cfg-nombre': 'nombre',
+    'cfg-nombre':    'nombre',
     'cfg-psicologo': 'psicologo',
-    'cfg-tel': 'tel',
-    'cfg-email': 'email',
-    'cfg-dir': 'dir'
+    'cfg-tel':       'tel',
+    'cfg-email':     'email',
+    'cfg-dir':       'dir'
   };
-
   Object.entries(configFields).forEach(([id, key]) => {
     const el = document.getElementById(id);
     if (el) el.value = store.config[key] || '';
@@ -1251,19 +1309,17 @@ function cargarConfig() {
 
 function guardarConfig() {
   const configFields = {
-    'cfg-nombre': 'nombre',
+    'cfg-nombre':    'nombre',
     'cfg-psicologo': 'psicologo',
-    'cfg-tel': 'tel',
-    'cfg-email': 'email',
-    'cfg-dir': 'dir'
+    'cfg-tel':       'tel',
+    'cfg-email':     'email',
+    'cfg-dir':       'dir'
   };
-
   store.config = {};
   Object.entries(configFields).forEach(([id, key]) => {
     const el = document.getElementById(id);
     if (el) store.config[key] = el.value;
   });
-
   toast('Configuración guardada');
 }
 
@@ -1276,7 +1332,7 @@ function agregarActividad(tipo, icon, texto, tiempo) {
 }
 
 // ═══════════════════════════════════════════════
-// BÚSQUEDA GLOBAL
+// BÚSQUEDA GLOBAL — incluye DNI
 // ═══════════════════════════════════════════════
 let searchTimeout;
 document.addEventListener('DOMContentLoaded', function() {
@@ -1302,7 +1358,8 @@ function performGlobalSearch(q, searchResultsEl) {
     const nombre = `${p.nombres} ${p.apellidos}`.toLowerCase();
     return nombre.includes(query) ||
       p.codigomatricula?.toLowerCase().includes(query) ||
-      p.telefono?.includes(query);
+      p.telefono?.includes(query) ||
+      p.dni?.includes(query);              // ← búsqueda por DNI
   }).slice(0, 5);
   
   if (res.length === 0 || !searchResultsEl) { 
@@ -1315,7 +1372,7 @@ function performGlobalSearch(q, searchResultsEl) {
       <div class="td-avatar ${colorAvatar(p.nombres+p.apellidos)}" style="width:28px;height:28px;font-size:10px;">${initials(p.nombres+' '+p.apellidos)}</div>
       <div>
         <div>${p.nombres} ${p.apellidos}</div>
-        <div class="sr-sub">${p.telefono || p.codigomatricula || '—'}</div>
+        <div class="sr-sub">${p.dni ? 'DNI: ' + p.dni + ' · ' : ''}${p.telefono || p.codigomatricula || '—'}</div>
       </div>
     </div>`
   ).join('');
@@ -1371,8 +1428,10 @@ function buildSchedule() {
   wrap.innerHTML = days.map((d, i) => `
     <div class="schedule-row" style="background:${i%2===0?'var(--bg)':'transparent'};border-radius:8px;padding:4px 0;">
       <span class="day-label">${d.label}</span>
-      <input type="time" value="${d.from}" id="from-${d.key}" onchange="updateScheduleTime('${d.key}', 'from', this.value)" style="border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;background:var(--surface);outline:none;${!d.active?'opacity:.35;pointer-events:none;':''}">
-      <input type="time" value="${d.to}" id="to-${d.key}" onchange="updateScheduleTime('${d.key}', 'to', this.value)" style="border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;background:var(--surface);outline:none;${!d.active?'opacity:.35;pointer-events:none;':''}">
+      <input type="time" value="${d.from}" id="from-${d.key}" onchange="updateScheduleTime('${d.key}', 'from', this.value)"
+        style="border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;background:var(--surface);outline:none;${!d.active?'opacity:.35;pointer-events:none;':''}">
+      <input type="time" value="${d.to}" id="to-${d.key}" onchange="updateScheduleTime('${d.key}', 'to', this.value)"
+        style="border:1.5px solid var(--border);border-radius:8px;padding:6px 10px;font-family:inherit;font-size:12px;background:var(--surface);outline:none;${!d.active?'opacity:.35;pointer-events:none;':''}">
       <div class="toggle-switch ${d.active?'on':''}" id="tog-${d.key}" onclick="toggleDay('${d.key}', ${i})"></div>
     </div>
   `).join('');
@@ -1394,7 +1453,7 @@ function toggleDay(key, i) {
   if (tog) tog.classList.toggle('on', days[i].active);
   [from, to].forEach(el => {
     if (el) {
-      el.style.opacity = days[i].active ? '1' : '.35';
+      el.style.opacity       = days[i].active ? '1' : '.35';
       el.style.pointerEvents = days[i].active ? '' : 'none';
     }
   });
@@ -1404,12 +1463,8 @@ function toggleDay(key, i) {
 // INIT
 // ═══════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', function() {
-
   buildSchedule();
-
   cargarDatos();
-
   navigateTo('dashboard');
-
   console.log('✅ PsiControl inicializado correctamente');
 });
