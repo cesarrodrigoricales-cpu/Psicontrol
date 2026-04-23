@@ -61,44 +61,50 @@ async function cargarDatos() {
 // NAVIGATION
 // ═══════════════════════════════════════════════
 const pageLabels = {
-  dashboard: 'Dashboard',
-  historial: 'Historial de registros',
-  citas:     'Atenciones',
-  nuevo:     'Nueva atención',
-  reportes:  'Reportes',
+  dashboard:  'Dashboard',
+  historial:  'Historial de registros',
+  citas:      'Atenciones',
+  nuevo:      'Nueva atención',
+  reportes:   'Reportes',
   calendario: 'Calendario',
-  config:    'Configuración'
+  config:     'Configuración',
+  '404':      'Página no encontrada'
 };
 
 function navigateTo(page) {
+  const paginasValidas = Object.keys(pageLabels).filter(k => k !== '404');
+  const target = paginasValidas.includes(page) ? page : '404';
+
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  
-  const pageEl = document.getElementById('page-' + page);
+
+  const pageEl = document.getElementById('page-' + target);
   if (pageEl) pageEl.classList.add('active');
-  
-  const navEl = document.querySelector('[data-page="' + page + '"]');
+
+  const navEl = document.querySelector('[data-page="' + target + '"]');
   if (navEl) navEl.classList.add('active');
-  
+
   const breadcrumb = document.getElementById('breadcrumb-text');
-  if (breadcrumb) breadcrumb.textContent = pageLabels[page] || page;
-  
-  switch(page) {
-    case 'historial': renderHistorial(); break;
-    case 'citas':     cargarYRenderCitas(); break;
-    case 'reportes':  renderReportes(); break;
-    case 'nuevo':     resetNuevaAtencion(); break;
-    case 'config':    cargarConfig(); break;
-    case 'calendario': renderCalendario(); break;
+  if (breadcrumb) breadcrumb.textContent = pageLabels[target] || target;
+
+  if (target !== '404') {
+    switch (target) {
+      case 'historial':  renderHistorial();       break;
+      case 'citas':      cargarYRenderCitas();    break;
+      case 'reportes':   renderReportes();        break;
+      case 'nuevo':      resetNuevaAtencion();    break;
+      case 'config':     cargarConfig();          break;
+      case 'calendario': renderCalendario();      break;
+    }
   }
-  
-  const searchInput = document.getElementById('global-search');
+
+  const searchInput   = document.getElementById('global-search');
   const searchResults = document.getElementById('search-results');
-  if (searchInput) searchInput.value = '';
+  if (searchInput)   searchInput.value = '';
   if (searchResults) searchResults.style.display = 'none';
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => navigateTo(item.dataset.page));
   });
@@ -131,13 +137,13 @@ function fmtHora(iso) {
 
 function colorAvatar(nombre) {
   const cols = ['bg-purple','bg-teal','bg-amber','bg-rose','bg-slate'];
-  let h = 0; 
-  for (let c of (nombre||'')) h = (h * 31 + c.charCodeAt(0)) % cols.length;
+  let h = 0;
+  for (let c of (nombre || '')) h = (h * 31 + c.charCodeAt(0)) % cols.length;
   return cols[h];
 }
 
 function initials(nombre) {
-  const p = (nombre||'').trim().split(' ');
+  const p = (nombre || '').trim().split(' ');
   return (p[0]?.[0] || '') + (p[1]?.[0] || '');
 }
 
@@ -151,50 +157,56 @@ function nivelBadge(n) {
   return `<span title="${n}">${map[n] || '⚪'}</span>`;
 }
 
-function capitalize(s) { 
-  return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; 
+function capitalize(s) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 }
 
 // ═══════════════════════════════════════════════
 // VALIDACIÓN DNI
 // ═══════════════════════════════════════════════
 function validarDNI(dni) {
-  if (!dni) return true; // opcional
+  if (!dni) return true;
   return /^\d{8}$/.test(dni.trim());
 }
 
 // ═══════════════════════════════════════════════
-// VALIDACIÓN DE HORARIO — FIX PRINCIPAL
-//
-// Lógica correcta:
-//   Un slot de 30 min está OCUPADO si ya existe una atención
-//   cuya fechahora cae dentro del mismo bloque de 30 minutos.
-//   Se compara normalizando ambas horas al inicio del bloque
-//   de 30 min al que pertenecen (floor al múltiplo de 30).
-//
-// Ejemplo: slot 09:00 → bloquea 09:00–09:29
-//          slot 09:30 → bloquea 09:30–09:59
-//   Si ya hay cita a las 09:00, el bloque 09:00 está ocupado.
-//   Si ya hay cita a las 09:15 (por error de BD), también bloquea 09:00.
+// BLOQUEAR FECHAS PASADAS EN INPUT DATE
 // ═══════════════════════════════════════════════
+function bloquearFechasPasadas(inputId) {
+  const el = document.getElementById(inputId);
+  if (el) el.min = hoy();
+}
 
-/**
- * Normaliza un timestamp al inicio del bloque de 30 min al que pertenece.
- * Así, 09:00, 09:10 y 09:29 se mapean todos al mismo bloque.
- */
+// ═══════════════════════════════════════════════
+// RESTRICCIÓN FECHA NACIMIENTO — SECUNDARIA
+// Rango válido: 11 a 17 años cumplidos
+// ═══════════════════════════════════════════════
+function aplicarRestriccionFechaNac() {
+  const el = document.getElementById('na-fechanac');
+  if (!el) return;
+
+  const hoyDate = new Date();
+
+  // max: nació hace al menos 11 años (no puede ser menor de 11)
+  const maxDate = new Date(hoyDate);
+  maxDate.setFullYear(hoyDate.getFullYear() - 11);
+
+  // min: nació hace no más de 17 años (no puede tener más de 17)
+  const minDate = new Date(hoyDate);
+  minDate.setFullYear(hoyDate.getFullYear() - 17);
+
+  el.max = maxDate.toISOString().split('T')[0];
+  el.min = minDate.toISOString().split('T')[0];
+}
+
+// ═══════════════════════════════════════════════
+// VALIDACIÓN DE HORARIO
+// ═══════════════════════════════════════════════
 function slotBase(ms) {
   return Math.floor(ms / DURACION_SESION_MS) * DURACION_SESION_MS;
 }
 
-/**
- * Verifica en tiempo real (contra la API fresca) si el slot fecha+hora
- * está libre. Excluye atenciones cerradas y, opcionalmente, una atención
- * en edición (idAtencionExcluir).
- * 
- * @returns {Promise<boolean>} true = disponible, false = ocupado
- */
 async function validarHorarioUnico(fecha, hora, idAtencionExcluir = null) {
-  // Siempre consultar la API fresca para evitar colisiones con datos obsoletos del store
   let atenciones;
   try {
     atenciones = await apiFetch(`${API}/atenciones`);
@@ -207,10 +219,9 @@ async function validarHorarioUnico(fecha, hora, idAtencionExcluir = null) {
   const nuevoSlot = slotBase(nuevaMs);
 
   const choca = (atenciones || []).some(a => {
-    if (!a.fechahora)              return false;
-    if (a.estado === 'cerrado')    return false;
+    if (!a.fechahora)           return false;
+    if (a.estado === 'cerrado') return false;
     if (idAtencionExcluir && String(a.idatencion) === String(idAtencionExcluir)) return false;
-
     const existSlot = slotBase(new Date(a.fechahora).getTime());
     return existSlot === nuevoSlot;
   });
@@ -220,32 +231,29 @@ async function validarHorarioUnico(fecha, hora, idAtencionExcluir = null) {
 
 // ═══════════════════════════════════════════════
 // GENERAR HORAS DISPONIBLES
-//
-// Usa el store LOCAL para poblar los <select> de hora.
-// El store se refresca en cargarDatos(); si quieres máxima
-// precisión también podrías hacer un apiFetch aquí, pero para
-// la UI de selección el store es suficientemente fresco.
-// La validación definitiva la hace validarHorarioUnico (API real).
 // ═══════════════════════════════════════════════
 function generarHorasDisponibles(fecha, idAtencionExcluir = null) {
   if (!fecha) return [];
 
   const horas = [];
+  const ahora = new Date();
+  const esHoy = fecha === hoy();
 
   for (let h = 8; h <= 17; h++) {
     for (let m of ['00', '30']) {
-      // No generar el slot 17:30 (fuera de horario)
       if (h === 17 && m === '30') continue;
 
-      const hora    = `${String(h).padStart(2,'0')}:${m}`;
-      const nuevaMs = new Date(`${fecha}T${hora}:00`).getTime();
-      const nuevoSlot = slotBase(nuevaMs);
+      const hora   = `${String(h).padStart(2,'0')}:${m}`;
+      const slotMs = new Date(`${fecha}T${hora}:00`).getTime();
+
+      if (esHoy && slotMs <= ahora.getTime()) continue;
+
+      const nuevoSlot = slotBase(slotMs);
 
       const ocupado = store.atenciones.some(a => {
         if (!a.fechahora)           return false;
         if (a.estado === 'cerrado') return false;
         if (idAtencionExcluir && String(a.idatencion) === String(idAtencionExcluir)) return false;
-
         const existSlot = slotBase(new Date(a.fechahora).getTime());
         return existSlot === nuevoSlot;
       });
@@ -258,14 +266,11 @@ function generarHorasDisponibles(fecha, idAtencionExcluir = null) {
 }
 
 // ═══════════════════════════════════════════════
-// GRADOS Y SECCIONES — separados
+// GRADOS Y SECCIONES
 // ═══════════════════════════════════════════════
-const GRADOS = ['1°','2°','3°','4°','5°'];
+const GRADOS    = ['1°','2°','3°','4°','5°'];
 const SECCIONES = ['A','B','C','D'];
 
-/**
- * Puebla un <select> de grado con opciones 1°–5°
- */
 function buildGradoSelect(selectId) {
   const sel = document.getElementById(selectId);
   if (!sel) return;
@@ -273,9 +278,6 @@ function buildGradoSelect(selectId) {
     GRADOS.map(g => `<option value="${g}">${g}</option>`).join('');
 }
 
-/**
- * Puebla un <select> de sección con opciones A–E
- */
 function buildSeccionSelect(selectId) {
   const sel = document.getElementById(selectId);
   if (!sel) return;
@@ -302,11 +304,12 @@ function toast(msg, tipo = 'success') {
 function openModal(id) {
   const modal = document.getElementById(id);
   if (modal) modal.classList.add('open');
-  
+
   if (id === 'modal-cita') {
     const fechaEl = document.getElementById('mc-fecha');
     if (fechaEl) {
       fechaEl.value = hoy();
+      fechaEl.min   = hoy();
       actualizarHorasDisponibles(fechaEl.value);
     }
     actualizarSelectEstudiantes();
@@ -318,10 +321,10 @@ function closeModal(id) {
   if (modal) modal.classList.remove('open');
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
-    overlay.addEventListener('click', e => { 
-      if (e.target === overlay) overlay.classList.remove('open'); 
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) overlay.classList.remove('open');
     });
   });
 });
@@ -344,8 +347,12 @@ function actualizarHorasSelect(selectId, fecha, idExcluir = null) {
   const sel = document.getElementById(selectId);
   if (!sel || !fecha) return;
   const disponibles = generarHorasDisponibles(fecha, idExcluir);
-  sel.innerHTML = '<option value="">-- Selecciona hora --</option>' +
-    disponibles.map(h => `<option value="${h}">${h}</option>`).join('');
+  if (disponibles.length === 0) {
+    sel.innerHTML = '<option value="">— Sin horarios disponibles —</option>';
+  } else {
+    sel.innerHTML = '<option value="">-- Selecciona hora --</option>' +
+      disponibles.map(h => `<option value="${h}">${h}</option>`).join('');
+  }
 }
 
 // ═══════════════════════════════════════════════
@@ -449,6 +456,7 @@ function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
   const fechaEl = document.getElementById('sc-fecha');
   if (fechaEl) {
     fechaEl.value = hoy();
+    fechaEl.min   = hoy();
     fechaEl.onchange = () => actualizarHorasSelect('sc-hora', fechaEl.value);
     actualizarHorasSelect('sc-hora', fechaEl.value);
   }
@@ -463,6 +471,11 @@ function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
 
     if (!fecha || !hora) {
       toast('Indica la fecha y hora de la segunda cita', 'warning');
+      return;
+    }
+
+    if (fecha < hoy()) {
+      toast('No puedes agendar en una fecha pasada', 'warning');
       return;
     }
 
@@ -505,10 +518,10 @@ function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
 // DASHBOARD
 // ═══════════════════════════════════════════════
 function renderDashboard() {
-  const now = new Date();
-  const dias   = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-  const meses  = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-  
+  const now   = new Date();
+  const dias  = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
   const fechaHoyEl   = document.getElementById('fecha-hoy');
   const fechaCitasEl = document.getElementById('fecha-citas-hoy');
   if (fechaHoyEl)   fechaHoyEl.textContent   = `${dias[now.getDay()]}, ${now.getDate()} de ${meses[now.getMonth()]} de ${now.getFullYear()} · Bienvenida`;
@@ -570,7 +583,7 @@ function renderDashboard() {
   const total = store.atenciones.length || 1;
   const conf  = store.atenciones.filter(a => a.estado === 'activo').length;
   const asist = Math.round((conf / total) * 100);
-  
+
   renderProgBars('prog-wrap', [
     { label:'Atenciones activas',    val: asist, color:'var(--teal)' },
     { label:'Registros completados', val: Math.min(Math.round(store.estudiantes.length / 20 * 100), 100), color:'var(--accent)' },
@@ -590,18 +603,18 @@ function renderProgBars(id, items) {
 }
 
 // ═══════════════════════════════════════════════
-// HISTORIAL — con DNI en tabla y detalle expandible
+// HISTORIAL
 // ═══════════════════════════════════════════════
 async function renderHistorial(filtro = '') {
   const tbody = document.getElementById('hist-tbody');
   if (!tbody) return;
-  
+
   tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">Cargando...</td></tr>';
-  
+
   try {
     const lista = store.estudiantes.length > 0 ? store.estudiantes : await apiFetch(`${API}/estudiantes`);
     store.estudiantes = lista || [];
-    
+
     const filtrados = filtro
       ? lista.filter(p => {
           const f = filtro.toLowerCase();
@@ -609,16 +622,15 @@ async function renderHistorial(filtro = '') {
           return nombre.includes(f) ||
             p.codigomatricula?.toLowerCase().includes(f) ||
             p.telefono?.includes(f) ||
-            p.dni?.includes(f);              // ← buscar también por DNI
+            p.dni?.includes(f);
         })
       : lista;
-    
+
     if (filtrados.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">📭</div><div class="es-text">No se encontraron registros</div></div></td></tr>';
       return;
     }
-    
-    // NOTA: si agregas la columna DNI en el <thead> del HTML, cambia colspan a 7
+
     tbody.innerHTML = filtrados.map(p =>
       `<tr class="hist-row" onclick="toggleHistorialPaciente(${p.idestudiante}, this)">
         <td>
@@ -761,11 +773,11 @@ function filterHistorial() {
 function verEstudiante(id) {
   const p = store.estudiantes.find(x => x.idestudiante == id);
   if (!p) return;
-  
+
   const tituloEl = document.getElementById('mp-titulo');
   const bodyEl   = document.getElementById('mp-body');
   if (!tituloEl || !bodyEl) return;
-  
+
   tituloEl.textContent = `${p.nombres} ${p.apellidos}`;
   bodyEl.innerHTML = `
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
@@ -778,7 +790,7 @@ function verEstudiante(id) {
     <div style="margin-top:20px;display:flex;gap:8px;">
       <button class="btn-secondary" onclick="closeModal('modal-paciente')">Cerrar</button>
     </div>`;
-  
+
   openModal('modal-paciente');
 }
 
@@ -799,7 +811,7 @@ async function cargarYRenderCitas() {
 function renderCitas() {
   const tbody = document.getElementById('citas-tbody');
   if (!tbody) return;
-  
+
   const base = store.atenciones.filter(a => a.estado !== 'cerrado');
   const lista = citaFiltro === 'todas'
     ? base
@@ -846,12 +858,12 @@ async function confirmarAtencion(id) {
   try {
     const atencion = store.atenciones.find(a => a.idatencion == id);
     if (!atencion) return;
-    
+
     await apiFetch(`${API}/atenciones/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ ...atencion, estado: 'activo' })
     });
-    
+
     agregarActividad('teal', '✅', `Atención de <strong>${atencion.paciente}</strong> confirmada`, 'Ahora');
     await cargarYRenderCitas();
     renderDashboard();
@@ -863,11 +875,11 @@ async function confirmarAtencion(id) {
 
 async function cerrarAtencion(id) {
   if (!confirm('¿Cerrar esta atención? Se eliminará del listado.')) return;
-  
+
   try {
     const atencion = store.atenciones.find(a => a.idatencion == id);
     if (!atencion) return;
-    
+
     await apiFetch(`${API}/atenciones/${id}`, { method: 'DELETE' });
 
     store.atenciones = store.atenciones.filter(a => a.idatencion != id);
@@ -900,6 +912,11 @@ async function guardarCita() {
 
   if (!idestudiante || !fecha || !hora) {
     toast('Completa los campos obligatorios', 'warning');
+    return;
+  }
+
+  if (fecha < hoy()) {
+    toast('No puedes agendar en una fecha pasada', 'warning');
     return;
   }
 
@@ -941,7 +958,6 @@ async function guardarCita() {
     await cargarDatos();
     renderCitas();
     renderDashboard();
-
   } catch (err) {
     console.error(err);
     toast('Error al guardar cita', 'warning');
@@ -955,29 +971,33 @@ function actualizarHorasDisponibles(fecha) {
 // ═══════════════════════════════════════════════
 // LISTENERS DE FECHA → HORA
 // ═══════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', function() {
-  document.getElementById('mc-fecha')?.addEventListener('change', (e) => {
-    actualizarHorasDisponibles(e.target.value);
-  });
+document.addEventListener('DOMContentLoaded', function () {
+  const mcFecha = document.getElementById('mc-fecha');
+  if (mcFecha) {
+    mcFecha.addEventListener('change', (e) => {
+      actualizarHorasDisponibles(e.target.value);
+    });
+  }
 
-  document.getElementById('na-fecha')?.addEventListener('change', (e) => {
-    actualizarHorasSelect('na-hora', e.target.value);
-  });
-
-  // sc-fecha se maneja dinámicamente en abrirFormularioSegundaCita
+  const naFecha = document.getElementById('na-fecha');
+  if (naFecha) {
+    naFecha.addEventListener('change', (e) => {
+      actualizarHorasSelect('na-hora', e.target.value);
+    });
+  }
 });
 
 // ═══════════════════════════════════════════════
 // NUEVA ATENCIÓN — PASO A PASO
 // ═══════════════════════════════════════════════
 function resetNuevaAtencion() {
-  ['na-nombres','na-apellidos','na-dni','na-telefono','na-fechanac',
+  ['na-nombres','na-apellidos','na-tipo-doc','na-telefono','na-fechanac',
    'na-condicion','na-motivo-texto','na-observaciones']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
     });
-    
+
   const generoEl = document.getElementById('na-genero');
   if (generoEl) generoEl.value = '';
 
@@ -985,10 +1005,13 @@ function resetNuevaAtencion() {
   const seccionEl = document.getElementById('na-seccion');
   if (gradoEl)   gradoEl.value   = '';
   if (seccionEl) seccionEl.value = '';
-  
+
   const fechaEl = document.getElementById('na-fecha');
-  if (fechaEl) fechaEl.value = hoy();
-  
+  if (fechaEl) {
+    fechaEl.value = hoy();
+    fechaEl.min   = hoy();
+  }
+
   const nivelEl = document.getElementById('na-nivel');
   if (nivelEl) nivelEl.value = 'moderado';
 
@@ -1006,46 +1029,103 @@ function resetNuevaAtencion() {
 
   buildGradoSelect('na-grado');
   buildSeccionSelect('na-seccion');
+
+  // ✅ Restricción de fecha de nacimiento para secundaria (11–17 años)
+  aplicarRestriccionFechaNac();
+}
+
+function calcularEdad(fechaNacStr) {
+  const nacimiento = new Date(fechaNacStr);
+  const hoyD = new Date();
+  let edad = hoyD.getFullYear() - nacimiento.getFullYear();
+  const m = hoyD.getMonth() - nacimiento.getMonth();
+  if (m < 0 || (m === 0 && hoyD.getDate() < nacimiento.getDate())) edad--;
+  return edad;
+}
+
+function validarPaso1() {
+  const campos = [
+    'na-nombres',
+    'na-apellidos',
+    'na-doc-numero',
+    'na-telefono',
+    'na-fechanac',
+    'na-genero',
+    'na-grado',
+    'na-seccion'
+  ];
+
+  let valido = true;
+
+  campos.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) {
+      console.warn('No existe:', id);
+      valido = false;
+      return;
+    }
+    const valor = (el.value || '').trim();
+    if (valor === '') {
+      el.style.border = '2px solid red';
+      valido = false;
+    } else {
+      el.style.border = '';
+    }
+  });
+
+  // Validación DNI: exactamente 8 dígitos
+  const dniEl = document.getElementById('na-doc-numero');
+  const valorDNI = (dniEl?.value || '').trim();
+  if (!/^\d{8}$/.test(valorDNI)) {
+    if (dniEl) dniEl.style.border = '2px solid red';
+    valido = false;
+  } else {
+    if (dniEl) dniEl.style.border = '';
+  }
+
+  // ✅ Validación fecha de nacimiento: rango secundaria (11–17 años)
+  const fechaNacEl  = document.getElementById('na-fechanac');
+  const fechaNacVal = (fechaNacEl?.value || '').trim();
+  if (fechaNacVal) {
+    const edad = calcularEdad(fechaNacVal);
+    if (edad < 11 || edad > 17) {
+      if (fechaNacEl) fechaNacEl.style.border = '2px solid red';
+      toast('⚠️ La fecha de nacimiento no corresponde a una estudiante de secundaria (11–17 años)', 'warning');
+      valido = false;
+    } else {
+      if (fechaNacEl) fechaNacEl.style.border = '';
+    }
+  }
+
+  if (!valido) {
+    toast('⚠️ Completa todos los campos correctamente', 'warning');
+  }
+
+  return valido;
 }
 
 function irPaso2() {
+  if (!validarPaso1()) return;
+
   const nombres   = document.getElementById('na-nombres')?.value?.trim();
   const apellidos = document.getElementById('na-apellidos')?.value?.trim();
-  const dni       = document.getElementById('na-dni')?.value?.trim();
+  const dni       = document.getElementById('na-doc-numero')?.value?.trim();
 
-  if (!nombres || !apellidos) {
-    toast('Completa los campos obligatorios: nombres y apellidos', 'warning');
-    return;
-  }
+  document.getElementById('paso-ind-1').className = 'paso-item done';
+  document.getElementById('paso-ind-2').className = 'paso-item active';
+  document.getElementById('paso-linea').className = 'paso-linea done';
 
-  if (dni && !validarDNI(dni)) {
-    toast('El DNI debe tener exactamente 8 dígitos', 'warning');
-    return;
-  }
+  document.getElementById('paso-1').style.display = 'none';
+  document.getElementById('paso-2').style.display = '';
 
-  const ind1      = document.getElementById('paso-ind-1');
-  const ind2      = document.getElementById('paso-ind-2');
-  const linea     = document.getElementById('paso-linea');
-  const subtitulo = document.getElementById('paso2-subtitulo');
-  
-  if (ind1)      ind1.className      = 'paso-item done';
-  if (ind2)      ind2.className      = 'paso-item active';
-  if (linea)     linea.className     = 'paso-linea done';
-  if (subtitulo) subtitulo.textContent = `Estudiante: ${nombres} ${apellidos}${dni ? ' · DNI: ' + dni : ''}`;
+  document.getElementById('paso2-subtitulo').textContent =
+    `Estudiante: ${nombres} ${apellidos} · DNI: ${dni}`;
 
-  const paso1 = document.getElementById('paso-1');
-  const paso2 = document.getElementById('paso-2');
-  if (paso1) paso1.style.display = 'none';
-  if (paso2) paso2.style.display = '';
-
+  // Actualizar horas disponibles para la fecha actual al entrar al paso 2
   const fechaEl = document.getElementById('na-fecha');
-  if (fechaEl) {
-    if (!fechaEl.value) fechaEl.value = hoy();
-    actualizarHorasSelect('na-hora', fechaEl.value);
-  }
+  if (fechaEl) actualizarHorasSelect('na-hora', fechaEl.value);
 
-  const content = document.querySelector('.content');
-  if (content) content.scrollTo({ top: 0, behavior: 'smooth' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
 function volverPaso1() {
@@ -1054,7 +1134,7 @@ function volverPaso1() {
   const ind1  = document.getElementById('paso-ind-1');
   const ind2  = document.getElementById('paso-ind-2');
   const linea = document.getElementById('paso-linea');
-  
+
   if (paso1) paso1.style.display = '';
   if (paso2) paso2.style.display = 'none';
   if (ind1)  ind1.className  = 'paso-item active';
@@ -1062,36 +1142,34 @@ function volverPaso1() {
   if (linea) linea.className = 'paso-linea';
 }
 
+// ═══════════════════════════════════════════════
+// NUEVA ATENCIÓN — GUARDAR (CORREGIDO)
+// Guarda estudiante + atención en la API,
+// ya no usa localStorage.
+// ═══════════════════════════════════════════════
 async function guardarNuevaAtencion() {
-  const nombres       = document.getElementById('na-nombres')?.value?.trim();
-  const apellidos     = document.getElementById('na-apellidos')?.value?.trim();
-  const dni           = document.getElementById('na-dni')?.value?.trim();
-  const telefono      = document.getElementById('na-telefono')?.value?.trim();
-  const fechanac      = document.getElementById('na-fechanac')?.value;
-  const genero        = document.getElementById('na-genero')?.value;
-  const grado         = document.getElementById('na-grado')?.value;      // ej: "3°"
-  const seccion       = document.getElementById('na-seccion')?.value;    // ej: "B"
-  const condicion     = document.getElementById('na-condicion')?.value?.trim();
-  const motivoTexto   = document.getElementById('na-motivo-texto')?.value?.trim();
-  const nivelatencion = document.getElementById('na-nivel')?.value;
-  const fecha         = document.getElementById('na-fecha')?.value;
-  const hora          = document.getElementById('na-hora')?.value;
-  const observaciones = document.getElementById('na-observaciones')?.value?.trim();
+
+  if (!validarPaso1()) return;
+
+  const fecha       = document.getElementById('na-fecha')?.value;
+  const hora        = document.getElementById('na-hora')?.value;
+  const motivoTexto = document.getElementById('na-motivo-texto')?.value?.trim();
 
   if (!fecha || !hora) {
-    toast('Indica la fecha y hora de la primera sesión', 'warning');
+    toast('Indica fecha y hora de la sesión', 'warning');
     return;
   }
+
   if (!motivoTexto) {
     toast('Escribe el motivo de consulta', 'warning');
     return;
   }
-  if (dni && !validarDNI(dni)) {
-    toast('El DNI debe tener exactamente 8 dígitos', 'warning');
+
+  if (fecha < hoy()) {
+    toast('No puedes agendar en una fecha pasada', 'warning');
     return;
   }
 
-  // Validación de horario contra la API (fuente de verdad)
   const disponible = await validarHorarioUnico(fecha, hora);
   if (!disponible) {
     const libres = generarHorasDisponibles(fecha);
@@ -1102,71 +1180,89 @@ async function guardarNuevaAtencion() {
     return;
   }
 
+  const nombres   = document.getElementById('na-nombres')?.value?.trim();
+  const apellidos = document.getElementById('na-apellidos')?.value?.trim();
+  const dni       = document.getElementById('na-doc-numero')?.value?.trim();
+  const telefono  = document.getElementById('na-telefono')?.value?.trim();
+  const fechanac  = document.getElementById('na-fechanac')?.value;
+  const genero    = document.getElementById('na-genero')?.value;
+  const grado     = document.getElementById('na-grado')?.value;
+  const seccion   = document.getElementById('na-seccion')?.value;
+  const nivel     = document.getElementById('na-nivel')?.value || 'moderado';
+  const obs       = document.getElementById('na-observaciones')?.value?.trim();
+
   try {
-    // 1. Registrar estudiante (ahora incluye DNI)
-    const nuevoEst = await apiFetch(`${API}/estudiantes`, {
-      method: 'POST',
-      body: JSON.stringify({
-        nombres,
-        apellidos,
-        dni:            dni || null,
-        codigomatricula: null,
-        telefono:       telefono || null,
-        fechanac:       fechanac || null,
-        genero:         genero || null,
-        condicion:      condicion || null,
-      })
-    });
+    // 1️⃣ Buscar si el estudiante ya existe (por DNI o nombre completo)
+    let idestudiante;
+    const estudiantesActuales = await apiFetch(`${API}/estudiantes`);
+    const existente = (estudiantesActuales || []).find(e =>
+      e.dni === dni ||
+      (`${e.nombres} ${e.apellidos}`.toLowerCase() === `${nombres} ${apellidos}`.toLowerCase())
+    );
 
-    const idestudiante = nuevoEst.idestudiante || nuevoEst.id;
-    agregarActividad('purple', '👤', `Estudiante <strong>${nombres} ${apellidos}</strong> registrado`, 'Ahora');
+    if (existente) {
+      idestudiante = existente.idestudiante;
+    } else {
+      // Crear nuevo estudiante
+      const nuevoEst = await apiFetch(`${API}/estudiantes`, {
+        method: 'POST',
+        body: JSON.stringify({
+          nombres,
+          apellidos,
+          dni,
+          telefono,
+          fechanac,
+          genero,
+          grado,
+          seccion,
+          condicion: 'regular',
+        })
+      });
+      idestudiante = nuevoEst.idestudiante;
+    }
 
-    // 2. Resolver idmotivo
+    // 2️⃣ Resolver idmotivo
     let idmotivo = 1;
     try {
       const motivos = await apiFetch(`${API}/motivosconsulta`);
-      const encontrado = motivos.find(m =>
-        (m.descripcion || m.nombre || '').toLowerCase() === motivoTexto.toLowerCase()
+      const encontrado = (motivos || []).find(m =>
+        m.descripcion === motivoTexto || m.nombre === motivoTexto
       );
-      idmotivo = encontrado ? encontrado.idmotivo : (motivos[0]?.idmotivo || 1);
+      idmotivo = encontrado ? encontrado.idmotivo : (motivos?.[0]?.idmotivo || 1);
     } catch (_) {}
 
-    // 3. Registrar primera sesión (grado y sección separados)
+    // 3️⃣ Registrar la atención
     const fechahora = `${fecha}T${hora}:00`;
     await apiFetch(`${API}/atenciones`, {
       method: 'POST',
       body: JSON.stringify({
-        idestudiante:  parseInt(idestudiante),
+        idestudiante,
         fechahora,
-        nivelatencion,
+        nivelatencion: nivel,
         idmotivo,
-        estado:        'pendiente',
-        grado:         grado   || null,
-        seccion:       seccion || null,
-        observaciones: observaciones || null,
-        idespecialista: null,
-        idprofesor:     null
+        estado: 'pendiente',
+        observaciones: obs || null,
       })
     });
 
-    agregarActividad('teal', '📅', `Primera sesión registrada para <strong>${nombres} ${apellidos}</strong>`, 'Ahora');
+    agregarActividad('purple', '📝', `Nueva atención: <strong>${nombres} ${apellidos}</strong>`, 'Ahora');
+    toast(`✅ Atención registrada para ${nombres} ${apellidos}`);
 
-    // 4. Recargar datos
+    // 4️⃣ Recargar datos globales
     await cargarDatos();
-    toast(`✓ ${nombres} ${apellidos} registrado`);
 
-    // 5. Preguntar si quiere agendar segunda cita
-    mostrarModalSegundaCita((quiereSegunda) => {
-      if (quiereSegunda) {
+    // 5️⃣ Preguntar si agendar segunda cita
+    mostrarModalSegundaCita((quiere) => {
+      if (quiere) {
         abrirFormularioSegundaCita(idestudiante, `${nombres} ${apellidos}`);
       } else {
-        navigateTo('historial');
+        navigateTo('citas');
       }
     });
 
   } catch (err) {
-    console.error('Error en nueva atención:', err);
-    toast('Error al registrar. Verifica los datos.', 'warning');
+    console.error('Error guardando nueva atención:', err);
+    toast('Error al registrar la atención', 'warning');
   }
 }
 
@@ -1196,25 +1292,25 @@ function renderReportes() {
       vals[mes]++;
     }
   });
-  
+
   const max     = Math.max(...vals, 1);
   const chartEl = document.getElementById('chart-area');
   if (chartEl) {
     chartEl.innerHTML = `
       <div style="display:flex;align-items:flex-end;gap:12px;height:120px;">
-        ${meses.map((m,i) => `
+        ${meses.map((m, i) => `
           <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;">
             <div style="font-size:11px;font-weight:600;color:var(--text-secondary);">${vals[i]}</div>
-            <div style="width:100%;background:${vals[i]>0?'var(--accent)':'var(--accent-soft)'};border-radius:6px 6px 0 0;height:${Math.round((vals[i]/max)*90)+10}px;transition:height .5s ease;"></div>
+            <div style="width:100%;background:${vals[i] > 0 ? 'var(--accent)' : 'var(--accent-soft)'};border-radius:6px 6px 0 0;height:${Math.round((vals[i]/max)*90)+10}px;transition:height .5s ease;"></div>
             <div style="font-size:11px;color:var(--text-muted);">${m}</div>
           </div>`).join('')}
       </div>`;
   }
 
   renderProgBars('rep-prog', [
-    { label:'Tasa de atención activa',  val: Math.round(activos / Math.max(store.atenciones.length,1)*100), color:'var(--teal)' },
-    { label:'Cobertura de estudiantes', val: Math.min(Math.round(total/20*100),100), color:'var(--accent)' },
-    { label:'Atenciones cerradas',      val: Math.round(cerrados / Math.max(store.atenciones.length,1)*100), color:'var(--amber)' },
+    { label:'Tasa de atención activa',  val: Math.round(activos / Math.max(store.atenciones.length, 1) * 100), color:'var(--teal)' },
+    { label:'Cobertura de estudiantes', val: Math.min(Math.round(total / 20 * 100), 100), color:'var(--accent)' },
+    { label:'Atenciones cerradas',      val: Math.round(cerrados / Math.max(store.atenciones.length, 1) * 100), color:'var(--amber)' },
   ]);
 }
 
@@ -1227,7 +1323,7 @@ async function generarReporte() {
   const { jsPDF } = window.jspdf;
   const meses = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
   const conteoMeses = new Array(12).fill(0);
-  
+
   store.atenciones.forEach(a => {
     if (a.fechahora) conteoMeses[new Date(a.fechahora).getMonth()]++;
   });
@@ -1237,53 +1333,53 @@ async function generarReporte() {
     toast('Canvas no encontrado para generar gráfico', 'warning');
     return;
   }
-  
+
   const ctx = canvas.getContext('2d');
   if (window.miGrafico) window.miGrafico.destroy();
-  
+
   window.miGrafico = new Chart(ctx, {
     type: 'line',
     data: {
       labels: meses,
-      datasets: [{ 
-        label: 'Atenciones por mes', 
-        data: conteoMeses, 
-        borderColor: '#6366f1', 
-        backgroundColor: 'rgba(99,102,241,0.2)', 
-        tension: 0.4, 
-        fill: true, 
-        pointRadius: 4, 
-        pointBackgroundColor: '#6366f1' 
+      datasets: [{
+        label: 'Atenciones por mes',
+        data: conteoMeses,
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99,102,241,0.2)',
+        tension: 0.4,
+        fill: true,
+        pointRadius: 4,
+        pointBackgroundColor: '#6366f1'
       }]
     },
-    options: { 
-      responsive: false, 
-      plugins: { legend: { display: true } }, 
-      scales: { y: { beginAtZero: true } } 
+    options: {
+      responsive: false,
+      plugins: { legend: { display: true } },
+      scales: { y: { beginAtZero: true } }
     }
   });
 
   setTimeout(() => {
     const imgData = canvas.toDataURL('image/png');
     const doc = new jsPDF();
-    
+
     doc.setFillColor(99, 102, 241);
     doc.rect(0, 0, 210, 30, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(18);
     doc.text('Reporte Mensual - PsiControl', 20, 18);
-    
+
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(12);
     doc.text('Atenciones por mes', 20, 45);
     doc.addImage(imgData, 'PNG', 15, 55, 180, 100);
-    
+
     doc.setFontSize(9);
     doc.setTextColor(150);
     doc.text('Sistema PsiControl - Análisis mensual', 20, 285);
-    
+
     doc.save('reporte_mensual.pdf');
-    
+
     store.reportes++;
     agregarActividad('amber', '📊', 'Reporte mensual generado', 'Ahora');
     renderDashboard();
@@ -1334,15 +1430,15 @@ function agregarActividad(tipo, icon, texto, tiempo) {
 }
 
 // ═══════════════════════════════════════════════
-// BÚSQUEDA GLOBAL — incluye DNI
+// BÚSQUEDA GLOBAL
 // ═══════════════════════════════════════════════
 let searchTimeout;
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   const searchInput   = document.getElementById('global-search');
   const searchResults = document.getElementById('search-results');
-  
+
   if (searchInput) {
-    searchInput.addEventListener('input', function() {
+    searchInput.addEventListener('input', function () {
       clearTimeout(searchTimeout);
       searchTimeout = setTimeout(() => performGlobalSearch(this.value, searchResults), 300);
     });
@@ -1351,24 +1447,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function performGlobalSearch(q, searchResultsEl) {
   const query = q?.trim().toLowerCase() || '';
-  if (!query) { 
-    if (searchResultsEl) searchResultsEl.style.display = 'none'; 
-    return; 
+  if (!query) {
+    if (searchResultsEl) searchResultsEl.style.display = 'none';
+    return;
   }
-  
+
   const res = store.estudiantes.filter(p => {
     const nombre = `${p.nombres} ${p.apellidos}`.toLowerCase();
     return nombre.includes(query) ||
       p.codigomatricula?.toLowerCase().includes(query) ||
       p.telefono?.includes(query) ||
-      p.dni?.includes(query);              // ← búsqueda por DNI
+      p.dni?.includes(query);
   }).slice(0, 5);
-  
-  if (res.length === 0 || !searchResultsEl) { 
-    searchResultsEl.style.display = 'none'; 
-    return; 
+
+  if (res.length === 0 || !searchResultsEl) {
+    searchResultsEl.style.display = 'none';
+    return;
   }
-  
+
   searchResultsEl.innerHTML = res.map(p =>
     `<div class="search-result-item" onclick="verEstudiante(${p.idestudiante})">
       <div class="td-avatar ${colorAvatar(p.nombres+p.apellidos)}" style="width:28px;height:28px;font-size:10px;">${initials(p.nombres+' '+p.apellidos)}</div>
@@ -1378,11 +1474,11 @@ function performGlobalSearch(q, searchResultsEl) {
       </div>
     </div>`
   ).join('');
-  
+
   searchResultsEl.style.display = 'block';
 }
 
-document.addEventListener('click', function(e) {
+document.addEventListener('click', function (e) {
   const searchWrap    = document.getElementById('search-wrap');
   const searchResults = document.getElementById('search-results');
   if (searchWrap && !searchWrap.contains(e.target) && searchResults) {
@@ -1393,12 +1489,12 @@ document.addEventListener('click', function(e) {
 // ═══════════════════════════════════════════════
 // NOTIFICACIONES
 // ═══════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
   const notifBtn = document.getElementById('notif-btn');
   const notifDot = document.getElementById('notif-dot');
-  
+
   if (notifBtn) {
-    notifBtn.addEventListener('click', function() {
+    notifBtn.addEventListener('click', function () {
       const pend = store.atenciones.filter(a => a.estado === 'pendiente');
       if (pend.length > 0) {
         toast(pend.length + ' atención(es) pendientes de confirmar', 'info');
@@ -1481,8 +1577,6 @@ function renderCalendario() {
   if (!page) return;
 
   calEventos = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '[]');
-
-  // Sincroniza atenciones del store como eventos de calendario
   sincronizarAtencionesAlCalendario();
 
   if (!calYear) {
@@ -1585,7 +1679,6 @@ function renderCalendario() {
   calRenderNotifBar();
   calScheduleNotifs();
 
-  // Cierra modal al click fuera
   document.getElementById('modal-calendario')?.addEventListener('click', e => {
     if (e.target.id === 'modal-calendario') closeModal('modal-calendario');
   });
@@ -1594,7 +1687,7 @@ function renderCalendario() {
 function sincronizarAtencionesAlCalendario() {
   store.atenciones.forEach(a => {
     if (!a.fechahora) return;
-    const key = `atencion_${a.idatencion}`;
+    const key    = `atencion_${a.idatencion}`;
     const existe = calEventos.find(e => e.key === key);
     if (!existe) {
       const dt   = new Date(a.fechahora);
@@ -1707,15 +1800,15 @@ function calRenderNotifBar() {
   if (!bar) return;
   const now  = new Date();
   const hoyS = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  const hoy  = calEventos.filter(e => e.fecha === hoyS);
+  const hoyCal = calEventos.filter(e => e.fecha === hoyS);
   bar.innerHTML = '';
 
   const chip = document.createElement('div');
   chip.className = 'appt-badge c-purple';
-  chip.textContent = `${hoy.length} sesión${hoy.length !== 1 ? 'es' : ''} hoy`;
+  chip.textContent = `${hoyCal.length} sesión${hoyCal.length !== 1 ? 'es' : ''} hoy`;
   bar.appendChild(chip);
 
-  hoy.slice(0, 3).forEach(ev => {
+  hoyCal.slice(0, 3).forEach(ev => {
     const c = document.createElement('div');
     c.className = 'appt-badge c-teal';
     c.style.cursor = 'pointer';
@@ -1761,8 +1854,13 @@ function calAbrirModal(fechaStr = null) {
   document.getElementById('cal-ev-notif').value  = '15';
   document.getElementById('cal-ev-obs').value    = '';
   const now = new Date();
-  document.getElementById('cal-ev-fecha').value  = fechaStr ||
+  const fechaDefault = fechaStr ||
     `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const fechaInput = document.getElementById('cal-ev-fecha');
+  if (fechaInput) {
+    fechaInput.value = fechaDefault;
+    fechaInput.min   = hoy();
+  }
   openModal('modal-calendario');
 }
 
@@ -1776,6 +1874,8 @@ function calAbrirEditar(ev) {
   document.getElementById('cal-ev-hora').value   = ev.hora || '08:00';
   document.getElementById('cal-ev-notif').value  = String(ev.notif || 15);
   document.getElementById('cal-ev-obs').value    = ev.obs || '';
+  const fechaInput = document.getElementById('cal-ev-fecha');
+  if (fechaInput) fechaInput.min = hoy();
   openModal('modal-calendario');
 }
 
@@ -1783,6 +1883,11 @@ function calGuardarEvento() {
   const titulo = document.getElementById('cal-ev-titulo')?.value?.trim();
   const fecha  = document.getElementById('cal-ev-fecha')?.value;
   if (!titulo || !fecha) { toast('Completa los campos obligatorios', 'warning'); return; }
+
+  if (fecha < hoy()) {
+    toast('No puedes crear un evento en una fecha pasada', 'warning');
+    return;
+  }
 
   const ev = {
     id:    calEditId || Date.now(),
@@ -1831,9 +1936,36 @@ function calNextMonth() {
 // ═══════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
+
+  const docInput      = document.getElementById('na-doc-numero');
+  const telefonoInput = document.getElementById('na-telefono');
+
+  if (docInput) {
+    docInput.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 8);
+    });
+  }
+
+  if (telefonoInput) {
+    telefonoInput.addEventListener('input', (e) => {
+      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 9);
+    });
+  }
+
+  const Validators = {
+    dni:       v => /^[0-9]{8}$/.test(v.trim()),
+    ce:        v => /^[a-zA-Z0-9]{9,12}$/.test(v.trim()),
+    pasaporte: v => /^[a-zA-Z0-9]{6,12}$/.test(v.trim())
+  };
+
+  function validarDocumento(tipo, valor) {
+    return Validators[tipo] ? Validators[tipo](valor) : false;
+  }
+
   buildSchedule();
   cargarDatos();
   navigateTo('dashboard');
+
   console.log('✅ PsiControl inicializado correctamente');
 });

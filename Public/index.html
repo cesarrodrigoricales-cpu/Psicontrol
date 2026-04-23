@@ -378,23 +378,28 @@
         <div class="form-grid">
           <div class="form-group">
             <label>Nombres *</label>
-            <input type="text" id="na-nombres" placeholder="Ej: Juan Carlos">
+            <input type="text" id="na-nombres" placeholder="Ej: Juan Carlos" required>
           </div>
           <div class="form-group">
             <label>Apellidos *</label>
-            <input type="text" id="na-apellidos" placeholder="Ej: García López">
+            <input type="text" id="na-apellidos" placeholder="Ej: García López" required>
           </div>
           <div class="form-group">
-            <label>DNI</label>
-            <input type="text" id="na-dni" placeholder="8 dígitos" maxlength="8" inputmode="numeric">
+         <label>Tipo de documento</label>
+             <select id="na-tipo-doc">
+              <option value="dni">DNI (Perú)</option>
+              <option value="ce">Carnet de extranjería</option>
+          </select>
+             <label>Número de documento</label>
+            <input type="text" id="na-doc-numero" autocomplete="off">
           </div>
           <div class="form-group">
             <label>Teléfono</label>
-            <input type="tel" id="na-telefono" placeholder="Ej: 987654321" maxlength="9">
+            <input type="tel" id="na-telefono" placeholder="Ej: 987654321" maxlength="9" required>
           </div>
           <div class="form-group">
             <label>Fecha de nacimiento</label>
-            <input type="date" id="na-fechanac">
+            <input type="date" id="na-fechanac" required>
           </div>
           <div class="form-group">
             <label>Género</label>
@@ -416,10 +421,6 @@
             <select id="na-seccion">
               <option value="">-- Selecciona sección --</option>
             </select>
-          </div>
-          <div class="form-group full">
-            <label>Condición / Observación inicial</label>
-            <input type="text" id="na-condicion" placeholder="Ej: Ninguna, Discapacidad auditiva...">
           </div>
         </div>
         <div class="form-actions">
@@ -453,7 +454,7 @@
           </div>
           <div class="form-group">
             <label>Fecha de la sesión *</label>
-            <input type="date" id="na-fecha" onchange="actualizarHorasSelect('na-hora', this.value)">
+            <input type="date" id="na-fecha" min onchange="actualizarHorasSelect('na-hora', this.value)">
           </div>
           <div class="form-group">
             <label>Hora disponible *</label>
@@ -505,6 +506,34 @@
     </div><!-- /page-reportes -->
 <!-- ══════════ CALENDARIO ══════════ -->
 <div class="page" id="page-calendario"></div>
+
+<!-- ══════════ 404 ══════════ -->
+<div class="page" id="page-404">
+  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:2rem 1rem;">
+    
+    <div style="width:80px;height:80px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+      </svg>
+    </div>
+
+    <div style="font-size:72px;font-weight:600;color:#534AB7;line-height:1;letter-spacing:-2px;margin-bottom:0.5rem;">404</div>
+
+    <div style="display:flex;gap:6px;margin-bottom:1.5rem;">
+      <div style="width:7px;height:7px;border-radius:50%;background:#AFA9EC;"></div>
+      <div style="width:7px;height:7px;border-radius:50%;background:#534AB7;"></div>
+      <div style="width:7px;height:7px;border-radius:50%;background:#AFA9EC;"></div>
+    </div>
+
+    <div style="font-size:18px;font-weight:600;color:var(--text-primary);margin-bottom:0.4rem;">Página no encontrada</div>
+    <div style="font-size:14px;color:var(--text-secondary);margin-bottom:2rem;max-width:300px;line-height:1.6;">
+      La sección que buscas no existe o fue movida. Vuelve al inicio para continuar.
+    </div>
+
+    <button class="btn-primary" onclick="navigateTo('dashboard')" style="display:inline-flex;align-items:center;gap:8px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+      Volver al inicio
+    </button>
 
     <!-- ══════════ CONFIGURACIÓN ══════════ -->
     <div class="page" id="page-config">
@@ -565,6 +594,7 @@
 
   </div><!-- /content -->
 </div><!-- /main -->
+
 
 
 <!-- ══════════════════════════════════════════
@@ -656,6 +686,9 @@
       <button class="modal-close" onclick="closeModal('modal-paciente')">✕</button>
     </div>
     <div class="modal-body" id="mp-body"></div>
+  </div>
+</div>
+
   </div>
 </div>
 

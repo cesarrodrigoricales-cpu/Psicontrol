@@ -6,7 +6,9 @@ const { sequelize } = require('../models');
 router.get('/', async (req, res) => {
   try {
     const [rows] = await sequelize.query(`
-      SELECT e.*, p.nombres, p.apellidos, p.telefono, p.genero
+      SELECT e.idestudiante, e.idpersona, e.fechanac, e.condicion,
+             p.nombres, p.apellidos, p.telefono, p.genero,
+             p.nrodoc AS dni
       FROM estudiantes e
       JOIN personas p ON e.idpersona = p.idpersona
     `);
@@ -20,25 +22,25 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { nombres, apellidos, telefono, genero, fechanac, condicion } = req.body;
+    const { nombres, apellidos, telefono, genero, fechanac, condicion, dni } = req.body;
 
-    // 1. Insertar en personas
     const [resultPersona] = await sequelize.query(`
-      INSERT INTO personas (nombres, apellidos, telefono, genero)
-      VALUES (:nombres, :apellidos, :telefono, :genero)
+      INSERT INTO personas (nombres, apellidos, telefono, genero, nrodoc, tipodoc)
+      VALUES (:nombres, :apellidos, :telefono, :genero, :nrodoc, :tipodoc)
     `, {
       replacements: {
         nombres:   nombres   || '',
         apellidos: apellidos || '',
         telefono:  telefono  || null,
         genero:    genero    || null,
+        nrodoc:    dni       || null,
+        tipodoc:   'DNI',           // valor por defecto
       },
       transaction: t
     });
 
     const idpersona = resultPersona;
 
-    // 2. Insertar en estudiantes
     const [resultEstudiante] = await sequelize.query(`
       INSERT INTO estudiantes (idpersona, fechanac, condicion)
       VALUES (:idpersona, :fechanac, :condicion)
@@ -52,12 +54,13 @@ router.post('/', async (req, res) => {
     });
 
     await t.commit();
-
     res.status(201).json({
       idestudiante: resultEstudiante,
       idpersona,
       nombres,
-      apellidos
+      apellidos,
+      telefono,
+      dni
     });
   } catch (err) {
     await t.rollback();
