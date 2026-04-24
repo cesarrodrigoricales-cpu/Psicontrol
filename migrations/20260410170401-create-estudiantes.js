@@ -2,17 +2,17 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('estudiantes', {
-      idestudiante:    { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
-      idpersona:       {
+      id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true, allowNull: false },
+      idpersona: {
         type: Sequelize.INTEGER,
-        references: { model: 'personas', key: 'idpersona' },
+        allowNull: false,
+        references: { model: 'personas', key: 'id' },
         onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+        onDelete: 'RESTRICT'
       },
-      codigomatricula: { type: Sequelize.STRING(50) },
-      fechanac:        { type: Sequelize.DATEONLY },
-      condicion:       { type: Sequelize.STRING(50) },
-      created_at:      { type: Sequelize.DATE, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }
+      fechanac:        { type: Sequelize.DATEONLY, allowNull: true },
+      condicion:       { type: Sequelize.STRING(50), allowNull: true },
+      codigomatricula: { type: Sequelize.STRING(30), allowNull: true }
     });
   },
   async down(queryInterface) {

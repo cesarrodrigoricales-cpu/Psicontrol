@@ -2,68 +2,180 @@ const express = require('express');
 const router = express.Router();
 const { sequelize } = require('../models');
 
-// GET - listar todos los estudiantes
+// ── GET todos los estudiantes ──
 router.get('/', async (req, res) => {
   try {
     const [rows] = await sequelize.query(`
-      SELECT e.idestudiante, e.idpersona, e.fechanac, e.condicion,
-             p.nombres, p.apellidos, p.telefono, p.genero,
-             p.nrodoc AS dni
+      SELECT
+        e.id, e.idpersona, e.fechanac, e.condicion, e.codigomatricula,
+        p.nombres, p.apellidos, p.telefono, p.genero,
+        p.nrodoc AS dni
       FROM estudiantes e
-      JOIN personas p ON e.idpersona = p.idpersona
+      JOIN personas p ON e.idpersona = p.id
+      ORDER BY p.apellidos ASC
     `);
+
+    // Adjuntar contactos de emergencia a cada estudiante
+    const [contactos] = await sequelize.query(`SELECT * FROM contacto_emergencia`);
+    const map = {};
+    contactos.forEach(c => {
+      if (!map[c.idestudiante]) map[c.idestudiante] = [];
+      map[c.idestudiante].push(c);
+    });
+    rows.forEach(e => { e.contactosEmergencia = map[e.id] || []; });
+
     res.json(rows);
   } catch (err) {
+    console.error('GET /estudiantes:', err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-// POST - registrar nuevo estudiante
+// ── GET un estudiante por ID ──
+router.get('/:id', async (req, res) => {
+  try {
+    const [rows] = await sequelize.query(`
+      SELECT e.id, e.idpersona, e.fechanac, e.condicion, e.codigomatricula,
+             p.nombres, p.apellidos, p.telefono, p.genero, p.nrodoc AS dni
+      FROM estudiantes e
+      JOIN personas p ON e.idpersona = p.id
+      WHERE e.id = ?
+    `, { replacements: [req.params.id] });
+
+    if (rows.length === 0) return res.status(404).json({ error: 'Estudiante no encontrado' });
+
+    const [contactos] = await sequelize.query(
+      `SELECT * FROM contacto_emergencia WHERE idestudiante = ?`,
+      { replacements: [req.params.id] }
+    );
+    rows[0].contactosEmergencia = contactos;
+
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('GET /estudiantes/:id:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST registrar nuevo estudiante ──
 router.post('/', async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { nombres, apellidos, telefono, genero, fechanac, condicion, dni } = req.body;
+    const { nombres, apellidos, telefono, genero, fechanac, condicion, dni, grado, seccion, contactosEmergencia } = req.body;
 
-    const [resultPersona] = await sequelize.query(`
+    // 1. Insertar persona
+    const [idpersona] = await sequelize.query(`
       INSERT INTO personas (nombres, apellidos, telefono, genero, nrodoc, tipodoc)
-      VALUES (:nombres, :apellidos, :telefono, :genero, :nrodoc, :tipodoc)
+      VALUES (?, ?, ?, ?, ?, 'DNI')
     `, {
-      replacements: {
-        nombres:   nombres   || '',
-        apellidos: apellidos || '',
-        telefono:  telefono  || null,
-        genero:    genero    || null,
-        nrodoc:    dni       || null,
-        tipodoc:   'DNI',           // valor por defecto
-      },
+      replacements: [nombres || '', apellidos || '', telefono || null, genero || null, dni || null],
       transaction: t
     });
 
-    const idpersona = resultPersona;
-
-    const [resultEstudiante] = await sequelize.query(`
+    // 2. Insertar estudiante
+    const [idestudiante] = await sequelize.query(`
       INSERT INTO estudiantes (idpersona, fechanac, condicion)
-      VALUES (:idpersona, :fechanac, :condicion)
+      VALUES (?, ?, ?)
     `, {
-      replacements: {
-        idpersona,
-        fechanac:  fechanac  || null,
-        condicion: condicion || null,
-      },
+      replacements: [idpersona, fechanac || null, condicion || 'regular'],
       transaction: t
     });
+
+    // 3. Insertar contactos de emergencia si vienen
+    if (Array.isArray(contactosEmergencia) && contactosEmergencia.length > 0) {
+      for (const c of contactosEmergencia) {
+        if (c.nombre || c.celular) {
+          await sequelize.query(`
+            INSERT INTO contacto_emergencia (idestudiante, nombre, parentesco, celular)
+            VALUES (?, ?, ?, ?)
+          `, {
+            replacements: [idestudiante, c.nombre || '', c.parentesco || null, c.celular || null],
+            transaction: t
+          });
+        }
+      }
+    }
 
     await t.commit();
     res.status(201).json({
-      idestudiante: resultEstudiante,
+      id: idestudiante,
       idpersona,
       nombres,
       apellidos,
       telefono,
-      dni
+      genero,
+      fechanac,
+      condicion,
+      dni,
+      grado,
+      seccion,
+      contactosEmergencia: contactosEmergencia || []
     });
   } catch (err) {
     await t.rollback();
+    console.error('POST /estudiantes:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── PUT actualizar estudiante ──
+router.put('/:id', async (req, res) => {
+  const t = await sequelize.transaction();
+  try {
+    const { nombres, apellidos, telefono, genero, fechanac, condicion, dni, contactosEmergencia } = req.body;
+
+    // Obtener idpersona
+    const [rows] = await sequelize.query(
+      `SELECT idpersona FROM estudiantes WHERE id = ?`,
+      { replacements: [req.params.id], transaction: t }
+    );
+    if (rows.length === 0) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Estudiante no encontrado' });
+    }
+    const { idpersona } = rows[0];
+
+    // Actualizar persona
+    await sequelize.query(`
+      UPDATE personas SET nombres=?, apellidos=?, telefono=?, genero=?, nrodoc=?
+      WHERE id=?
+    `, {
+      replacements: [nombres || '', apellidos || '', telefono || null, genero || null, dni || null, idpersona],
+      transaction: t
+    });
+
+    // Actualizar estudiante
+    await sequelize.query(`
+      UPDATE estudiantes SET fechanac=?, condicion=? WHERE id=?
+    `, {
+      replacements: [fechanac || null, condicion || 'regular', req.params.id],
+      transaction: t
+    });
+
+    // Actualizar contactos: borrar y reinsertar
+    if (Array.isArray(contactosEmergencia)) {
+      await sequelize.query(
+        `DELETE FROM contacto_emergencia WHERE idestudiante = ?`,
+        { replacements: [req.params.id], transaction: t }
+      );
+      for (const c of contactosEmergencia) {
+        if (c.nombre || c.celular) {
+          await sequelize.query(`
+            INSERT INTO contacto_emergencia (idestudiante, nombre, parentesco, celular)
+            VALUES (?, ?, ?, ?)
+          `, {
+            replacements: [req.params.id, c.nombre || '', c.parentesco || null, c.celular || null],
+            transaction: t
+          });
+        }
+      }
+    }
+
+    await t.commit();
+    res.json({ mensaje: 'Estudiante actualizado correctamente' });
+  } catch (err) {
+    await t.rollback();
+    console.error('PUT /estudiantes/:id:', err.message);
     res.status(500).json({ error: err.message });
   }
 });

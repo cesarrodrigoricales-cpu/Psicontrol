@@ -2,17 +2,17 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('monitoreos', {
-      idmonitoreo:     { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
-      idatencion:      {
+      id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true, allowNull: false },
+      idatencion: {
         type: Sequelize.INTEGER,
-        references: { model: 'atenciones', key: 'idatencion' },
+        allowNull: false,
+        references: { model: 'atenciones', key: 'id' },
         onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+        onDelete: 'CASCADE'
       },
-      fechahora:       { type: Sequelize.DATE },
-      seguimiento:     { type: Sequelize.TEXT },
-      recomendaciones: { type: Sequelize.TEXT },
-      created_at:      { type: Sequelize.DATE, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }
+      fechahora:       { type: Sequelize.DATE, allowNull: true },
+      seguimiento:     { type: Sequelize.TEXT, allowNull: true },
+      recomendaciones: { type: Sequelize.TEXT, allowNull: true }
     });
   },
   async down(queryInterface) {

@@ -20,6 +20,8 @@ app.use('/api/atenciones', require('./routes/atenciones'));
 app.use('/api/monitoreos', require('./routes/monitoreos'));
 app.use('/api/intervenciones', require('./routes/intervenciones'));
 app.use('/api/motivosconsulta', require('./routes/motivosconsulta'));
+app.use('/api/contacto-emergencia', require('./routes/contacto_emergencia')); 
+app.use('/api/calendario-eventos', require('./routes/calendario_eventos'));   
 
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'Public', 'index.html'));

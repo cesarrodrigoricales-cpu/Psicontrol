@@ -7,19 +7,20 @@ router.get('/', async (req, res) => {
   try {
     const [rows] = await sequelize.query(`
       SELECT 
-        a.idatencion, a.fechahora, a.grado, a.seccion,
+        a.id, a.fechahora, a.grado, a.seccion,
         a.nivelatencion, a.observaciones, a.estado,
         a.idespecialista, a.idprofesor, a.idestudiante, a.idmotivo,
         CONCAT(p.nombres, ' ', p.apellidos) AS paciente,
+        p.nrodoc AS dni,
         e.codigomatricula,
         m.motivoconsulta,
         CONCAT(pe.nombres, ' ', pe.apellidos) AS especialista
       FROM atenciones a
-      JOIN estudiantes e  ON a.idestudiante  = e.idestudiante
-      JOIN personas p     ON e.idpersona     = p.idpersona
-      JOIN motivosconsulta m ON a.idmotivo   = m.idmotivo
-      LEFT JOIN colaboradores c ON a.idespecialista = c.idcolaborador
-      LEFT JOIN personas pe   ON c.idpersona        = pe.idpersona
+      JOIN estudiantes e     ON a.idestudiante  = e.id
+      JOIN personas p        ON e.idpersona     = p.id
+      LEFT JOIN motivosconsulta m  ON a.idmotivo = m.id
+      LEFT JOIN colaboradores c    ON a.idespecialista = c.id
+      LEFT JOIN personas pe        ON c.idpersona      = pe.id
       ORDER BY a.fechahora DESC
     `);
     res.json(rows);
@@ -35,9 +36,9 @@ router.get('/:id', async (req, res) => {
     const [rows] = await sequelize.query(`
       SELECT a.*, CONCAT(p.nombres, ' ', p.apellidos) AS paciente
       FROM atenciones a
-      JOIN estudiantes e ON a.idestudiante = e.idestudiante
-      JOIN personas p    ON e.idpersona    = p.idpersona
-      WHERE a.idatencion = ?
+      JOIN estudiantes e ON a.idestudiante = e.id
+      JOIN personas p    ON e.idpersona    = p.id
+      WHERE a.id = ?
     `, { replacements: [req.params.id] });
 
     if (rows.length === 0) return res.status(404).json({ error: 'Atención no encontrada' });
@@ -53,16 +54,29 @@ router.post('/', async (req, res) => {
   try {
     const { idespecialista, idprofesor, idestudiante, fechahora, grado, seccion, nivelatencion, idmotivo, observaciones, estado } = req.body;
 
-    // Validación de campos obligatorios
-    if (!idestudiante || !fechahora || !nivelatencion || !idmotivo) {
-      return res.status(400).json({ error: 'Faltan campos obligatorios: idestudiante, fechahora, nivelatencion, idmotivo' });
+    if (!idestudiante || !fechahora) {
+      return res.status(400).json({ error: 'Faltan campos obligatorios: idestudiante, fechahora' });
     }
+
+    // Usar idmotivo=1 como fallback si no se envía
+    const motivoFinal = idmotivo || 1;
 
     const [result] = await sequelize.query(
       `INSERT INTO atenciones 
-        (idespecialista, idprofesor, idestudiante, fechahora, grado, seccion, nivelatencion, idmotivo, observaciones, estado, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      { replacements: [idespecialista || null, idprofesor || null, idestudiante, fechahora, grado || null, seccion || null, nivelatencion, idmotivo, observaciones || null, estado || 'pendiente'] }
+        (idespecialista, idprofesor, idestudiante, fechahora, grado, seccion, nivelatencion, idmotivo, observaciones, estado)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      { replacements: [
+          idespecialista || null,
+          idprofesor     || null,
+          idestudiante,
+          fechahora,
+          grado          || null,
+          seccion        || null,
+          nivelatencion  || 'moderado',
+          motivoFinal,
+          observaciones  || null,
+          estado         || 'pendiente'
+      ]}
     );
 
     res.status(201).json({ id: result, mensaje: 'Atención registrada correctamente' });
@@ -77,16 +91,28 @@ router.put('/:id', async (req, res) => {
   try {
     const { idespecialista, idprofesor, idestudiante, fechahora, grado, seccion, nivelatencion, idmotivo, observaciones, estado } = req.body;
 
-    if (!idestudiante || !fechahora || !nivelatencion || !idmotivo) {
+    if (!idestudiante || !fechahora) {
       return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }
 
-    const [result] = await sequelize.query(
+    await sequelize.query(
       `UPDATE atenciones SET
         idespecialista=?, idprofesor=?, idestudiante=?, fechahora=?,
         grado=?, seccion=?, nivelatencion=?, idmotivo=?, observaciones=?, estado=?
-       WHERE idatencion=?`,
-      { replacements: [idespecialista || null, idprofesor || null, idestudiante, fechahora, grado || null, seccion || null, nivelatencion, idmotivo, observaciones || null, estado, req.params.id] }
+       WHERE id=?`,
+      { replacements: [
+          idespecialista || null,
+          idprofesor     || null,
+          idestudiante,
+          fechahora,
+          grado          || null,
+          seccion        || null,
+          nivelatencion  || 'moderado',
+          idmotivo       || 1,
+          observaciones  || null,
+          estado,
+          req.params.id
+      ]}
     );
 
     res.json({ mensaje: 'Atención actualizada correctamente' });
@@ -96,11 +122,11 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// ── DELETE cancelar atención ──
+// ── DELETE cerrar atención ──
 router.delete('/:id', async (req, res) => {
   try {
     await sequelize.query(
-      `UPDATE atenciones SET estado='cerrado' WHERE idatencion=?`,
+      `UPDATE atenciones SET estado='cerrado' WHERE id=?`,
       { replacements: [req.params.id] }
     );
     res.json({ mensaje: 'Atención cerrada correctamente' });

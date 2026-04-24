@@ -2,38 +2,41 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('atenciones', {
-      idatencion:     { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
+      id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true, allowNull: false },
       idespecialista: {
         type: Sequelize.INTEGER,
-        references: { model: 'colaboradores', key: 'idcolaborador' },
+        allowNull: true,
+        references: { model: 'colaboradores', key: 'id' },
         onUpdate: 'CASCADE',
         onDelete: 'SET NULL'
       },
-      idprofesor:     {
+      idprofesor: {
         type: Sequelize.INTEGER,
-        references: { model: 'colaboradores', key: 'idcolaborador' },
+        allowNull: true,
+        references: { model: 'colaboradores', key: 'id' },
         onUpdate: 'CASCADE',
         onDelete: 'SET NULL'
       },
-      idestudiante:   {
+      idestudiante: {
         type: Sequelize.INTEGER,
-        references: { model: 'estudiantes', key: 'idestudiante' },
+        allowNull: false,
+        references: { model: 'estudiantes', key: 'id' },
         onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+        onDelete: 'RESTRICT'
       },
-      fechahora:      { type: Sequelize.DATE },
-      grado:          { type: Sequelize.STRING(50) },
-      seccion:        { type: Sequelize.STRING(50) },
-      nivelatencion:  { type: Sequelize.ENUM('leve', 'moderado', 'grave'), allowNull: false },
-      idmotivo:       {
+      idmotivo: {
         type: Sequelize.INTEGER,
-        references: { model: 'motivosconsulta', key: 'idmotivo' },
+        allowNull: true,
+        references: { model: 'motivosconsulta', key: 'id' },
         onUpdate: 'CASCADE',
         onDelete: 'SET NULL'
       },
-      observaciones:  { type: Sequelize.TEXT },
-      estado:         { type: Sequelize.ENUM('activo', 'cerrado', 'derivado', 'pendiente'), defaultValue: 'pendiente' },
-      created_at:     { type: Sequelize.DATE, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }
+      fechahora:     { type: Sequelize.DATE,        allowNull: false },
+      grado:         { type: Sequelize.STRING(10),  allowNull: true },  // ← corregido de INTEGER a STRING
+      seccion:       { type: Sequelize.STRING(5),   allowNull: true },
+      nivelatencion: { type: Sequelize.STRING(20),  allowNull: true },
+      observaciones: { type: Sequelize.TEXT,        allowNull: true },
+      estado:        { type: Sequelize.STRING(20),  allowNull: true, defaultValue: 'pendiente' }
     });
   },
   async down(queryInterface) {

@@ -2,22 +2,23 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('colaboradores', {
-      idcolaborador: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
-      idpersona:     {
-        type: Sequelize.INTEGER,
-        references: { model: 'personas', key: 'idpersona' },
+      id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true, allowNull: false },
+      idpersona: {
+        type: Sequelize.INTEGER,        // ← corregido de BIGINT a INTEGER
+        allowNull: false,
+        references: { model: 'personas', key: 'id' },
         onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+        onDelete: 'RESTRICT'
       },
-      idrol:         {
+      idrol: {
         type: Sequelize.INTEGER,
-        references: { model: 'roles', key: 'idrol' },
+        allowNull: false,
+        references: { model: 'roles', key: 'id' },
         onUpdate: 'CASCADE',
-        onDelete: 'SET NULL'
+        onDelete: 'RESTRICT'
       },
-      usuario:       { type: Sequelize.STRING(50), unique: true, allowNull: false },
-      claveacceso:   { type: Sequelize.STRING(255), allowNull: false },
-      created_at:    { type: Sequelize.DATE, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }
+      usuario:     { type: Sequelize.STRING(50),  allowNull: false, unique: true },
+      claveacceso: { type: Sequelize.STRING(255), allowNull: false }
     });
   },
   async down(queryInterface) {

@@ -2,9 +2,8 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     await queryInterface.createTable('motivosconsulta', {
-      idmotivo:       { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
-      motivoconsulta: { type: Sequelize.STRING(200), allowNull: false },
-      created_at:     { type: Sequelize.DATE, defaultValue: Sequelize.literal('CURRENT_TIMESTAMP') }
+      id: { type: Sequelize.INTEGER, primaryKey: true, autoIncrement: true, allowNull: false },
+      motivoconsulta: { type: Sequelize.STRING(200), allowNull: false }  // ← corregido de BIGINT a STRING
     });
   },
   async down(queryInterface) {

@@ -179,7 +179,6 @@ function bloquearFechasPasadas(inputId) {
 
 // ═══════════════════════════════════════════════
 // RESTRICCIÓN FECHA NACIMIENTO — SECUNDARIA
-// Rango válido: 11 a 17 años cumplidos
 // ═══════════════════════════════════════════════
 function aplicarRestriccionFechaNac() {
   const el = document.getElementById('na-fechanac');
@@ -187,11 +186,9 @@ function aplicarRestriccionFechaNac() {
 
   const hoyDate = new Date();
 
-  // max: nació hace al menos 11 años (no puede ser menor de 11)
   const maxDate = new Date(hoyDate);
   maxDate.setFullYear(hoyDate.getFullYear() - 11);
 
-  // min: nació hace no más de 17 años (no puede tener más de 17)
   const minDate = new Date(hoyDate);
   minDate.setFullYear(hoyDate.getFullYear() - 17);
 
@@ -200,16 +197,54 @@ function aplicarRestriccionFechaNac() {
 }
 
 // ═══════════════════════════════════════════════
-// VALIDACIÓN DE HORARIO
+// SLOT DE 30 MIN — helper
 // ═══════════════════════════════════════════════
 function slotBase(ms) {
   return Math.floor(ms / DURACION_SESION_MS) * DURACION_SESION_MS;
 }
 
-async function validarHorarioUnico(fecha, hora, idAtencionExcluir = null) {
+// ═══════════════════════════════════════════════
+// VALIDACIÓN CRONOLÓGICA POR ESTUDIANTE
+// ═══════════════════════════════════════════════
+function validarCronologiaEstudiante(idestudiante, nuevaFecha, nuevaHora, idAtencionExcluir = null, atencionesOverride = null) {
+  const atenciones = atencionesOverride ?? store.atenciones;
+
+  const delEst = atenciones.filter(a => {
+    if (String(a.idestudiante) !== String(idestudiante)) return false;
+    if (a.estado === 'cerrado') return false;
+    // FIX: usar a.id en lugar de a.idatencion
+    if (idAtencionExcluir && String(a.id) === String(idAtencionExcluir)) return false;
+    return !!a.fechahora;
+  });
+
+  if (delEst.length === 0) return { ok: true };
+
+  const ultimaCita = delEst.reduce((max, a) => {
+    const t = new Date(a.fechahora).getTime();
+    return t > max.t ? { t, a } : max;
+  }, { t: 0, a: null });
+
+  const nuevaMs   = new Date(`${nuevaFecha}T${nuevaHora}:00`).getTime();
+  const ultimaMs  = ultimaCita.t;
+
+  if (nuevaMs <= ultimaMs) {
+    return {
+      ok: false,
+      ultimaFecha: fmtFecha(ultimaCita.a.fechahora),
+      ultimaHora:  fmtHora(ultimaCita.a.fechahora),
+    };
+  }
+
+  return { ok: true };
+}
+
+// ═══════════════════════════════════════════════
+// VALIDACIÓN DE HORARIO GLOBAL
+// ═══════════════════════════════════════════════
+async function validarHorarioUnico(fecha, hora, idAtencionExcluir = null, atencionesOverride = null) {
   let atenciones;
   try {
-    atenciones = await apiFetch(`${API}/atenciones`);
+    atenciones = atencionesOverride ?? await apiFetch(`${API}/atenciones`);
   } catch (err) {
     console.error('validarHorarioUnico: fallo al consultar API, se permite continuar', err);
     return true;
@@ -221,7 +256,8 @@ async function validarHorarioUnico(fecha, hora, idAtencionExcluir = null) {
   const choca = (atenciones || []).some(a => {
     if (!a.fechahora)           return false;
     if (a.estado === 'cerrado') return false;
-    if (idAtencionExcluir && String(a.idatencion) === String(idAtencionExcluir)) return false;
+    // FIX: usar a.id en lugar de a.idatencion
+    if (idAtencionExcluir && String(a.id) === String(idAtencionExcluir)) return false;
     const existSlot = slotBase(new Date(a.fechahora).getTime());
     return existSlot === nuevoSlot;
   });
@@ -253,7 +289,8 @@ function generarHorasDisponibles(fecha, idAtencionExcluir = null) {
       const ocupado = store.atenciones.some(a => {
         if (!a.fechahora)           return false;
         if (a.estado === 'cerrado') return false;
-        if (idAtencionExcluir && String(a.idatencion) === String(idAtencionExcluir)) return false;
+        // FIX: usar a.id en lugar de a.idatencion
+        if (idAtencionExcluir && String(a.id) === String(idAtencionExcluir)) return false;
         const existSlot = slotBase(new Date(a.fechahora).getTime());
         return existSlot === nuevoSlot;
       });
@@ -336,7 +373,8 @@ function actualizarSelectEstudiantes() {
     store.estudiantes.map(e => {
       const dni   = e.dni ? ` · DNI: ${e.dni}` : '';
       const label = `${e.codigomatricula || '—'} | ${e.nombres} ${e.apellidos}${dni}`;
-      return `<option value="${e.idestudiante}">${label}</option>`;
+      // FIX: usar e.id en lugar de e.idestudiante
+      return `<option value="${e.id}">${label}</option>`;
     }).join('');
 }
 
@@ -409,7 +447,12 @@ function mostrarModalSegundaCita(callback) {
 // ═══════════════════════════════════════════════
 // MODAL SEGUNDA CITA (formulario)
 // ═══════════════════════════════════════════════
-function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
+async function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
+  try {
+    const frescas = await apiFetch(`${API}/atenciones`);
+    store.atenciones = frescas || [];
+  } catch (_) {}
+
   let modal = document.getElementById('modal-form-segunda-cita');
   if (!modal) {
     modal = document.createElement('div');
@@ -463,6 +506,10 @@ function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
 
   modal.classList.add('open');
 
+  const btnGuardar = document.getElementById('btn-guardar-segunda');
+  const btnNuevo = btnGuardar.cloneNode(true);
+  btnGuardar.parentNode.replaceChild(btnNuevo, btnGuardar);
+
   document.getElementById('btn-guardar-segunda').onclick = async () => {
     const fecha  = document.getElementById('sc-fecha')?.value;
     const hora   = document.getElementById('sc-hora')?.value;
@@ -479,13 +526,19 @@ function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
       return;
     }
 
-    const disponible = await validarHorarioUnico(fecha, hora);
+    const disponible = await validarHorarioUnico(fecha, hora, null, store.atenciones);
     if (!disponible) {
       const libres = generarHorasDisponibles(fecha);
       const sugerencia = libres.length
         ? ` Próximo disponible: ${libres[0]}`
         : ' No hay horarios libres ese día.';
       toast(`❌ Horario ocupado.${sugerencia}`, 'warning');
+      return;
+    }
+
+    const cronOk = validarCronologiaEstudiante(idestudiante, fecha, hora, null, store.atenciones);
+    if (!cronOk.ok) {
+      toast(`❌ Debes agendar DESPUÉS de la última cita (${cronOk.ultimaFecha} ${cronOk.ultimaHora})`, 'warning');
       return;
     }
 
@@ -506,6 +559,7 @@ function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
       agregarActividad('teal', '📅', `Segunda cita registrada para <strong>${nombreCompleto}</strong>`, 'Ahora');
       toast(`✓ Segunda cita agendada para ${nombreCompleto}`);
       closeModal('modal-form-segunda-cita');
+
       await cargarDatos();
     } catch (err) {
       console.error(err);
@@ -553,7 +607,8 @@ function renderDashboard() {
     } else {
       apptEl.innerHTML = recientes.map(a => {
         const hora = fmtHora(a.fechahora);
-        return `<div class="appt-item" onclick="verAtencionDetalle(${a.idatencion})">
+        // FIX: usar a.id en lugar de a.idatencion
+        return `<div class="appt-item" onclick="verAtencionDetalle(${a.id})">
           <div class="appt-time"><div class="appt-hour">${hora}</div></div>
           <div class="appt-divider"></div>
           <div class="appt-avatar ${colorAvatar(a.paciente)}">${initials(a.paciente)}</div>
@@ -609,7 +664,7 @@ async function renderHistorial(filtro = '') {
   const tbody = document.getElementById('hist-tbody');
   if (!tbody) return;
 
-  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">Cargando...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:20px;color:var(--text-muted);">Cargando...</td></tr>';
 
   try {
     const lista = store.estudiantes.length > 0 ? store.estudiantes : await apiFetch(`${API}/estudiantes`);
@@ -627,12 +682,19 @@ async function renderHistorial(filtro = '') {
       : lista;
 
     if (filtrados.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">📭</div><div class="es-text">No se encontraron registros</div></div></td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="es-icon">📭</div><div class="es-text">No se encontraron registros</div></div></td></tr>';
       return;
     }
 
-    tbody.innerHTML = filtrados.map(p =>
-      `<tr class="hist-row" onclick="toggleHistorialPaciente(${p.idestudiante}, this)">
+    tbody.innerHTML = filtrados.map(p => {
+      // FIX: usar p.id en lugar de p.idestudiante
+      const atencionEst = store.atenciones.find(a => a.idestudiante == p.id);
+      const gradoMostrar   = p.grado   || atencionEst?.grado   || '—';
+      const seccionMostrar = p.seccion || atencionEst?.seccion || '';
+      const gradoSeccion   = gradoMostrar !== '—' ? `${gradoMostrar}${seccionMostrar ? ' ' + seccionMostrar : ''}` : '—';
+
+      // FIX: usar p.id en lugar de p.idestudiante
+      return `<tr class="hist-row" onclick="toggleHistorialPaciente(${p.id}, this)">
         <td>
           <div class="td-name">
             <div class="td-avatar ${colorAvatar(p.nombres+p.apellidos)}">${initials(p.nombres+' '+p.apellidos)}</div>
@@ -641,26 +703,27 @@ async function renderHistorial(filtro = '') {
         </td>
         <td>${p.dni || '—'}</td>
         <td>${p.telefono || '—'}</td>
+        <td>${gradoSeccion}</td>
         <td>${p.condicion || '—'}</td>
         <td><span class="appt-badge c-teal">${p.genero || '—'}</span></td>
         <td>${fmtFecha(p.fechanac)}</td>
         <td>
-          <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();toggleHistorialPaciente(${p.idestudiante}, this.closest('tr'))">
+          <button class="btn-secondary" style="font-size:11px;padding:4px 10px;" onclick="event.stopPropagation();toggleHistorialPaciente(${p.id}, this.closest('tr'))">
             Ver historial
           </button>
         </td>
       </tr>
-      <tr class="hist-detail-row" id="hist-detail-${p.idestudiante}" style="display:none;">
-        <td colspan="7" style="padding:0;">
-          <div class="hist-detail-panel" id="hist-detail-panel-${p.idestudiante}">
+      <tr class="hist-detail-row" id="hist-detail-${p.id}" style="display:none;">
+        <td colspan="8" style="padding:0;">
+          <div class="hist-detail-panel" id="hist-detail-panel-${p.id}">
             <div style="text-align:center;padding:16px;color:var(--text-muted);font-size:13px;">Cargando historial...</div>
           </div>
         </td>
-      </tr>`
-    ).join('');
+      </tr>`;
+    }).join('');
   } catch (err) {
     console.error('Error renderizando historial:', err);
-    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">⚠️</div><div class="es-text">Error cargando datos</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="es-icon">⚠️</div><div class="es-text">Error cargando datos</div></div></td></tr>';
   }
 }
 
@@ -685,7 +748,8 @@ async function cargarHistorialPaciente(id) {
   const panel = document.getElementById(`hist-detail-panel-${id}`);
   if (!panel) return;
 
-  const p = store.estudiantes.find(x => x.idestudiante == id);
+  // FIX: usar p.id en lugar de p.idestudiante
+  const p = store.estudiantes.find(x => x.id == id);
   if (!p) return;
 
   let atencionesEst = store.atenciones.filter(a => a.idestudiante == id);
@@ -697,6 +761,28 @@ async function cargarHistorialPaciente(id) {
   const motivoTexto = atencionesEst.length > 0
     ? (atencionesEst[0].motivoconsulta || atencionesEst[0].motivo || '—')
     : '—';
+
+  const gradoMostrar   = p.grado   || atencionesEst[0]?.grado   || '—';
+  const seccionMostrar = p.seccion || atencionesEst[0]?.seccion || '';
+
+  const contactosHtml = p.contactosEmergencia && p.contactosEmergencia.length > 0
+    ? `<div style="margin-top:16px;">
+        <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">
+          📞 Contactos de emergencia
+        </div>
+        <div style="display:grid;gap:8px;">
+          ${p.contactosEmergencia.map(c => `
+            <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;">
+              <div style="font-size:20px;">${c.parentesco === 'Madre' ? '👩' : c.parentesco === 'Padre' ? '👨' : '👤'}</div>
+              <div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${c.nombre}</div>
+                <div style="font-size:11px;color:var(--text-muted);">${c.parentesco} · ${c.celular}</div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>`
+    : '';
 
   panel.innerHTML = `
     <div class="hist-detail-content">
@@ -730,10 +816,16 @@ async function cargarHistorialPaciente(id) {
           <div class="hist-info-value">${fmtFecha(p.fechanac)}</div>
         </div>
         <div class="hist-info-block">
+          <div class="hist-info-label">Grado y Sección</div>
+          <div class="hist-info-value">${gradoMostrar !== '—' ? `${gradoMostrar}${seccionMostrar ? ' ' + seccionMostrar : ''}` : '—'}</div>
+        </div>
+        <div class="hist-info-block">
           <div class="hist-info-label">Condición</div>
           <div class="hist-info-value">${p.condicion || '—'}</div>
         </div>
       </div>
+
+      ${contactosHtml}
 
       <div style="margin-top:16px;">
         <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">
@@ -749,7 +841,7 @@ async function cargarHistorialPaciente(id) {
                     <div>
                       <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${fmtFecha(a.fechahora)} · ${fmtHora(a.fechahora)}</div>
                       <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">
-                        ${a.motivoconsulta || '—'} · ${a.grado || '—'}${a.seccion ? ' ' + a.seccion : ''}
+                        ${a.motivoconsulta || '—'} · ${a.grado || p.grado || '—'}${(a.seccion || p.seccion) ? ' ' + (a.seccion || p.seccion) : ''}
                       </div>
                     </div>
                   </div>
@@ -771,7 +863,8 @@ function filterHistorial() {
 }
 
 function verEstudiante(id) {
-  const p = store.estudiantes.find(x => x.idestudiante == id);
+  // FIX: usar x.id en lugar de x.idestudiante
+  const p = store.estudiantes.find(x => x.id == id);
   if (!p) return;
 
   const tituloEl = document.getElementById('mp-titulo');
@@ -812,18 +905,28 @@ function renderCitas() {
   const tbody = document.getElementById('citas-tbody');
   if (!tbody) return;
 
-  const base = store.atenciones.filter(a => a.estado !== 'cerrado');
-  const lista = citaFiltro === 'todas'
-    ? base
-    : store.atenciones.filter(a => a.estado === citaFiltro);
+  let lista;
+  if (citaFiltro === 'todas') {
+    lista = store.atenciones.filter(a => a.estado !== 'cerrado');
+  } else if (citaFiltro === 'cerrado') {
+    lista = store.atenciones.filter(a => a.estado === 'cerrado');
+  } else {
+    lista = store.atenciones.filter(a => a.estado === citaFiltro);
+  }
 
   if (lista.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="es-icon">📅</div><div class="es-text">No hay atenciones para mostrar</div></div></td></tr>`;
+    const msg = citaFiltro === 'cerrado'
+      ? 'No hay atenciones cerradas'
+      : 'No hay atenciones para mostrar';
+    tbody.innerHTML = `<tr><td colspan="8"><div class="empty-state"><div class="es-icon">📅</div><div class="es-text">${msg}</div></div></td></tr>`;
     return;
   }
 
+  const esCerradas = citaFiltro === 'cerrado';
+
   tbody.innerHTML = lista.map(a =>
-    `<tr id="atencion-row-${a.idatencion}">
+    // FIX: usar a.id en lugar de a.idatencion
+    `<tr id="atencion-row-${a.id}">
       <td>${fmtFecha(a.fechahora)}</td>
       <td style="font-weight:600;">${fmtHora(a.fechahora)}</td>
       <td>${a.motivoconsulta || '—'}</td>
@@ -840,10 +943,13 @@ function renderCitas() {
         </div>
       </td>
       <td>
-        <div class="td-actions">
-          ${a.estado !== 'activo' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--teal);border-color:var(--teal);" onclick="confirmarAtencion(${a.idatencion})">Confirmar</button>` : ''}
-          <button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--rose);border-color:var(--rose);" onclick="cerrarAtencion(${a.idatencion})">Cerrar</button>
-        </div>
+        ${esCerradas
+          ? `<span style="font-size:11px;color:var(--text-muted);font-style:italic;">Cerrada</span>`
+          : `<div class="td-actions">
+              ${a.estado !== 'activo' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--teal);border-color:var(--teal);" onclick="confirmarAtencion(${a.id})">Confirmar</button>` : ''}
+              <button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--rose);border-color:var(--rose);" onclick="cerrarAtencion(${a.id})">Cerrar</button>
+            </div>`
+        }
       </td>
     </tr>`
   ).join('');
@@ -856,7 +962,8 @@ function filterCitas(tipo) {
 
 async function confirmarAtencion(id) {
   try {
-    const atencion = store.atenciones.find(a => a.idatencion == id);
+    // FIX: usar a.id en lugar de a.idatencion
+    const atencion = store.atenciones.find(a => a.id == id);
     if (!atencion) return;
 
     await apiFetch(`${API}/atenciones/${id}`, {
@@ -874,28 +981,37 @@ async function confirmarAtencion(id) {
 }
 
 async function cerrarAtencion(id) {
-  if (!confirm('¿Cerrar esta atención? Se eliminará del listado.')) return;
+  if (!confirm('¿Cerrar esta atención? Se marcará como cerrada.')) return;
 
   try {
-    const atencion = store.atenciones.find(a => a.idatencion == id);
+    // FIX: usar a.id en lugar de a.idatencion
+    const atencion = store.atenciones.find(a => a.id == id);
     if (!atencion) return;
 
-    await apiFetch(`${API}/atenciones/${id}`, { method: 'DELETE' });
-
-    store.atenciones = store.atenciones.filter(a => a.idatencion != id);
-    const row = document.getElementById(`atencion-row-${id}`);
-    if (row) row.remove();
+    try {
+      await apiFetch(`${API}/atenciones/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ ...atencion, estado: 'cerrado' })
+      });
+      const idx = store.atenciones.findIndex(a => a.id == id);
+      if (idx !== -1) store.atenciones[idx].estado = 'cerrado';
+    } catch (_) {
+      await apiFetch(`${API}/atenciones/${id}`, { method: 'DELETE' });
+      store.atenciones = store.atenciones.filter(a => a.id != id);
+    }
 
     agregarActividad('rose', '🔒', `Atención de <strong>${atencion.paciente}</strong> cerrada`, 'Ahora');
+    renderCitas();
     renderDashboard();
-    toast('Atención cerrada y eliminada', 'warning');
+    toast('Atención cerrada correctamente', 'warning');
   } catch (err) {
     console.error('Error cerrando atención:', err);
   }
 }
 
 function verAtencionDetalle(id) {
-  const a = store.atenciones.find(x => x.idatencion == id);
+  // FIX: usar x.id en lugar de x.idatencion
+  const a = store.atenciones.find(x => x.id == id);
   if (!a) return;
   toast(`${a.paciente} · ${fmtFecha(a.fechahora)} ${fmtHora(a.fechahora)}`, 'info');
 }
@@ -920,13 +1036,19 @@ async function guardarCita() {
     return;
   }
 
-  const disponible = await validarHorarioUnico(fecha, hora);
+  const disponible = await validarHorarioUnico(fecha, hora, null, store.atenciones);
   if (!disponible) {
     const libres = generarHorasDisponibles(fecha);
     const sugerencia = libres.length
       ? ` Próximo disponible: ${libres[0]}`
       : ' No hay horarios libres ese día.';
     toast(`❌ Horario ocupado.${sugerencia}`, 'warning');
+    return;
+  }
+
+  const cronOk = validarCronologiaEstudiante(idestudiante, fecha, hora, null, store.atenciones);
+  if (!cronOk.ok) {
+    toast(`❌ Debes agendar DESPUÉS de la última cita del estudiante (${cronOk.ultimaFecha} ${cronOk.ultimaHora})`, 'warning');
     return;
   }
 
@@ -990,6 +1112,100 @@ document.addEventListener('DOMContentLoaded', function () {
 // ═══════════════════════════════════════════════
 // NUEVA ATENCIÓN — PASO A PASO
 // ═══════════════════════════════════════════════
+function buildContactosEmergenciaHTML() {
+  return `
+    <div style="grid-column:1/-1;margin-top:8px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+        <div style="font-size:13px;font-weight:600;color:var(--text-primary);display:flex;align-items:center;gap:6px;">
+          📞 Contactos de emergencia
+          <span style="font-size:11px;font-weight:400;color:var(--text-muted);">(Opcional — máx. 3)</span>
+        </div>
+        <button type="button" class="btn-secondary" id="btn-add-contacto"
+          style="font-size:11px;padding:4px 12px;display:flex;align-items:center;gap:4px;"
+          onclick="agregarContactoEmergencia()">
+          + Agregar
+        </button>
+      </div>
+      <div id="contactos-lista" style="display:flex;flex-direction:column;gap:8px;"></div>
+    </div>`;
+}
+
+function agregarContactoEmergencia() {
+  const lista = document.getElementById('contactos-lista');
+  if (!lista) return;
+
+  const existentes = lista.querySelectorAll('.contacto-row');
+  if (existentes.length >= 3) {
+    toast('Máximo 3 contactos de emergencia', 'warning');
+    return;
+  }
+
+  const idx = Date.now();
+  const row = document.createElement('div');
+  row.className = 'contacto-row';
+  row.dataset.idx = idx;
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:end;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;';
+
+  row.innerHTML = `
+    <div class="form-group" style="margin:0;">
+      <label style="font-size:11px;">Nombre completo</label>
+      <input type="text" class="ce-nombre" placeholder="Ej: María García" style="font-size:13px;">
+    </div>
+    <div class="form-group" style="margin:0;">
+      <label style="font-size:11px;">Parentesco</label>
+      <select class="ce-parentesco" style="font-size:13px;">
+        <option value="">-- Parentesco --</option>
+        <option value="Madre">Madre</option>
+        <option value="Padre">Padre</option>
+        <option value="Apoderado">Apoderado</option>
+        <option value="Hermano/a">Hermano/a</option>
+        <option value="Tío/a">Tío/a</option>
+        <option value="Abuelo/a">Abuelo/a</option>
+        <option value="Otro">Otro familiar</option>
+      </select>
+    </div>
+    <div class="form-group" style="margin:0;">
+      <label style="font-size:11px;">Celular</label>
+      <input type="text" class="ce-celular" placeholder="9XXXXXXXX" maxlength="9"
+        style="font-size:13px;"
+        oninput="this.value=this.value.replace(/\\D/g,'').slice(0,9)">
+    </div>
+    <button type="button"
+      style="background:none;border:none;cursor:pointer;color:var(--rose);font-size:18px;padding:0 4px;align-self:center;margin-top:14px;"
+      onclick="this.closest('.contacto-row').remove();actualizarBtnAgregarContacto()"
+      title="Eliminar contacto">✕</button>`;
+
+  lista.appendChild(row);
+  actualizarBtnAgregarContacto();
+}
+
+function actualizarBtnAgregarContacto() {
+  const lista = document.getElementById('contactos-lista');
+  const btn   = document.getElementById('btn-add-contacto');
+  if (!lista || !btn) return;
+  const count = lista.querySelectorAll('.contacto-row').length;
+  btn.disabled = count >= 3;
+  btn.style.opacity = count >= 3 ? '0.4' : '1';
+}
+
+function leerContactosEmergencia() {
+  const lista = document.getElementById('contactos-lista');
+  if (!lista) return [];
+
+  const contactos = [];
+  lista.querySelectorAll('.contacto-row').forEach(row => {
+    const nombre     = row.querySelector('.ce-nombre')?.value?.trim() || '';
+    const parentesco = row.querySelector('.ce-parentesco')?.value || '';
+    const celular    = row.querySelector('.ce-celular')?.value?.trim() || '';
+
+    if (nombre || celular) {
+      contactos.push({ nombre, parentesco, celular });
+    }
+  });
+
+  return contactos;
+}
+
 function resetNuevaAtencion() {
   ['na-nombres','na-apellidos','na-tipo-doc','na-telefono','na-fechanac',
    'na-condicion','na-motivo-texto','na-observaciones']
@@ -1029,9 +1245,15 @@ function resetNuevaAtencion() {
 
   buildGradoSelect('na-grado');
   buildSeccionSelect('na-seccion');
-
-  // ✅ Restricción de fecha de nacimiento para secundaria (11–17 años)
   aplicarRestriccionFechaNac();
+
+  const contactosWrap = document.getElementById('na-contactos-emergencia-wrap');
+  if (contactosWrap) {
+    contactosWrap.innerHTML = buildContactosEmergenciaHTML();
+  }
+
+  const lista = document.getElementById('contactos-lista');
+  if (lista) lista.innerHTML = '';
 }
 
 function calcularEdad(fechaNacStr) {
@@ -1073,7 +1295,6 @@ function validarPaso1() {
     }
   });
 
-  // Validación DNI: exactamente 8 dígitos
   const dniEl = document.getElementById('na-doc-numero');
   const valorDNI = (dniEl?.value || '').trim();
   if (!/^\d{8}$/.test(valorDNI)) {
@@ -1083,7 +1304,6 @@ function validarPaso1() {
     if (dniEl) dniEl.style.border = '';
   }
 
-  // ✅ Validación fecha de nacimiento: rango secundaria (11–17 años)
   const fechaNacEl  = document.getElementById('na-fechanac');
   const fechaNacVal = (fechaNacEl?.value || '').trim();
   if (fechaNacVal) {
@@ -1095,6 +1315,21 @@ function validarPaso1() {
     } else {
       if (fechaNacEl) fechaNacEl.style.border = '';
     }
+  }
+
+  const lista = document.getElementById('contactos-lista');
+  if (lista) {
+    lista.querySelectorAll('.contacto-row').forEach(row => {
+      const celEl = row.querySelector('.ce-celular');
+      const cel   = celEl?.value?.trim() || '';
+      if (cel && !/^\d{9}$/.test(cel)) {
+        celEl.style.border = '2px solid red';
+        toast('⚠️ El celular de emergencia debe tener 9 dígitos', 'warning');
+        valido = false;
+      } else if (celEl) {
+        celEl.style.border = '';
+      }
+    });
   }
 
   if (!valido) {
@@ -1120,7 +1355,7 @@ function irPaso2() {
 
   document.getElementById('paso2-subtitulo').textContent =
     `Estudiante: ${nombres} ${apellidos} · DNI: ${dni}`;
-
+    
   // Actualizar horas disponibles para la fecha actual al entrar al paso 2
   const fechaEl = document.getElementById('na-fecha');
   if (fechaEl) actualizarHorasSelect('na-hora', fechaEl.value);
@@ -1143,9 +1378,7 @@ function volverPaso1() {
 }
 
 // ═══════════════════════════════════════════════
-// NUEVA ATENCIÓN — GUARDAR (CORREGIDO)
-// Guarda estudiante + atención en la API,
-// ya no usa localStorage.
+// NUEVA ATENCIÓN — GUARDAR
 // ═══════════════════════════════════════════════
 async function guardarNuevaAtencion() {
 
@@ -1170,7 +1403,7 @@ async function guardarNuevaAtencion() {
     return;
   }
 
-  const disponible = await validarHorarioUnico(fecha, hora);
+  const disponible = await validarHorarioUnico(fecha, hora, null, store.atenciones);
   if (!disponible) {
     const libres = generarHorasDisponibles(fecha);
     const sugerencia = libres.length
@@ -1191,8 +1424,9 @@ async function guardarNuevaAtencion() {
   const nivel     = document.getElementById('na-nivel')?.value || 'moderado';
   const obs       = document.getElementById('na-observaciones')?.value?.trim();
 
+  const contactosEmergencia = leerContactosEmergencia();
+
   try {
-    // 1️⃣ Buscar si el estudiante ya existe (por DNI o nombre completo)
     let idestudiante;
     const estudiantesActuales = await apiFetch(`${API}/estudiantes`);
     const existente = (estudiantesActuales || []).find(e =>
@@ -1201,9 +1435,24 @@ async function guardarNuevaAtencion() {
     );
 
     if (existente) {
-      idestudiante = existente.idestudiante;
+      // FIX: usar existente.id en lugar de existente.idestudiante
+      idestudiante = existente.id;
+
+      const cronOk = validarCronologiaEstudiante(idestudiante, fecha, hora, null, store.atenciones);
+      if (!cronOk.ok) {
+        toast(`❌ El alumno ya tiene una cita posterior (${cronOk.ultimaFecha} ${cronOk.ultimaHora}). Agendarla después.`, 'warning');
+        return;
+      }
+
+      if (contactosEmergencia.length > 0) {
+        try {
+          await apiFetch(`${API}/estudiantes/${idestudiante}`, {
+            method: 'PUT',
+            body: JSON.stringify({ ...existente, contactosEmergencia })
+          });
+        } catch (_) {}
+      }
     } else {
-      // Crear nuevo estudiante
       const nuevoEst = await apiFetch(`${API}/estudiantes`, {
         method: 'POST',
         body: JSON.stringify({
@@ -1216,12 +1465,13 @@ async function guardarNuevaAtencion() {
           grado,
           seccion,
           condicion: 'regular',
+          contactosEmergencia,
         })
       });
-      idestudiante = nuevoEst.idestudiante;
+      // FIX: usar nuevoEst.id en lugar de nuevoEst.idestudiante
+      idestudiante = nuevoEst.id;
     }
 
-    // 2️⃣ Resolver idmotivo
     let idmotivo = 1;
     try {
       const motivos = await apiFetch(`${API}/motivosconsulta`);
@@ -1231,7 +1481,6 @@ async function guardarNuevaAtencion() {
       idmotivo = encontrado ? encontrado.idmotivo : (motivos?.[0]?.idmotivo || 1);
     } catch (_) {}
 
-    // 3️⃣ Registrar la atención
     const fechahora = `${fecha}T${hora}:00`;
     await apiFetch(`${API}/atenciones`, {
       method: 'POST',
@@ -1248,10 +1497,8 @@ async function guardarNuevaAtencion() {
     agregarActividad('purple', '📝', `Nueva atención: <strong>${nombres} ${apellidos}</strong>`, 'Ahora');
     toast(`✅ Atención registrada para ${nombres} ${apellidos}`);
 
-    // 4️⃣ Recargar datos globales
     await cargarDatos();
 
-    // 5️⃣ Preguntar si agendar segunda cita
     mostrarModalSegundaCita((quiere) => {
       if (quiere) {
         abrirFormularioSegundaCita(idestudiante, `${nombres} ${apellidos}`);
@@ -1466,7 +1713,8 @@ function performGlobalSearch(q, searchResultsEl) {
   }
 
   searchResultsEl.innerHTML = res.map(p =>
-    `<div class="search-result-item" onclick="verEstudiante(${p.idestudiante})">
+    // FIX: usar p.id en lugar de p.idestudiante
+    `<div class="search-result-item" onclick="verEstudiante(${p.id})">
       <div class="td-avatar ${colorAvatar(p.nombres+p.apellidos)}" style="width:28px;height:28px;font-size:10px;">${initials(p.nombres+' '+p.apellidos)}</div>
       <div>
         <div>${p.nombres} ${p.apellidos}</div>
@@ -1687,7 +1935,8 @@ function renderCalendario() {
 function sincronizarAtencionesAlCalendario() {
   store.atenciones.forEach(a => {
     if (!a.fechahora) return;
-    const key    = `atencion_${a.idatencion}`;
+    // FIX: usar a.id en lugar de a.idatencion
+    const key    = `atencion_${a.id}`;
     const existe = calEventos.find(e => e.key === key);
     if (!existe) {
       const dt   = new Date(a.fechahora);
@@ -1951,16 +2200,6 @@ document.addEventListener('DOMContentLoaded', function () {
     telefonoInput.addEventListener('input', (e) => {
       e.target.value = e.target.value.replace(/\D/g, '').slice(0, 9);
     });
-  }
-
-  const Validators = {
-    dni:       v => /^[0-9]{8}$/.test(v.trim()),
-    ce:        v => /^[a-zA-Z0-9]{9,12}$/.test(v.trim()),
-    pasaporte: v => /^[a-zA-Z0-9]{6,12}$/.test(v.trim())
-  };
-
-  function validarDocumento(tipo, valor) {
-    return Validators[tipo] ? Validators[tipo](valor) : false;
   }
 
   buildSchedule();
