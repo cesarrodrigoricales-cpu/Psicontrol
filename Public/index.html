@@ -73,20 +73,38 @@
       </span>
       Reportes
     </div>
-     <div class="nav-item" data-page="calendario">
-          <span class="nav-icon">
-         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" 
-              stroke="currentColor" stroke-width="2" 
-              stroke-linecap="round" stroke-linejoin="round">
-           <rect x="3" y="4" width="18" height="18" rx="2"></rect>
-           <line x1="16" y1="2" x2="16" y2="6"></line>
-           <line x1="8" y1="2" x2="8" y2="6"></line>
-           <line x1="3" y1="10" x2="21" y2="10"></line>
-         </svg>
-       </span>
-       <span class="nav-text">Calendario</span>
-     </div>
-   </div>
+
+    <div class="nav-item" data-page="calendario">
+      <span class="nav-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      </span>
+      <span class="nav-text">Calendario</span>
+    </div>
+
+    <!-- NUEVO: Historial de años anteriores -->
+    <div class="nav-item" data-page="historial-anios">
+      <span class="nav-icon">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </span>
+      Historial de años
+    </div>
+
+    <!-- NUEVO: SIAGIE -->
+    <div class="nav-item" data-page="siagie">
+      <span class="nav-icon">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </span>
+      SIAGIE
+    </div>
 
     <div class="nav-label" style="margin-top:20px;">Sistema</div>
 
@@ -161,10 +179,17 @@
           <div class="page-title">Panel de control</div>
           <div class="page-subtitle" id="fecha-hoy">Cargando...</div>
         </div>
-        <button class="btn-primary" onclick="navigateTo('nuevo')">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Nueva atención
-        </button>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <!-- BOTÓN IR A PRIMARIA -->
+          <a href="/Public/primaria/index.html" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:9px;background:#EEEDFE;color:#534AB7;font-size:13px;font-weight:600;text-decoration:none;border:1.5px solid #CECBF6;transition:all .15s;" onmouseover="this.style.background='#CECBF6'" onmouseout="this.style.background='#EEEDFE'">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Ir a Primaria
+          </a>
+          <button class="btn-primary" onclick="navigateTo('nuevo')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Nueva atención
+          </button>
+        </div>
       </div>
 
       <!-- STATS -->
@@ -352,7 +377,6 @@
         </div>
       </div>
 
-      <!-- PASO INDICADOR -->
       <div class="card">
         <div style="padding:20px 22px;display:flex;align-items:center;">
           <div class="paso-item active" id="paso-ind-1">
@@ -367,7 +391,6 @@
         </div>
       </div>
 
-      <!-- PASO 1 -->
       <div class="card" id="paso-1">
         <div class="card-header">
           <div>
@@ -385,12 +408,12 @@
             <input type="text" id="na-apellidos" placeholder="Ej: García López" required>
           </div>
           <div class="form-group">
-         <label>Tipo de documento</label>
-             <select id="na-tipo-doc">
+            <label>Tipo de documento</label>
+            <select id="na-tipo-doc">
               <option value="dni">DNI (Perú)</option>
               <option value="ce">Carnet de extranjería</option>
-          </select>
-             <label>Número de documento</label>
+            </select>
+            <label>Número de documento</label>
             <input type="text" id="na-doc-numero" autocomplete="off">
           </div>
           <div class="form-group">
@@ -424,13 +447,10 @@
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn-primary" onclick="irPaso2()">
-            Continuar → Primera sesión
-          </button>
+          <button class="btn-primary" onclick="irPaso2()">Continuar → Primera sesión</button>
         </div>
       </div>
 
-      <!-- PASO 2 -->
       <div class="card" id="paso-2" style="display:none;">
         <div class="card-header">
           <div>
@@ -504,36 +524,223 @@
         </div>
       </div>
     </div><!-- /page-reportes -->
-<!-- ══════════ CALENDARIO ══════════ -->
-<div class="page" id="page-calendario"></div>
 
-<!-- ══════════ 404 ══════════ -->
-<div class="page" id="page-404">
-  <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:2rem 1rem;">
-    
-    <div style="width:80px;height:80px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;">
-      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-      </svg>
-    </div>
+    <!-- ══════════ CALENDARIO ══════════ -->
+    <div class="page" id="page-calendario"></div>
 
-    <div style="font-size:72px;font-weight:600;color:#534AB7;line-height:1;letter-spacing:-2px;margin-bottom:0.5rem;">404</div>
+    <!-- ══════════ HISTORIAL DE AÑOS ANTERIORES ══════════ -->
+    <div class="page" id="page-historial-anios">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Historial de años anteriores</div>
+          <div class="page-subtitle">Registro histórico de atenciones psicológicas por año escolar</div>
+        </div>
+        <button class="btn-primary" onclick="exportarAnio()">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Exportar año
+        </button>
+      </div>
 
-    <div style="display:flex;gap:6px;margin-bottom:1.5rem;">
-      <div style="width:7px;height:7px;border-radius:50%;background:#AFA9EC;"></div>
-      <div style="width:7px;height:7px;border-radius:50%;background:#534AB7;"></div>
-      <div style="width:7px;height:7px;border-radius:50%;background:#AFA9EC;"></div>
-    </div>
+      <!-- Selector de año -->
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-header"><div class="card-title">Seleccionar año escolar</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;padding:0 22px 18px;">
+          <button class="btn-secondary" id="anio-btn-2025" onclick="seleccionarAnio(2025)" style="font-weight:700;background:#EEEDFE;color:#534AB7;border-color:#CECBF6;">2025</button>
+          <button class="btn-secondary" id="anio-btn-2024" onclick="seleccionarAnio(2024)">2024</button>
+          <button class="btn-secondary" id="anio-btn-2023" onclick="seleccionarAnio(2023)">2023</button>
+          <button class="btn-secondary" id="anio-btn-2022" onclick="seleccionarAnio(2022)">2022</button>
+          <button class="btn-secondary" id="anio-btn-2021" onclick="seleccionarAnio(2021)">2021</button>
+          <button class="btn-secondary" id="anio-btn-2020" onclick="seleccionarAnio(2020)">2020</button>
+        </div>
+      </div>
 
-    <div style="font-size:18px;font-weight:600;color:var(--text-primary);margin-bottom:0.4rem;">Página no encontrada</div>
-    <div style="font-size:14px;color:var(--text-secondary);margin-bottom:2rem;max-width:300px;line-height:1.6;">
-      La sección que buscas no existe o fue movida. Vuelve al inicio para continuar.
-    </div>
+      <!-- Resumen del año -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:18px;" id="anio-stats"></div>
 
-    <button class="btn-primary" onclick="navigateTo('dashboard')" style="display:inline-flex;align-items:center;gap:8px;">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-      Volver al inicio
-    </button>
+      <!-- Gráfico por mes -->
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-header">
+          <div class="card-title" id="anio-chart-title">Atenciones por mes — 2025</div>
+        </div>
+        <div style="padding:16px 22px 22px;" id="anio-chart"></div>
+      </div>
+
+      <!-- Tabla de casos -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" id="anio-tabla-title">Casos registrados — 2025</div>
+          <input type="text" class="filter-input" placeholder="Buscar por nombre o motivo..." oninput="filtrarAnio(this.value)">
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);font-style:italic;padding:0 22px 8px;">Los datos históricos son de solo lectura.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Estudiante</th>
+                <th>DNI</th>
+                <th>Grado</th>
+                <th>Motivo</th>
+                <th>Nivel</th>
+                <th>Fecha</th>
+                <th>Estado final</th>
+              </tr>
+            </thead>
+            <tbody id="anio-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div><!-- /page-historial-anios -->
+
+
+    <!-- ══════════ SIAGIE ══════════ -->
+    <div class="page" id="page-siagie">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Integración SIAGIE</div>
+          <div class="page-subtitle">Sistema de Información de Apoyo a la Gestión de la IE — MINEDU</div>
+        </div>
+        <button class="btn-primary" onclick="sincronizarSiagie()">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Sincronizar ahora
+        </button>
+      </div>
+
+      <!-- Header azul SIAGIE -->
+      <div style="display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,#1a56a4,#0d3b7a);border-radius:12px;padding:18px 24px;margin-bottom:18px;color:#fff;">
+        <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px 16px;font-size:18px;font-weight:800;letter-spacing:1px;">SIAGIE</div>
+        <div>
+          <div style="font-size:15px;font-weight:700;">Ministerio de Educación — Perú</div>
+          <div style="font-size:12px;opacity:.75;margin-top:2px;">Conectado al módulo de estudiantes activos</div>
+        </div>
+        <div style="margin-left:auto;text-align:right;">
+          <div style="font-size:11px;opacity:.7;">Última sincronización</div>
+          <div style="font-size:13px;font-weight:700;" id="siagie-sync-time">—</div>
+        </div>
+      </div>
+
+      <!-- Módulos -->
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-header">
+          <div class="card-title">Módulos disponibles</div>
+          <div class="card-meta">Haz clic en un módulo para importar sus datos</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;padding:0 22px 22px;">
+          <div onclick="toast('📥 Importando nómina de matrícula...')" style="border:1.5px solid #e0e0e0;border-radius:11px;padding:16px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#1a56a4'" onmouseout="this.style.borderColor='#e0e0e0'">
+            <div style="font-size:22px;margin-bottom:8px;">📋</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Nómina de matrícula</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Estudiantes matriculados por grado y sección</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px;background:#EAF3DE;color:#3B6D11;">● Sincronizado</div>
+          </div>
+          <div onclick="toast('📥 Importando asistencia...')" style="border:1.5px solid #e0e0e0;border-radius:11px;padding:16px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#1a56a4'" onmouseout="this.style.borderColor='#e0e0e0'">
+            <div style="font-size:22px;margin-bottom:8px;">📅</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Asistencia escolar</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Registros de asistencia diaria por alumno</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px;background:#EAF3DE;color:#3B6D11;">● Sincronizado</div>
+          </div>
+          <div onclick="toast('📥 Importando calificaciones...')" style="border:1.5px solid #e0e0e0;border-radius:11px;padding:16px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#1a56a4'" onmouseout="this.style.borderColor='#e0e0e0'">
+            <div style="font-size:22px;margin-bottom:8px;">📊</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Calificaciones</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Notas y evaluaciones por bimestre</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px;background:#FAEEDA;color:#854F0B;">⏳ Pendiente</div>
+          </div>
+          <div onclick="toast('📥 Importando apoderados...')" style="border:1.5px solid #e0e0e0;border-radius:11px;padding:16px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#1a56a4'" onmouseout="this.style.borderColor='#e0e0e0'">
+            <div style="font-size:22px;margin-bottom:8px;">👨‍👩‍👧</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Apoderados</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Información de padres y tutores</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px;background:#EAF3DE;color:#3B6D11;">● Sincronizado</div>
+          </div>
+          <div onclick="toast('⚠ Error al conectar con módulo de traslados')" style="border:1.5px solid #e0e0e0;border-radius:11px;padding:16px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#1a56a4'" onmouseout="this.style.borderColor='#e0e0e0'">
+            <div style="font-size:22px;margin-bottom:8px;">🔄</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Traslados y retiros</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Movimiento de estudiantes entre IE</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px;background:#FCEBEB;color:#A32D2D;">✗ Error</div>
+          </div>
+          <div onclick="toast('📥 Importando plana docente...')" style="border:1.5px solid #e0e0e0;border-radius:11px;padding:16px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#1a56a4'" onmouseout="this.style.borderColor='#e0e0e0'">
+            <div style="font-size:22px;margin-bottom:8px;">👩‍🏫</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Plana docente</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Profesores asignados por grado y área</div>
+            <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px;background:#EAF3DE;color:#3B6D11;">● Sincronizado</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones -->
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-header"><div class="card-title">Acciones de importación</div></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 22px 22px;">
+          <button class="btn-primary" onclick="toast('📥 Importando estudiantes desde SIAGIE...')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
+            Importar estudiantes
+          </button>
+          <button class="btn-secondary" onclick="toast('🔄 Actualizando nómina desde SIAGIE...')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Actualizar nómina
+          </button>
+          <button class="btn-secondary" onclick="toast('📤 Exportando informes al SIAGIE...')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+            Exportar informes
+          </button>
+          <button class="btn-secondary" onclick="toast('🔗 Verificando conexión con SIAGIE...')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            Verificar conexión
+          </button>
+        </div>
+      </div>
+
+      <!-- Configuración de conexión -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Configuración de conexión</div>
+          <div class="card-meta">Credenciales de acceso al sistema SIAGIE</div>
+        </div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Código modular de la IE</label>
+            <input type="text" id="siagie-codigo" placeholder="Ej: 0500123">
+          </div>
+          <div class="form-group">
+            <label>Usuario SIAGIE</label>
+            <input type="text" id="siagie-usuario" placeholder="usuario@minedu.gob.pe">
+          </div>
+          <div class="form-group">
+            <label>Contraseña</label>
+            <input type="password" id="siagie-pass" placeholder="••••••••">
+          </div>
+          <div class="form-group">
+            <label>Frecuencia de sincronización</label>
+            <select id="siagie-freq">
+              <option value="manual">Manual</option>
+              <option value="diaria" selected>Diaria (8:00 AM)</option>
+              <option value="semanal">Semanal (lunes)</option>
+              <option value="mensual">Mensual</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button class="btn-secondary" onclick="toast('🔗 Verificando credenciales...')">Probar conexión</button>
+          <button class="btn-primary" onclick="toast('✅ Configuración SIAGIE guardada')">Guardar configuración</button>
+        </div>
+      </div>
+    </div><!-- /page-siagie -->
+
+
+    <!-- ══════════ 404 ══════════ -->
+    <div class="page" id="page-404">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:2rem 1rem;">
+        <div style="width:80px;height:80px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
+        </div>
+        <div style="font-size:72px;font-weight:600;color:#534AB7;line-height:1;letter-spacing:-2px;margin-bottom:0.5rem;">404</div>
+        <div style="font-size:18px;font-weight:600;color:var(--text-primary);margin-bottom:0.4rem;">Página no encontrada</div>
+        <div style="font-size:14px;color:var(--text-secondary);margin-bottom:2rem;max-width:300px;line-height:1.6;">La sección que buscas no existe o fue movida.</div>
+        <button class="btn-primary" onclick="navigateTo('dashboard')" style="display:inline-flex;align-items:center;gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Volver al inicio
+        </button>
+      </div>
+    </div><!-- /page-404 -->
 
     <!-- ══════════ CONFIGURACIÓN ══════════ -->
     <div class="page" id="page-config">
@@ -596,10 +803,7 @@
 </div><!-- /main -->
 
 
-
-<!-- ══════════════════════════════════════════
-     MODAL — NUEVA SESIÓN (para estudiante existente)
-══════════════════════════════════════════ -->
+<!-- MODAL — NUEVA SESIÓN -->
 <div class="modal-overlay" id="modal-cita">
   <div class="modal">
     <div class="modal-header">
@@ -676,9 +880,7 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════
-     MODAL — VER ESTUDIANTE
-══════════════════════════════════════════ -->
+<!-- MODAL — VER ESTUDIANTE -->
 <div class="modal-overlay" id="modal-paciente">
   <div class="modal">
     <div class="modal-header">
@@ -689,10 +891,7 @@
   </div>
 </div>
 
-  </div>
-</div>
-
-<!-- TOAST CONTAINER -->
+<!-- TOAST -->
 <div class="toast-container" id="toast-container"></div>
 
 <!-- Canvas oculto para PDF -->
@@ -702,5 +901,7 @@
 <script src="script.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+
 </body>
 </html>
