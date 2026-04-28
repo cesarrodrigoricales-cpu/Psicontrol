@@ -9,9 +9,7 @@
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════
-     SIDEBAR
-══════════════════════════════════════════ -->
+<!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="sidebar-logo">
     <div class="logo-tag">Sistema</div>
@@ -133,9 +131,7 @@
   </div>
 </aside>
 
-<!-- ══════════════════════════════════════════
-     MAIN
-══════════════════════════════════════════ -->
+<!-- MAIN -->
 <div class="main">
 
   <!-- TOPBAR -->
@@ -169,10 +165,10 @@
     </button>
   </div>
 
-  <!-- ═══ CONTENT ═══ -->
+  <!-- CONTENT  -->
   <div class="content">
 
-    <!-- ══════════ DASHBOARD ══════════ -->
+    <!-- DASHBOARD -->
     <div class="page active" id="page-dashboard">
       <div class="page-header">
         <div>
@@ -180,7 +176,6 @@
           <div class="page-subtitle" id="fecha-hoy">Cargando...</div>
         </div>
         <div style="display:flex;gap:10px;align-items:center;">
-          <!-- BOTÓN IR A PRIMARIA -->
           <a href="/Public/primaria/index.html" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:9px;background:#EEEDFE;color:#534AB7;font-size:13px;font-weight:600;text-decoration:none;border:1.5px solid #CECBF6;transition:all .15s;" onmouseover="this.style.background='#CECBF6'" onmouseout="this.style.background='#EEEDFE'">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             Ir a Primaria
@@ -284,7 +279,7 @@
     </div><!-- /page-dashboard -->
 
 
-    <!-- ══════════ HISTORIAL ══════════ -->
+    <!-- HISTORIAL   -->
     <div class="page" id="page-historial">
       <div class="page-header">
         <div>
@@ -322,7 +317,7 @@
     </div><!-- /page-historial -->
 
 
-    <!-- ══════════ ATENCIONES ══════════ -->
+    <!-- ATENCIONES -->
     <div class="page" id="page-citas">
       <div class="page-header">
         <div>
@@ -368,7 +363,7 @@
     </div><!-- /page-citas -->
 
 
-    <!-- ══════════ NUEVA ATENCIÓN ══════════ -->
+    <!-- NUEVA ATENCIÓN  -->
     <div class="page" id="page-nuevo">
       <div class="page-header">
         <div>
@@ -498,7 +493,7 @@
     </div><!-- /page-nuevo -->
 
 
-    <!-- ══════════ REPORTES ══════════ -->
+    <!-- REPORTES  -->
     <div class="page" id="page-reportes">
       <div class="page-header">
         <div>
@@ -525,10 +520,10 @@
       </div>
     </div><!-- /page-reportes -->
 
-    <!-- ══════════ CALENDARIO ══════════ -->
+    <!--  CALENDARIO  -->
     <div class="page" id="page-calendario"></div>
 
-    <!-- ══════════ HISTORIAL DE AÑOS ANTERIORES ══════════ -->
+    <!-- HISTORIAL DE AÑOS ANTERIORES -->
     <div class="page" id="page-historial-anios">
       <div class="page-header">
         <div>
@@ -592,7 +587,7 @@
     </div><!-- /page-historial-anios -->
 
 
-    <!-- ══════════ SIAGIE ══════════ -->
+    <!-- SIAGIE  -->
     <div class="page" id="page-siagie">
       <div class="page-header">
         <div>
@@ -724,7 +719,7 @@
     </div><!-- /page-siagie -->
 
 
-    <!-- ══════════ 404 ══════════ -->
+    <!-- 404  -->
     <div class="page" id="page-404">
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:2rem 1rem;">
         <div style="width:80px;height:80px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;">
@@ -742,7 +737,7 @@
       </div>
     </div><!-- /page-404 -->
 
-    <!-- ══════════ CONFIGURACIÓN ══════════ -->
+    <!-- CONFIGURACIÓN  -->
     <div class="page" id="page-config">
       <div class="page-header">
         <div>
@@ -764,7 +759,7 @@
           </div>
           <div class="form-group">
             <label>Teléfono de contacto</label>
-            <input type="tel" id="cfg-tel" placeholder="Ej: 01 234 5678">
+            <input type="tel" id="cfg-tel" placeholder="Ej: 01 234 5678" required  maxlength="9">
           </div>
           <div class="form-group">
             <label>Correo electrónico</label>
@@ -826,7 +821,7 @@
           <label>Tipo de sesión</label>
           <select id="mc-tipo">
             <option>Sesión de seguimiento</option>
-            <option>Evaluación psicológica</option>
+            <option>Atencion psicológica</option>
             <option>Terapia cognitiva</option>
             <option>Terapia familiar</option>
           </select>
@@ -856,17 +851,28 @@
             <option value="alta">🔴 Grave</option>
           </select>
         </div>
-        <div class="form-group">
-          <label>Grado y sección</label>
-          <select id="mc-grado">
-            <option value="">-- Selecciona --</option>
-            <option>1° A</option><option>1° B</option><option>1° C</option><option>1° D</option><option>1° E</option>
-            <option>2° A</option><option>2° B</option><option>2° C</option><option>2° D</option><option>2° E</option>
-            <option>3° A</option><option>3° B</option><option>3° C</option><option>3° D</option><option>3° E</option>
-            <option>4° A</option><option>4° B</option><option>4° C</option><option>4° D</option><option>4° E</option>
-            <option>5° A</option><option>5° B</option><option>5° C</option><option>5° D</option><option>5° E</option>
-          </select>
-        </div>
+      <div class="form-group">
+      <label>Grado</label>
+        <select id="mc-grado">
+          <option value="">-- Selecciona grado --</option>
+          <option value="1">1°</option>
+          <option value="2">2°</option>
+          <option value="3">3°</option>
+          <option value="4">4°</option>
+          <option value="5">5°</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Sección</label>
+        <select id="mc-seccion">
+          <option value="">-- Selecciona sección --</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
+          <option value="D">D</option>
+          <option value="E">E</option>
+        </select>
+      </div>
         <div class="form-group full">
           <label>Observaciones</label>
           <textarea id="mc-observaciones" placeholder="Observaciones adicionales..." style="min-height:70px;"></textarea>
@@ -898,10 +904,17 @@
 <canvas id="graficoPDF" width="400" height="200" style="display:none;"></canvas>
 
 <!-- SCRIPTS -->
-<script src="script.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/historial.js"></script>
+<script src="js/citas.js"></script>
+<script src="js/nuevo.js"></script>
+<script src="js/calendario.js"></script>
+<script src="js/config.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>
