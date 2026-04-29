@@ -489,3 +489,21 @@ document.addEventListener('DOMContentLoaded', () => {
     o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
   });
 });
+// Al final del DOMContentLoaded existente en script-primary.js
+document.addEventListener('DOMContentLoaded', () => {
+  // ... tu código existente ...
+
+  // ── RETORNAR A SECUNDARIA ──
+  const btnRetornar = document.getElementById('btn-retornar');
+  if (btnRetornar) {
+    btnRetornar.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      document.body.classList.add('saliendo');
+      setTimeout(() => {
+        window.location.href = '/index.html';
+      }, 450);
+    });
+  }
+
+});

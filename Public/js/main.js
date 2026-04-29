@@ -191,6 +191,23 @@ document.addEventListener('DOMContentLoaded', function () {
       e.target.value = e.target.value.replace(/\D/g, '').slice(0, 9);
     });
   }
+document.addEventListener('DOMContentLoaded', () => {
+
+  const btnIrPrimaria = document.getElementById('btn-ir-primaria');
+
+  if (btnIrPrimaria) {
+    btnIrPrimaria.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      document.body.classList.add('saliendo');
+      setTimeout(() => {
+        window.location.href = '/primaria/index.html';
+      }, 450);
+    });
+  }
+
+});
+   
 
   // Construir horario semanal (config)
   buildSchedule();
