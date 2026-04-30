@@ -88,7 +88,7 @@ function aplicarRestriccionFechaNac() {
   const maxDate = new Date(hoyDate);
   maxDate.setFullYear(hoyDate.getFullYear() - 11);
   const minDate = new Date(hoyDate);
-  minDate.setFullYear(hoyDate.getFullYear() - 17);
+  minDate.setFullYear(hoyDate.getFullYear() - 18);
   el.max = maxDate.toISOString().split('T')[0];
   el.min = minDate.toISOString().split('T')[0];
 }
@@ -165,7 +165,6 @@ function generarHorasDisponibles(fecha, idAtencionExcluir = null) {
       const hora   = `${String(h).padStart(2,'0')}:${m}`;
       const slotMs = new Date(`${fecha}T${hora}:00`).getTime();
 
-      if (esHoy && slotMs <= ahora.getTime()) continue;
 
       const nuevoSlot = slotBase(slotMs);
 
@@ -190,11 +189,12 @@ function generarHorasDisponibles(fecha, idAtencionExcluir = null) {
 const GRADOS    = ['1°','2°','3°','4°','5°'];
 const SECCIONES = ['A','B','C','D'];
 
+
 function buildGradoSelect(selectId) {
   const sel = document.getElementById(selectId);
   if (!sel) return;
   sel.innerHTML = '<option value="">-- Grado --</option>' +
-    GRADOS.map(g => `<option value="${g}">${g}</option>`).join('');
+    GRADOS.map(g => `<option value="${g}">${g}°</option>`).join('');
 }
 
 function buildSeccionSelect(selectId) {
@@ -220,6 +220,7 @@ function toast(msg, tipo = 'success') {
 // ═══════════════════════════════════════
 // MODALS
 // ═══════════════════════════════════════
+// DESPUÉS — agrega el listener del select de estudiante
 function openModal(id) {
   const modal = document.getElementById(id);
   if (modal) modal.classList.add('open');
@@ -232,6 +233,33 @@ function openModal(id) {
       actualizarHorasDisponibles(fechaEl.value);
     }
     actualizarSelectEstudiantes();
+
+    // ✅ Autocompletar grado y sección al seleccionar estudiante
+    const selPaciente = document.getElementById('mc-paciente');
+    if (selPaciente) {
+      // Clonar para evitar listeners duplicados si se abre el modal varias veces
+      const nuevo = selPaciente.cloneNode(true);
+      selPaciente.parentNode.replaceChild(nuevo, selPaciente);
+
+      // Volver a poblar el select (se perdió al clonar)
+      actualizarSelectEstudiantes();
+
+      document.getElementById('mc-paciente').addEventListener('change', function () {
+        const est = store.estudiantes.find(e => e.id === parseInt(this.value));
+
+        const gradoSel   = document.getElementById('mc-grado');
+        const seccionSel = document.getElementById('mc-seccion');
+
+        if (est) {
+          const gradoVal = String(est.grado || '').replace('°','').replace('to','').trim();
+          if (gradoSel)   gradoSel.value   = gradoVal;
+          if (seccionSel) seccionSel.value = est.seccion || '';
+        } else {
+          if (gradoSel)   gradoSel.value   = '';
+          if (seccionSel) seccionSel.value = '';
+        }
+      });
+    }
   }
 }
 

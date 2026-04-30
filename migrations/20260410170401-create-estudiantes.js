@@ -10,9 +10,12 @@ module.exports = {
         onUpdate: 'CASCADE',
         onDelete: 'RESTRICT'
       },
-      fechanac:        { type: Sequelize.DATEONLY, allowNull: true },
-      condicion:       { type: Sequelize.STRING(50), allowNull: true },
-      codigomatricula: { type: Sequelize.STRING(30), allowNull: true }
+      fechanac:        { type: Sequelize.DATEONLY,    allowNull: true },
+      condicion:       { type: Sequelize.STRING(50),  allowNull: true },
+      codigomatricula: { type: Sequelize.STRING(30),  allowNull: true },
+      grado:           { type: Sequelize.STRING(10),  allowNull: true },
+      seccion:         { type: Sequelize.STRING(5),   allowNull: true },
+      nivel:           { type: Sequelize.STRING(20),  allowNull: true, defaultValue: 'secundaria' }
     });
   },
   async down(queryInterface) {

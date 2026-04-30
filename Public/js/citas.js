@@ -35,12 +35,18 @@ function renderCitas() {
 
   const esCerradas = citaFiltro === 'cerrado';
 
-  tbody.innerHTML = lista.map(a =>
-    `<tr id="atencion-row-${a.id}">
+  tbody.innerHTML = lista.map(a => {
+    // ✅ Fix: mostrar grado siempre con °
+   const gradoRaw = String(a.grado || '').replace('to', '').trim();
+   const gradoMostrar = gradoRaw ? (gradoRaw.includes('°') ? gradoRaw : gradoRaw + '°') : '—';
+   const seccionMostrar = a.seccion || '—';
+
+    return `<tr id="atencion-row-${a.id}">
       <td>${fmtFecha(a.fechahora)}</td>
       <td style="font-weight:600;">${fmtHora(a.fechahora)}</td>
       <td>${a.motivoconsulta || '—'}</td>
-      <td>${a.grado || '—'}${a.seccion ? ' ' + a.seccion : ''}</td>
+      <td>${gradoMostrar}</td>
+      <td>${seccionMostrar}</td>
       <td>${nivelBadge(a.nivelatencion)}</td>
       <td>${estadoBadge(a.estado)}</td>
       <td>
@@ -61,8 +67,8 @@ function renderCitas() {
             </div>`
         }
       </td>
-    </tr>`
-  ).join('');
+    </tr>`;
+  }).join('');
 }
 
 function filterCitas(tipo) {
@@ -168,6 +174,13 @@ async function guardarCita() {
     idmotivo = encontrado ? encontrado.idmotivo : (motivos[0]?.idmotivo || 1);
   } catch (_) {}
 
+  // ✅ Fix: tomar grado y sección del modal, o del estudiante como fallback
+  const gradoModal   = document.getElementById('mc-grado')?.value   || '';
+  const seccionModal = document.getElementById('mc-seccion')?.value || '';
+  const estModal     = store.estudiantes.find(e => e.id == parseInt(idestudiante));
+  const gradoFinal   = gradoModal   || estModal?.grado   || '';
+  const seccionFinal = seccionModal || estModal?.seccion || '';
+
   const fechahora = `${fecha}T${hora}:00`;
 
   try {
@@ -179,6 +192,8 @@ async function guardarCita() {
         estado: estado || 'pendiente',
         idmotivo,
         nivelatencion,
+        grado:   gradoFinal,
+        seccion: seccionFinal,
       })
     });
 
@@ -321,7 +336,6 @@ async function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
       toast('Indica la fecha y hora de la segunda cita', 'warning');
       return;
     }
-
     if (fecha < hoy()) {
       toast('No puedes agendar en una fecha pasada', 'warning');
       return;
@@ -343,6 +357,12 @@ async function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
       return;
     }
 
+    // ✅ Fix: heredar grado y sección del estudiante en segunda cita
+    const estSC      = store.estudiantes.find(e => e.id == parseInt(idestudiante));
+    const gradoSC    = estSC?.grado   || '';
+    const seccionSC  = estSC?.seccion || '';
+
+    
     try {
       const fechahora = `${fecha}T${hora}:00`;
       await apiFetch(`${API}/atenciones`, {
@@ -354,17 +374,51 @@ async function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
           idmotivo: 1,
           estado: 'pendiente',
           observaciones: obs || null,
+          grado:   gradoSC,
+          seccion: seccionSC,
         })
       });
+
 
       agregarActividad('teal', '📅', `Segunda cita registrada para <strong>${nombreCompleto}</strong>`, 'Ahora');
       toast(`✓ Segunda cita agendada para ${nombreCompleto}`);
       closeModal('modal-form-segunda-cita');
-
       await cargarDatos();
     } catch (err) {
       console.error(err);
       toast('Error al guardar segunda cita', 'warning');
     }
   };
+
+  // ═══════════════════════════════════════
+// AUTOCOMPLETAR MODAL AL SELECCIONAR ESTUDIANTE
+// ═══════════════════════════════════════
+function inicializarSelectPaciente() {
+  const sel = document.getElementById('mc-paciente');
+  if (!sel) return;
+
+  sel.addEventListener('change', function () {
+    const id = parseInt(this.value);
+    const est = store.estudiantes.find(e => e.id === id);
+
+    const gradoSel   = document.getElementById('mc-grado');
+    const seccionSel = document.getElementById('mc-seccion');
+
+    if (est) {
+      // Autocompletar grado
+      if (gradoSel) {
+        const gradoVal = String(est.grado || '').replace('°', '').replace('to', '').trim();
+        gradoSel.value = gradoVal;
+      }
+      // Autocompletar sección
+      if (seccionSel) {
+        seccionSel.value = est.seccion || '';
+      }
+    } else {
+      // Limpiar si no hay estudiante
+      if (gradoSel)   gradoSel.value   = '';
+      if (seccionSel) seccionSel.value = '';
+    }
+  });
+}
 }

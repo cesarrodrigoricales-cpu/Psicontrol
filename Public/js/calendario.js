@@ -1,35 +1,26 @@
 // ═══════════════════════════════════════════════
-// CALENDARIO.JS — Calendario de sesiones
+// CALENDARIO.JS — FullCalendar
 // ═══════════════════════════════════════════════
 
 const CAL_STORAGE_KEY = 'psicontrol_cal_eventos';
-let calYear, calMonth, calEventos = [], calNotifTimers = [];
-
-const CAL_MESES = [
-  'Enero','Febrero','Marzo','Abril','Mayo','Junio',
-  'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'
-];
+let calEventos = [];
+let calInstance = null;
+let calEditId   = null;
 
 const CAL_TIPO_COLORS = {
-  sesion:  { pill:'background:#EEEDFE;color:#3C3489;', dot:'#534AB7' },
-  cita:    { pill:'background:#E1F5EE;color:#085041;', dot:'#1D9E75' },
-  urgente: { pill:'background:#FCEBEB;color:#791F1F;', dot:'#E24B4A' },
-  otro:    { pill:'background:#F1EFE8;color:#444441;', dot:'#888780' },
+  sesion:  '#534AB7',
+  cita:    '#1D9E75',
+  urgente: '#E24B4A',
+  otro:    '#888780',
 };
 
-// RENDER PRINCIPAL
+// ── RENDER PRINCIPAL ────────────────────────────
 function renderCalendario() {
   const page = document.getElementById('page-calendario');
   if (!page) return;
 
   calEventos = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '[]');
   sincronizarAtencionesAlCalendario();
-
-  if (!calYear) {
-    const now = new Date();
-    calYear  = now.getFullYear();
-    calMonth = now.getMonth();
-  }
 
   page.innerHTML = `
     <div class="page-header">
@@ -47,29 +38,11 @@ function renderCalendario() {
 
     <div id="cal-notif-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
 
-    <div style="display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start;">
-      <div class="card" style="padding:20px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-          <div style="display:flex;align-items:center;gap:12px;">
-            <button class="btn-secondary" style="width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;font-size:16px;" onclick="calPrevMonth()">&#8249;</button>
-            <div style="font-size:16px;font-weight:600;color:var(--text-primary);" id="cal-month-label"></div>
-            <button class="btn-secondary" style="width:30px;height:30px;padding:0;display:flex;align-items:center;justify-content:center;font-size:16px;" onclick="calNextMonth()">&#8250;</button>
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);margin-bottom:6px;">
-          ${['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(d =>
-            `<div style="text-align:center;font-size:11px;font-weight:600;color:var(--text-muted);padding:4px 0;text-transform:uppercase;letter-spacing:.04em;">${d}</div>`
-          ).join('')}
-        </div>
-        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;" id="cal-grid"></div>
-      </div>
-
-      <div class="card" style="padding:16px;">
-        <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:12px;">Próximas sesiones</div>
-        <div id="cal-upcoming"></div>
-      </div>
+    <div class="card" style="padding:16px;">
+      <div id="fullcalendar"></div>
     </div>
 
+    <!-- MODAL -->
     <div class="modal-overlay" id="modal-calendario">
       <div class="modal" style="max-width:420px;">
         <div class="modal-header">
@@ -114,25 +87,65 @@ function renderCalendario() {
               <textarea id="cal-ev-obs" placeholder="Notas adicionales..." style="min-height:56px;"></textarea>
             </div>
           </div>
-          <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
-            <button class="btn-secondary" onclick="closeModal('modal-calendario')">Cancelar</button>
-            <button class="btn-primary" onclick="calGuardarEvento()">Guardar</button>
+          <div style="margin-top:16px;display:flex;gap:10px;justify-content:space-between;">
+            <button class="btn-secondary" id="cal-btn-eliminar" style="color:var(--rose);border-color:var(--rose);display:none;" onclick="calEliminarEvento()">Eliminar</button>
+            <div style="display:flex;gap:10px;margin-left:auto;">
+              <button class="btn-secondary" onclick="closeModal('modal-calendario')">Cancelar</button>
+              <button class="btn-primary" onclick="calGuardarEvento()">Guardar</button>
+            </div>
           </div>
         </div>
       </div>
     </div>`;
 
-  calRenderGrid();
-  calRenderUpcoming();
+  // Inicializar FullCalendar
+  const el = document.getElementById('fullcalendar');
+  calInstance = new FullCalendar.Calendar(el, {
+    initialView: window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth',
+    locale: 'es',
+    height: 'auto',
+    headerToolbar: {
+      left:   'prev,next today',
+      center: 'title',
+      right:  window.innerWidth < 768 ? 'listWeek,dayGridMonth' : 'dayGridMonth,timeGridWeek'
+    },
+    buttonText: {
+      today:    'Hoy',
+      month:    'Mes',
+      week:     'Semana',
+      list:     'Lista'
+    },
+    events: calEventosParaFC(),
+    eventClick(info) {
+      const ev = calEventos.find(e => String(e.id) === info.event.id);
+      if (ev) calAbrirEditar(ev);
+    },
+    dateClick(info) {
+      if (info.dateStr < hoy()) return;
+      calAbrirModal(info.dateStr);
+    },
+    eventColor: '#534AB7',
+  });
+
+  calInstance.render();
   calRenderNotifBar();
-  calScheduleNotifs();
 
   document.getElementById('modal-calendario')?.addEventListener('click', e => {
     if (e.target.id === 'modal-calendario') closeModal('modal-calendario');
   });
 }
 
-// SINCRONIZAR ATENCIONES → CALENDARIO
+// ── CONVERTIR EVENTOS AL FORMATO FULLCALENDAR ───
+function calEventosParaFC() {
+  return calEventos.map(ev => ({
+    id:    String(ev.id),
+    title: ev.titulo,
+    start: `${ev.fecha}T${ev.hora || '08:00'}`,
+    color: CAL_TIPO_COLORS[ev.tipo] || CAL_TIPO_COLORS.otro,
+  }));
+}
+
+// ── SINCRONIZAR ATENCIONES → CALENDARIO ─────────
 function sincronizarAtencionesAlCalendario() {
   store.atenciones.forEach(a => {
     if (!a.fechahora) return;
@@ -160,102 +173,12 @@ function calSave() {
   localStorage.setItem(CAL_STORAGE_KEY, JSON.stringify(calEventos));
 }
 
-// RENDER GRILLA
-function calRenderGrid() {
-  const label = document.getElementById('cal-month-label');
-  const grid  = document.getElementById('cal-grid');
-  if (!label || !grid) return;
-
-  label.textContent = `${CAL_MESES[calMonth]} ${calYear}`;
-  grid.innerHTML = '';
-
-  const now        = new Date();
-  const todayStr   = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  const first      = new Date(calYear, calMonth, 1);
-  let startDow     = first.getDay();
-  startDow = startDow === 0 ? 6 : startDow - 1;
-  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
-  const daysInPrev  = new Date(calYear, calMonth,   0).getDate();
-
-  const cells = [];
-  for (let i = startDow - 1; i >= 0; i--) cells.push({ day: daysInPrev - i, other: true });
-  for (let d = 1; d <= daysInMonth; d++)   cells.push({ day: d, other: false });
-  while (cells.length % 7 !== 0)           cells.push({ day: cells.length - startDow - daysInMonth + 1, other: true });
-
-  cells.forEach(({ day, other }) => {
-    const dateStr = `${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-    const isToday = !other && dateStr === todayStr;
-    const dayEvs  = other ? [] : calEventos.filter(e => e.fecha === dateStr);
-
-    const cell = document.createElement('div');
-    cell.style.cssText = `min-height:68px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:5px 6px;cursor:pointer;opacity:${other?'.3':'1'};${isToday?'border-color:var(--accent);':''}transition:border-color .15s;`;
-    cell.onmouseover = () => { if (!isToday) cell.style.borderColor = 'var(--accent-soft)'; };
-    cell.onmouseout  = () => { if (!isToday) cell.style.borderColor = 'var(--border)'; };
-
-    const numEl = document.createElement('div');
-    numEl.style.cssText = `font-size:12px;font-weight:600;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;${isToday?'background:var(--accent);color:#fff;':'color:var(--text-primary);'}`;
-    numEl.textContent = day;
-    cell.appendChild(numEl);
-
-    dayEvs.slice(0, 2).forEach(ev => {
-      const pill = document.createElement('div');
-      const col  = CAL_TIPO_COLORS[ev.tipo] || CAL_TIPO_COLORS.otro;
-      pill.style.cssText = `font-size:10px;padding:1px 5px;border-radius:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500;margin-top:2px;${col.pill}`;
-      pill.textContent = ev.titulo;
-      pill.title = `${ev.hora} — ${ev.titulo}`;
-      pill.onclick = (e) => { e.stopPropagation(); calAbrirEditar(ev); };
-      cell.appendChild(pill);
-    });
-
-    if (dayEvs.length > 2) {
-      const more = document.createElement('div');
-      more.style.cssText = 'font-size:9px;color:var(--text-muted);padding-left:4px;margin-top:1px;';
-      more.textContent = `+${dayEvs.length - 2} más`;
-      cell.appendChild(more);
-    }
-
-    if (!other) cell.onclick = () => calAbrirModal(dateStr);
-    grid.appendChild(cell);
-  });
-}
-
-// PRÓXIMAS SESIONES
-function calRenderUpcoming() {
-  const ul = document.getElementById('cal-upcoming');
-  if (!ul) return;
-
-  const now  = new Date();
-  const hoyS = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  const prox = calEventos
-    .filter(e => e.fecha >= hoyS)
-    .sort((a, b) => (a.fecha + a.hora > b.fecha + b.hora ? 1 : -1))
-    .slice(0, 6);
-
-  if (!prox.length) {
-    ul.innerHTML = '<div style="font-size:12px;color:var(--text-muted);">Sin próximas sesiones</div>';
-    return;
-  }
-
-  ul.innerHTML = prox.map(ev => {
-    const col = CAL_TIPO_COLORS[ev.tipo] || CAL_TIPO_COLORS.otro;
-    return `<div onclick="calAbrirEditar(${JSON.stringify(ev).replace(/"/g,'&quot;')})"
-      style="padding:8px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start;cursor:pointer;">
-      <div style="width:8px;height:8px;border-radius:50%;background:${col.dot};flex-shrink:0;margin-top:4px;"></div>
-      <div>
-        <div style="font-size:12px;font-weight:600;color:var(--text-primary);">${ev.titulo}</div>
-        <div style="font-size:11px;color:var(--text-muted);">${calFmtFecha(ev.fecha)} · ${ev.hora}</div>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// BARRA DE NOTIFICACIONES DE HOY
+// ── BARRA DE HOY ─────────────────────────────────
 function calRenderNotifBar() {
   const bar = document.getElementById('cal-notif-bar');
   if (!bar) return;
 
-  const now  = new Date();
-  const hoyS = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  const hoyS = hoy();
   const hoyCal = calEventos.filter(e => e.fecha === hoyS);
   bar.innerHTML = '';
 
@@ -274,35 +197,7 @@ function calRenderNotifBar() {
   });
 }
 
-// NOTIFICACIONES DEL NAVEGADOR
-function calScheduleNotifs() {
-  calNotifTimers.forEach(t => clearTimeout(t));
-  calNotifTimers = [];
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'default') Notification.requestPermission();
-
-  const now = new Date();
-  calEventos.forEach(ev => {
-    const evTime    = new Date(`${ev.fecha}T${ev.hora || '08:00'}`);
-    const notifTime = new Date(evTime.getTime() - (ev.notif || 0) * 60000);
-    const diff      = notifTime - now;
-    if (diff > 0 && diff < 86400000) {
-      const t = setTimeout(() => {
-        if (Notification.permission === 'granted') {
-          new Notification('PsiControl — Recordatorio', {
-            body: `${ev.titulo} a las ${ev.hora}`
-          });
-        }
-        toast(`🔔 Recordatorio: ${ev.titulo} a las ${ev.hora}`, 'info');
-      }, diff);
-      calNotifTimers.push(t);
-    }
-  });
-}
-
-// MODAL — CREAR / EDITAR
-let calEditId = null;
-
+// ── MODAL CREAR ──────────────────────────────────
 function calAbrirModal(fechaStr = null) {
   calEditId = null;
   document.getElementById('cal-modal-titulo').textContent = 'Nuevo evento';
@@ -311,20 +206,18 @@ function calAbrirModal(fechaStr = null) {
   document.getElementById('cal-ev-hora').value   = '08:00';
   document.getElementById('cal-ev-notif').value  = '15';
   document.getElementById('cal-ev-obs').value    = '';
-
-  const now = new Date();
-  const fechaDefault = fechaStr ||
-    `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
-  const fechaInput = document.getElementById('cal-ev-fecha');
-  if (fechaInput) {
-    fechaInput.value = fechaDefault;
-    fechaInput.min   = hoy();
-  }
+  document.getElementById('cal-ev-fecha').value  = fechaStr || hoy();
+  document.getElementById('cal-btn-eliminar').style.display = 'none';
   openModal('modal-calendario');
 }
 
+// ── MODAL EDITAR ─────────────────────────────────
 function calAbrirEditar(ev) {
   if (typeof ev === 'string') ev = JSON.parse(ev);
+  if (ev.fromAtencion) {
+    toast('Este evento viene de una atención registrada', 'info');
+    return;
+  }
   calEditId = ev.id;
   document.getElementById('cal-modal-titulo').textContent = 'Editar evento';
   document.getElementById('cal-ev-titulo').value = ev.titulo;
@@ -333,20 +226,16 @@ function calAbrirEditar(ev) {
   document.getElementById('cal-ev-hora').value   = ev.hora || '08:00';
   document.getElementById('cal-ev-notif').value  = String(ev.notif || 15);
   document.getElementById('cal-ev-obs').value    = ev.obs || '';
-  const fechaInput = document.getElementById('cal-ev-fecha');
-  if (fechaInput) fechaInput.min = hoy();
+  document.getElementById('cal-btn-eliminar').style.display = 'inline-flex';
   openModal('modal-calendario');
 }
 
+// ── GUARDAR ──────────────────────────────────────
 function calGuardarEvento() {
   const titulo = document.getElementById('cal-ev-titulo')?.value?.trim();
   const fecha  = document.getElementById('cal-ev-fecha')?.value;
   if (!titulo || !fecha) { toast('Completa los campos obligatorios', 'warning'); return; }
-
-  if (fecha < hoy()) {
-    toast('No puedes crear un evento en una fecha pasada', 'warning');
-    return;
-  }
+  if (fecha < hoy()) { toast('No puedes crear un evento en una fecha pasada', 'warning'); return; }
 
   const ev = {
     id:    calEditId || Date.now(),
@@ -367,29 +256,33 @@ function calGuardarEvento() {
 
   calSave();
   closeModal('modal-calendario');
-  calRenderGrid();
-  calRenderUpcoming();
+
+  // Actualizar FullCalendar sin re-renderizar
+  if (calInstance) {
+    calInstance.removeAllEvents();
+    calInstance.addEventSource(calEventosParaFC());
+  }
+
   calRenderNotifBar();
-  calScheduleNotifs();
-  agregarActividad('purple', '📅', `Evento de calendario: <strong>${titulo}</strong>`, 'Ahora');
   toast(calEditId ? 'Evento actualizado' : 'Evento guardado');
   calEditId = null;
 }
 
-// NAVEGACIÓN DE MESES
-function calPrevMonth() {
-  if (calMonth === 0) { calMonth = 11; calYear--; } else calMonth--;
-  calRenderGrid();
-}
+// ── ELIMINAR ─────────────────────────────────────
+function calEliminarEvento() {
+  if (!calEditId) return;
+  if (!confirm('¿Eliminar este evento?')) return;
 
-function calNextMonth() {
-  if (calMonth === 11) { calMonth = 0; calYear++; } else calMonth++;
-  calRenderGrid();
-}
+  calEventos = calEventos.filter(e => e.id != calEditId);
+  calSave();
+  closeModal('modal-calendario');
 
-// FORMATO FECHA DEL CALENDARIO
-function calFmtFecha(str) {
-  if (!str) return '—';
-  const [y, m, d] = str.split('-');
-  return `${d}/${m}/${y}`;
+  if (calInstance) {
+    calInstance.removeAllEvents();
+    calInstance.addEventSource(calEventosParaFC());
+  }
+
+  calRenderNotifBar();
+  toast('Evento eliminado', 'warning');
+  calEditId = null;
 }

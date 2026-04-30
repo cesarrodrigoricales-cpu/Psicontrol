@@ -1,15 +1,22 @@
 'use strict';
+
 module.exports = {
-  async up(queryInterface) {
+  async up(queryInterface, Sequelize) {
     await queryInterface.bulkInsert('personas', [
-      { nombres: 'Carlos',    apellidos: 'García' },
-      { nombres: 'María',     apellidos: 'Torres' },
-      { nombres: 'Juan',      apellidos: 'Mamani' },
-      { nombres: 'Lucía',     apellidos: 'Quispe' },
-      { nombres: 'Rodrigo',   apellidos: 'Flores' },
+      {
+        nombres:    'Ana',
+        apellidos:  'López',
+        tipodoc:    'DNI',
+        nrodoc:     '12345678',
+        telefono:   '987654321',
+        genero:     'Femenino',
+        direccion:  null,
+        referencia: null
+      }
     ]);
   },
-  async down(queryInterface) {
+
+  async down(queryInterface, Sequelize) {
     await queryInterface.bulkDelete('personas', null, {});
   }
 };

@@ -5,9 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PsiControl — Dashboard</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
- <link rel="stylesheet" href="style.css"> 
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
+
+  <!-- BACKDROP -->
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="cerrarSidebar()"></div>
 
 <!-- SIDEBAR -->
 <aside class="sidebar">
@@ -61,7 +64,7 @@
       Nueva atención
     </div>
 
-    <div class="nav-label" style="margin-top:20px;">Análisis</div>
+    <div class="nav-label nav-label--mt">Análisis</div>
 
     <div class="nav-item" data-page="reportes">
       <span class="nav-icon">
@@ -84,7 +87,6 @@
       <span class="nav-text">Calendario</span>
     </div>
 
-    <!-- NUEVO: Historial de años anteriores -->
     <div class="nav-item" data-page="historial-anios">
       <span class="nav-icon">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -94,7 +96,6 @@
       Historial de años
     </div>
 
-    <!-- NUEVO: SIAGIE -->
     <div class="nav-item" data-page="siagie">
       <span class="nav-icon">
         <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -104,7 +105,7 @@
       SIAGIE
     </div>
 
-    <div class="nav-label" style="margin-top:20px;">Sistema</div>
+    <div class="nav-label nav-label--mt">Sistema</div>
 
     <div class="nav-item" data-page="config">
       <span class="nav-icon">
@@ -124,7 +125,7 @@
         <div class="profile-name">Ana López</div>
         <div class="profile-role">Administradora</div>
       </div>
-      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255F,0.3)" stroke-width="2">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.3)" stroke-width="2">
         <path d="M9 18l6-6-6-6"/>
       </svg>
     </div>
@@ -136,36 +137,44 @@
 
   <!-- TOPBAR -->
   <div class="topbar">
-    <div class="breadcrumb">
-      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="color:var(--text-muted)"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
-      <strong id="breadcrumb-text">Inicio</strong>
-    </div>
+  <!-- HAMBURGUESA -->
+  <button class="btn-hamburger" id="btn-hamburger" onclick="toggleSidebar()">
+    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path d="M4 6h16M4 12h16M4 18h16"/>
+    </svg>
+  </button>
 
-    <div class="search-wrap" id="search-wrap">
-      <span class="search-icon">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
-        </svg>
-      </span>
-      <input type="text" class="search" id="global-search" placeholder="Buscar estudiante por nombre o DNI..." autocomplete="off">
-      <div class="search-results" id="search-results" style="display:none;"></div>
-    </div>
-
-    <button class="topbar-btn" id="notif-btn" title="Notificaciones">
-      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-      </svg>
-      <span class="notif-dot" id="notif-dot"></span>
-    </button>
-
-    <button class="topbar-btn" title="Perfil">
-      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-      </svg>
-    </button>
+  <div class="breadcrumb">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="breadcrumb-icon"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+    <strong id="breadcrumb-text">Inicio</strong>
   </div>
 
-  <!-- CONTENT  -->
+  <div class="search-wrap" id="search-wrap">
+    <span class="search-icon">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+      </svg>
+    </span>
+    <input type="text" class="search" id="global-search" placeholder="Buscar estudiante por nombre o DNI..." autocomplete="off">
+    <div class="search-results" id="search-results" style="display:none;"></div>
+  </div>
+
+  <button class="topbar-btn" id="notif-btn" title="Notificaciones">
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+    </svg>
+    <span class="notif-dot" id="notif-dot"></span>
+  </button>
+
+  <button class="topbar-btn" title="Perfil">
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+  </button>
+
+  </div>
+
+  <!-- CONTENT -->
   <div class="content">
 
     <!-- DASHBOARD -->
@@ -175,11 +184,10 @@
           <div class="page-title">Panel de control</div>
           <div class="page-subtitle" id="fecha-hoy">Cargando...</div>
         </div>
-        <div style="display:flex;gap:10px;align-items:center;">
-       <a id="btn-ir-primaria" href="/primaria/index.html" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:9px;background:#EEEDFE;color:#534AB7;font-size:13px;font-weight:600;text-decoration:none;border:1.5px solid #CECBF6;transition:all .15s;" onmouseover="this.style.background='#CECBF6'" onmouseout="this.style.background='#EEEDFE'">
-  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-  Ir a Primaria
-</a>
+        <div class="page-header-actions">
+          <a id="btn-ir-primaria" href="/primaria/index.html" class="btn-primaria">
+            Ir a Primaria
+          </a>
           <button class="btn-primary" onclick="navigateTo('nuevo')">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
             Nueva atención
@@ -187,7 +195,6 @@
         </div>
       </div>
 
-      <!-- STATS -->
       <div class="stat-strip">
         <div class="stat-card">
           <div class="stat-icon c-purple">📋</div>
@@ -223,9 +230,8 @@
         </div>
       </div>
 
-      <!-- MAIN GRID -->
       <div class="main-grid">
-        <div style="display:flex;flex-direction:column;gap:20px;">
+        <div class="col-flex">
           <div class="card">
             <div class="card-header">
               <div>
@@ -262,7 +268,7 @@
           </div>
         </div>
 
-        <div style="display:flex;flex-direction:column;gap:20px;">
+        <div class="col-flex">
           <div class="card">
             <div class="card-header">
               <div class="card-title">Actividad reciente</div>
@@ -279,7 +285,7 @@
     </div><!-- /page-dashboard -->
 
 
-    <!-- HISTORIAL   -->
+    <!-- HISTORIAL -->
     <div class="page" id="page-historial">
       <div class="page-header">
         <div>
@@ -287,25 +293,19 @@
           <div class="page-subtitle">Haz clic en un estudiante para ver su historial completo</div>
         </div>
       </div>
-
       <div class="card">
         <div class="card-header">
           <div class="card-title">Estudiantes registrados</div>
           <input type="text" id="hist-search" class="filter-input"
-            placeholder="Buscar por nombre, DNI o teléfono..."
+            placeholder="Buscar por nombre, DNI o grado..."
             oninput="filterHistorial()">
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Estudiante</th>
-                <th>DNI</th>
-                <th>Teléfono</th>
-                <th>Condición</th>
-                <th>Género</th>
-                <th>Nacimiento</th>
-                <th>Acción</th>
+                <th>Estudiante</th><th>DNI</th><th>Grado</th>
+                <th>Sección</th><th>Género</th><th>Nacimiento</th><th>Acción</th>
               </tr>
             </thead>
             <tbody id="hist-tbody">
@@ -329,29 +329,22 @@
           Nueva sesión
         </button>
       </div>
-
       <div class="card">
         <div class="card-header">
           <div class="card-title">Listado de atenciones</div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn-secondary" onclick="filterCitas('todas')"     style="font-size:11px;padding:5px 12px;">Todas</button>
-            <button class="btn-secondary" onclick="filterCitas('pendiente')" style="font-size:11px;padding:5px 12px;">Pendientes</button>
-            <button class="btn-secondary" onclick="filterCitas('activo')"    style="font-size:11px;padding:5px 12px;">Activas</button>
-            <button class="btn-secondary" onclick="filterCitas('cerrado')"   style="font-size:11px;padding:5px 12px;">Cerradas</button>
+          <div class="filter-btn-group">
+            <button class="btn-secondary btn-sm" onclick="filterCitas('todas')">Todas</button>
+            <button class="btn-secondary btn-sm" onclick="filterCitas('pendiente')">Pendientes</button>
+            <button class="btn-secondary btn-sm" onclick="filterCitas('activo')">Activas</button>
+            <button class="btn-secondary btn-sm" onclick="filterCitas('cerrado')">Cerradas</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Hora</th>
-                <th>Motivo</th>
-                <th>Grado</th>
-                <th>Nivel</th>
-                <th>Estado</th>
-                <th>Estudiante</th>
-                <th>Acciones</th>
+                <th>Fecha</th><th>Hora</th><th>Motivo</th><th>Grado</th>
+                <th>Nivel</th><th>Estado</th><th>Estudiante</th><th>Acciones</th>
               </tr>
             </thead>
             <tbody id="citas-tbody">
@@ -363,17 +356,41 @@
     </div><!-- /page-citas -->
 
 
-    <!-- NUEVA ATENCIÓN  -->
+    <!-- NUEVA ATENCIÓN -->
     <div class="page" id="page-nuevo">
       <div class="page-header">
         <div>
           <div class="page-title">Nueva atención</div>
-          <div class="page-subtitle">Registra un nuevo estudiante y su primera sesión psicológica</div>
+          <div class="page-subtitle">Busca al estudiante y registra su sesión psicológica</div>
         </div>
       </div>
 
-      <div class="card">
-        <div style="padding:20px 22px;display:flex;align-items:center;">
+      <!-- BUSCADOR SIAGIE -->
+      <div class="card card--overflow-visible card--mb">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🔍 Buscar estudiante</div>
+            <div class="card-meta">Escribe el nombre o DNI del estudiante importado desde SIAGIE</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="search-student-wrap">
+            <input type="text" id="na-buscar-estudiante"
+              class="search-student-input"
+              placeholder="Ej: García López o 75234891..."
+              oninput="buscarEstudianteSiagie(this.value)">
+            <div id="na-resultados-busqueda" class="search-student-dropdown" style="display:none;"></div>
+          </div>
+          <div id="na-estudiante-seleccionado" class="student-chip" style="display:none;">
+            <span id="na-estudiante-nombre"></span>
+            <button onclick="limpiarEstudianteSeleccionado()" class="student-chip-close">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PASOS -->
+      <div class="card card--mb">
+        <div class="pasos-wrap">
           <div class="paso-item active" id="paso-ind-1">
             <div class="paso-circle">1</div>
             <div class="paso-label">Datos del estudiante</div>
@@ -386,11 +403,12 @@
         </div>
       </div>
 
+      <!-- PASO 1 -->
       <div class="card" id="paso-1">
         <div class="card-header">
           <div>
             <div class="card-title">📋 Datos del estudiante</div>
-            <div class="card-meta">Información personal del nuevo estudiante</div>
+            <div class="card-meta">Se autocompleta si seleccionas un estudiante de SIAGIE</div>
           </div>
         </div>
         <div class="form-grid">
@@ -408,12 +426,14 @@
               <option value="dni">DNI (Perú)</option>
               <option value="ce">Carnet de extranjería</option>
             </select>
-            <label>Número de documento</label>
+            <label class="label-mt">Número de documento</label>
             <input type="text" id="na-doc-numero" autocomplete="off">
           </div>
           <div class="form-group">
             <label>Teléfono</label>
-            <input type="tel" id="na-telefono" placeholder="Ej: 987654321" maxlength="9" required>
+            <input type="tel" id="na-telefono" placeholder="Ej: 987654321" maxlength="9">
+            <label class="label-mt">Teléfono de emergencia</label>
+            <input type="tel" id="na-telefono-emergencia" placeholder="Ej: 987654321" maxlength="9">
           </div>
           <div class="form-group">
             <label>Fecha de nacimiento</label>
@@ -446,13 +466,14 @@
         </div>
       </div>
 
+      <!-- PASO 2 -->
       <div class="card" id="paso-2" style="display:none;">
         <div class="card-header">
           <div>
             <div class="card-title">📅 Primera sesión</div>
             <div class="card-meta" id="paso2-subtitulo">Datos de la primera sesión</div>
           </div>
-          <button class="btn-secondary" style="font-size:12px;padding:6px 14px;" onclick="volverPaso1()">← Volver</button>
+          <button class="btn-secondary btn-sm" onclick="volverPaso1()">← Volver</button>
         </div>
         <div class="form-grid">
           <div class="form-group full">
@@ -493,7 +514,7 @@
     </div><!-- /page-nuevo -->
 
 
-    <!-- REPORTES  -->
+    <!-- REPORTES -->
     <div class="page" id="page-reportes">
       <div class="page-header">
         <div>
@@ -505,13 +526,11 @@
           Generar PDF
         </button>
       </div>
-
       <div class="stat-strip" id="rep-stats"></div>
-
       <div class="main-grid">
         <div class="card">
           <div class="card-header"><div class="card-title">Atenciones por mes</div></div>
-          <div style="padding:16px 22px 22px;" id="chart-area"></div>
+          <div class="chart-area" id="chart-area"></div>
         </div>
         <div class="card">
           <div class="card-header"><div class="card-title">Indicadores generales</div></div>
@@ -520,7 +539,7 @@
       </div>
     </div><!-- /page-reportes -->
 
-    <!--  CALENDARIO  -->
+    <!-- CALENDARIO -->
     <div class="page" id="page-calendario"></div>
 
     <!-- HISTORIAL DE AÑOS ANTERIORES -->
@@ -536,48 +555,39 @@
         </button>
       </div>
 
-      <!-- Selector de año -->
-      <div class="card" style="margin-bottom:18px;">
+      <div class="card card--mb">
         <div class="card-header"><div class="card-title">Seleccionar año escolar</div></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;padding:0 22px 18px;">
-          <button class="btn-secondary" id="anio-btn-2025" onclick="seleccionarAnio(2025)" style="font-weight:700;background:#EEEDFE;color:#534AB7;border-color:#CECBF6;">2025</button>
-          <button class="btn-secondary" id="anio-btn-2024" onclick="seleccionarAnio(2024)">2024</button>
-          <button class="btn-secondary" id="anio-btn-2023" onclick="seleccionarAnio(2023)">2023</button>
-          <button class="btn-secondary" id="anio-btn-2022" onclick="seleccionarAnio(2022)">2022</button>
-          <button class="btn-secondary" id="anio-btn-2021" onclick="seleccionarAnio(2021)">2021</button>
-          <button class="btn-secondary" id="anio-btn-2020" onclick="seleccionarAnio(2020)">2020</button>
+        <div class="anios-btn-group">
+          <button class="btn-secondary anio-btn anio-btn--active" id="anio-btn-2025" onclick="seleccionarAnio(2025)">2025</button>
+          <button class="btn-secondary anio-btn" id="anio-btn-2024" onclick="seleccionarAnio(2024)">2024</button>
+          <button class="btn-secondary anio-btn" id="anio-btn-2023" onclick="seleccionarAnio(2023)">2023</button>
+          <button class="btn-secondary anio-btn" id="anio-btn-2022" onclick="seleccionarAnio(2022)">2022</button>
+          <button class="btn-secondary anio-btn" id="anio-btn-2021" onclick="seleccionarAnio(2021)">2021</button>
+          <button class="btn-secondary anio-btn" id="anio-btn-2020" onclick="seleccionarAnio(2020)">2020</button>
         </div>
       </div>
 
-      <!-- Resumen del año -->
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:18px;" id="anio-stats"></div>
+      <div class="anio-stats-grid" id="anio-stats"></div>
 
-      <!-- Gráfico por mes -->
-      <div class="card" style="margin-bottom:18px;">
+      <div class="card card--mb">
         <div class="card-header">
           <div class="card-title" id="anio-chart-title">Atenciones por mes — 2025</div>
         </div>
-        <div style="padding:16px 22px 22px;" id="anio-chart"></div>
+        <div class="chart-area" id="anio-chart"></div>
       </div>
 
-      <!-- Tabla de casos -->
       <div class="card">
         <div class="card-header">
           <div class="card-title" id="anio-tabla-title">Casos registrados — 2025</div>
           <input type="text" class="filter-input" placeholder="Buscar por nombre o motivo..." oninput="filtrarAnio(this.value)">
         </div>
-        <p style="font-size:12px;color:var(--text-muted);font-style:italic;padding:0 22px 8px;">Los datos históricos son de solo lectura.</p>
+        <p class="readonly-note">Los datos históricos son de solo lectura.</p>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Estudiante</th>
-                <th>DNI</th>
-                <th>Grado</th>
-                <th>Motivo</th>
-                <th>Nivel</th>
-                <th>Fecha</th>
-                <th>Estado final</th>
+                <th>Estudiante</th><th>DNI</th><th>Grado</th>
+                <th>Motivo</th><th>Nivel</th><th>Fecha</th><th>Estado final</th>
               </tr>
             </thead>
             <tbody id="anio-tbody"></tbody>
@@ -587,157 +597,99 @@
     </div><!-- /page-historial-anios -->
 
 
-    <!-- SIAGIE  -->
+    <!-- SIAGIE -->
     <div class="page" id="page-siagie">
       <div class="page-header">
         <div>
           <div class="page-title">Integración SIAGIE</div>
-          <div class="page-subtitle">Sistema de Información de Apoyo a la Gestión de la IE — MINEDU</div>
+          <div class="page-subtitle">Importa la nómina de estudiantes del nivel secundaria</div>
         </div>
-        <button class="btn-primary" onclick="sincronizarSiagie()">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          Sincronizar ahora
-        </button>
       </div>
 
-      <!-- Header azul SIAGIE -->
-      <div style="display:flex;align-items:center;gap:16px;background:linear-gradient(135deg,#1a56a4,#0d3b7a);border-radius:12px;padding:18px 24px;margin-bottom:18px;color:#fff;">
-        <div style="background:rgba(255,255,255,.15);border-radius:8px;padding:8px 16px;font-size:18px;font-weight:800;letter-spacing:1px;">SIAGIE</div>
+      <!-- Banner SIAGIE -->
+      <div class="siagie-banner">
+        <div class="siagie-banner-logo">SIAGIE</div>
         <div>
-          <div style="font-size:15px;font-weight:700;">Ministerio de Educación — Perú</div>
-          <div style="font-size:12px;opacity:.75;margin-top:2px;">Conectado al módulo de estudiantes activos</div>
+          <div class="siagie-banner-title">Ministerio de Educación — Perú</div>
+          <div class="siagie-banner-sub">Importación de nómina — Nivel Secundaria</div>
         </div>
-        <div style="margin-left:auto;text-align:right;">
-          <div style="font-size:11px;opacity:.7;">Última sincronización</div>
-          <div style="font-size:13px;font-weight:700;" id="siagie-sync-time">—</div>
+        <div class="siagie-banner-time">
+          <div class="siagie-banner-time-label">Última importación</div>
+          <div class="siagie-banner-time-value" id="siagie-sync-time">—</div>
         </div>
       </div>
 
-      <!-- Módulos -->
-      <div class="card" style="margin-bottom:18px;">
+      <!-- Drop zone -->
+      <div class="card card--mb">
         <div class="card-header">
-          <div class="card-title">Módulos disponibles</div>
-          <div class="card-meta">Haz clic en un módulo para importar sus datos</div>
+          <div class="card-title">Importar nómina desde Excel</div>
+          <div class="card-meta">Descarga el Excel de SIAGIE y súbelo aquí</div>
         </div>
-        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;padding:0 22px 22px;">
-          <div onclick="toast('📥 Importando nómina de matrícula...')" style="border:1.5px solid #e0e0e0;border-radius:11px;padding:16px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#1a56a4'" onmouseout="this.style.borderColor='#e0e0e0'">
-            <div style="font-size:22px;margin-bottom:8px;">📋</div>
-            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Nómina de matrícula</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Estudiantes matriculados por grado y sección</div>
-            <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px;background:#EAF3DE;color:#3B6D11;">● Sincronizado</div>
+        <div class="card-body">
+          <div class="siagie-instructions">
+            <b>¿Cómo obtener el Excel?</b><br>
+            1. Ingresa a <b>siagie.minedu.gob.pe</b> con tu cuenta del colegio<br>
+            2. Ve a <b>Matrícula → Nómina de matrícula</b><br>
+            3. Selecciona el nivel <b>Secundaria</b> y exporta en Excel<br>
+            4. Sube el archivo descargado aquí abajo
           </div>
-          <div onclick="toast('📥 Importando asistencia...')" style="border:1.5px solid #e0e0e0;border-radius:11px;padding:16px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#1a56a4'" onmouseout="this.style.borderColor='#e0e0e0'">
-            <div style="font-size:22px;margin-bottom:8px;">📅</div>
-            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Asistencia escolar</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Registros de asistencia diaria por alumno</div>
-            <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px;background:#EAF3DE;color:#3B6D11;">● Sincronizado</div>
-          </div>
-          <div onclick="toast('📥 Importando calificaciones...')" style="border:1.5px solid #e0e0e0;border-radius:11px;padding:16px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#1a56a4'" onmouseout="this.style.borderColor='#e0e0e0'">
-            <div style="font-size:22px;margin-bottom:8px;">📊</div>
-            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Calificaciones</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Notas y evaluaciones por bimestre</div>
-            <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px;background:#FAEEDA;color:#854F0B;">⏳ Pendiente</div>
-          </div>
-          <div onclick="toast('📥 Importando apoderados...')" style="border:1.5px solid #e0e0e0;border-radius:11px;padding:16px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#1a56a4'" onmouseout="this.style.borderColor='#e0e0e0'">
-            <div style="font-size:22px;margin-bottom:8px;">👨‍👩‍👧</div>
-            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Apoderados</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Información de padres y tutores</div>
-            <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px;background:#EAF3DE;color:#3B6D11;">● Sincronizado</div>
-          </div>
-          <div onclick="toast('⚠ Error al conectar con módulo de traslados')" style="border:1.5px solid #e0e0e0;border-radius:11px;padding:16px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#1a56a4'" onmouseout="this.style.borderColor='#e0e0e0'">
-            <div style="font-size:22px;margin-bottom:8px;">🔄</div>
-            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Traslados y retiros</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Movimiento de estudiantes entre IE</div>
-            <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px;background:#FCEBEB;color:#A32D2D;">✗ Error</div>
-          </div>
-          <div onclick="toast('📥 Importando plana docente...')" style="border:1.5px solid #e0e0e0;border-radius:11px;padding:16px;cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='#1a56a4'" onmouseout="this.style.borderColor='#e0e0e0'">
-            <div style="font-size:22px;margin-bottom:8px;">👩‍🏫</div>
-            <div style="font-size:13px;font-weight:700;color:var(--text-primary);">Plana docente</div>
-            <div style="font-size:11px;color:var(--text-muted);margin-top:3px;">Profesores asignados por grado y área</div>
-            <div style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;margin-top:8px;padding:3px 8px;border-radius:6px;background:#EAF3DE;color:#3B6D11;">● Sincronizado</div>
-          </div>
+          <label id="drop-zone" class="drop-zone">
+            <div class="drop-zone-icon">📂</div>
+            <div class="drop-zone-title">Haz clic para seleccionar el archivo Excel</div>
+            <div class="drop-zone-sub">Formatos aceptados: .xlsx · .xls</div>
+            <input type="file" accept=".xlsx,.xls" class="input-hidden"
+              onchange="importarExcelSiagie(this.files[0]); actualizarNombreArchivo(this)">
+          </label>
+          <div id="siagie-archivo" class="siagie-filename" style="display:none;"></div>
         </div>
       </div>
 
-      <!-- Acciones -->
-      <div class="card" style="margin-bottom:18px;">
-        <div class="card-header"><div class="card-title">Acciones de importación</div></div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 22px 22px;">
-          <button class="btn-primary" onclick="toast('📥 Importando estudiantes desde SIAGIE...')">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/></svg>
-            Importar estudiantes
-          </button>
-          <button class="btn-secondary" onclick="toast('🔄 Actualizando nómina desde SIAGIE...')">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            Actualizar nómina
-          </button>
-          <button class="btn-secondary" onclick="toast('📤 Exportando informes al SIAGIE...')">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-            Exportar informes
-          </button>
-          <button class="btn-secondary" onclick="toast('🔗 Verificando conexión con SIAGIE...')">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-            Verificar conexión
-          </button>
-        </div>
-      </div>
-
-      <!-- Configuración de conexión -->
+      <!-- Tabla importados -->
       <div class="card">
         <div class="card-header">
-          <div class="card-title">Configuración de conexión</div>
-          <div class="card-meta">Credenciales de acceso al sistema SIAGIE</div>
+          <div class="card-title">Estudiantes importados</div>
         </div>
-        <div class="form-grid">
-          <div class="form-group">
-            <label>Código modular de la IE</label>
-            <input type="text" id="siagie-codigo" placeholder="Ej: 0500123">
-          </div>
-          <div class="form-group">
-            <label>Usuario SIAGIE</label>
-            <input type="text" id="siagie-usuario" placeholder="usuario@minedu.gob.pe">
-          </div>
-          <div class="form-group">
-            <label>Contraseña</label>
-            <input type="password" id="siagie-pass" placeholder="••••••••">
-          </div>
-          <div class="form-group">
-            <label>Frecuencia de sincronización</label>
-            <select id="siagie-freq">
-              <option value="manual">Manual</option>
-              <option value="diaria" selected>Diaria (8:00 AM)</option>
-              <option value="semanal">Semanal (lunes)</option>
-              <option value="mensual">Mensual</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-actions">
-          <button class="btn-secondary" onclick="toast('🔗 Verificando credenciales...')">Probar conexión</button>
-          <button class="btn-primary" onclick="toast('✅ Configuración SIAGIE guardada')">Guardar configuración</button>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Apellidos y nombres</th><th>DNI</th>
+                <th>Grado</th><th>Sección</th><th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="siagie-tbody">
+              <tr><td colspan="5">
+                <div class="empty-state">
+                  <div class="es-icon">📋</div>
+                  <div class="es-text">Importa un Excel de SIAGIE para ver los estudiantes aquí</div>
+                </div>
+              </td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div><!-- /page-siagie -->
 
 
-    <!-- 404  -->
+    <!-- 404 -->
     <div class="page" id="page-404">
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:2rem 1rem;">
-        <div style="width:80px;height:80px;border-radius:50%;background:#EEEDFE;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;">
+      <div class="not-found">
+        <div class="not-found-icon">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#534AB7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
           </svg>
         </div>
-        <div style="font-size:72px;font-weight:600;color:#534AB7;line-height:1;letter-spacing:-2px;margin-bottom:0.5rem;">404</div>
-        <div style="font-size:18px;font-weight:600;color:var(--text-primary);margin-bottom:0.4rem;">Página no encontrada</div>
-        <div style="font-size:14px;color:var(--text-secondary);margin-bottom:2rem;max-width:300px;line-height:1.6;">La sección que buscas no existe o fue movida.</div>
-        <button class="btn-primary" onclick="navigateTo('dashboard')" style="display:inline-flex;align-items:center;gap:8px;">
+        <div class="not-found-code">404</div>
+        <div class="not-found-title">Página no encontrada</div>
+        <div class="not-found-text">La sección que buscas no existe o fue movida.</div>
+        <button class="btn-primary" onclick="navigateTo('dashboard')">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
           Volver al inicio
         </button>
       </div>
     </div><!-- /page-404 -->
 
-    <!-- CONFIGURACIÓN  -->
+    <!-- CONFIGURACIÓN -->
     <div class="page" id="page-config">
       <div class="page-header">
         <div>
@@ -745,7 +697,6 @@
           <div class="page-subtitle">Preferencias del sistema y horario de atención</div>
         </div>
       </div>
-
       <div class="card">
         <div class="card-header"><div class="card-title">Datos del consultorio</div></div>
         <div class="form-grid">
@@ -759,7 +710,7 @@
           </div>
           <div class="form-group">
             <label>Teléfono de contacto</label>
-            <input type="tel" id="cfg-tel" placeholder="Ej: 01 234 5678" required  maxlength="9">
+            <input type="tel" id="cfg-tel" placeholder="Ej: 01 234 5678" maxlength="9">
           </div>
           <div class="form-group">
             <label>Correo electrónico</label>
@@ -783,7 +734,7 @@
           </div>
         </div>
         <div class="schedule-grid">
-          <div class="schedule-row" style="color:var(--text-muted);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;padding-bottom:4px;">
+          <div class="schedule-row schedule-row--header">
             <span>Día</span><span>Desde</span><span>Hasta</span><span>Activo</span>
           </div>
           <div id="schedule-rows"></div>
@@ -806,7 +757,7 @@
       <button class="modal-close" onclick="closeModal('modal-cita')">✕</button>
     </div>
     <div class="modal-body">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="modal-form-grid">
         <div class="form-group full">
           <label>Estudiante *</label>
           <select id="mc-paciente">
@@ -821,7 +772,7 @@
           <label>Tipo de sesión</label>
           <select id="mc-tipo">
             <option>Sesión de seguimiento</option>
-            <option>Atencion psicológica</option>
+            <option>Atención psicológica</option>
             <option>Terapia cognitiva</option>
             <option>Terapia familiar</option>
           </select>
@@ -851,34 +802,34 @@
             <option value="alta">🔴 Grave</option>
           </select>
         </div>
-      <div class="form-group">
-      <label>Grado</label>
-        <select id="mc-grado">
-          <option value="">-- Selecciona grado --</option>
-          <option value="1">1°</option>
-          <option value="2">2°</option>
-          <option value="3">3°</option>
-          <option value="4">4°</option>
-          <option value="5">5°</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Sección</label>
-        <select id="mc-seccion">
-          <option value="">-- Selecciona sección --</option>
-          <option value="A">A</option>
-          <option value="B">B</option>
-          <option value="C">C</option>
-          <option value="D">D</option>
-          <option value="E">E</option>
-        </select>
-      </div>
+        <div class="form-group">
+          <label>Grado</label>
+          <select id="mc-grado">
+            <option value="">-- Selecciona grado --</option>
+            <option value="1">1°</option>
+            <option value="2">2°</option>
+            <option value="3">3°</option>
+            <option value="4">4°</option>
+            <option value="5">5°</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Sección</label>
+          <select id="mc-seccion">
+            <option value="">-- Selecciona sección --</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+            <option value="E">E</option>
+          </select>
+        </div>
         <div class="form-group full">
           <label>Observaciones</label>
-          <textarea id="mc-observaciones" placeholder="Observaciones adicionales..." style="min-height:70px;"></textarea>
+          <textarea id="mc-observaciones" placeholder="Observaciones adicionales..."></textarea>
         </div>
       </div>
-      <div style="margin-top:18px;display:flex;gap:10px;justify-content:flex-end;">
+      <div class="modal-actions">
         <button class="btn-secondary" onclick="closeModal('modal-cita')">Cancelar</button>
         <button class="btn-primary" onclick="guardarCita()">Guardar sesión</button>
       </div>
@@ -901,20 +852,26 @@
 <div class="toast-container" id="toast-container"></div>
 
 <!-- Canvas oculto para PDF -->
-<canvas id="graficoPDF" width="400" height="200" style="display:none;"></canvas>
+<canvas id="graficoPDF" width="400" height="200" class="canvas-hidden"></canvas>
 
 <!-- SCRIPTS -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
 
 <script src="js/utils.js"></script>
 <script src="js/api.js"></script>
+<script src="js/siagie.js"></script>
 <script src="js/dashboard.js"></script>
 <script src="js/historial.js"></script>
+<script src="js/historial-anios.js"></script>
 <script src="js/citas.js"></script>
 <script src="js/nuevo.js"></script>
 <script src="js/calendario.js"></script>
+<script src="js/reportes.js"></script>
 <script src="js/config.js"></script>
 <script src="js/main.js"></script>
+
 </body>
 </html>

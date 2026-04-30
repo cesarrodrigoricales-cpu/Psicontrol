@@ -1,6 +1,4 @@
-// ═══════════════════════════════════════
 // API BASE
-// ═══════════════════════════════════════
 const API = 'http://localhost:3000/api';
 
 async function apiFetch(url, options = {}) {
@@ -18,14 +16,14 @@ async function apiFetch(url, options = {}) {
   }
 }
 
-// CARGAR DATOS INICIALES
+// ── CARGAR DATOS INICIALES ──────────────────────
 async function cargarDatos() {
   try {
     const [atenciones, estudiantes] = await Promise.all([
       apiFetch(`${API}/atenciones`),
       apiFetch(`${API}/estudiantes`)
     ]);
-    store.atenciones  = atenciones || [];
+    store.atenciones  = atenciones  || [];
     store.estudiantes = estudiantes || [];
     renderDashboard();
     actualizarSelectEstudiantes();

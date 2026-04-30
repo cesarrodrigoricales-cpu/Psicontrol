@@ -28,12 +28,15 @@ const pageLabels = {
   citas:      'Atenciones',
   nuevo:      'Nueva atención',
   reportes:   'Reportes',
+  'historial-anios': 'Historial de años anteriores',  // ← AGREGAR
+  siagie:            'Integración SIAGIE',
   calendario: 'Calendario',
   config:     'Configuración',
   '404':      'Página no encontrada'
 };
 
 function navigateTo(page) {
+  cerrarSidebar();
   const paginasValidas = Object.keys(pageLabels).filter(k => k !== '404');
   const target = paginasValidas.includes(page) ? page : '404';
 
@@ -51,22 +54,35 @@ function navigateTo(page) {
 
   if (target !== '404') {
     switch (target) {
-      case 'historial':  renderHistorial();       break;
-      case 'citas':      cargarYRenderCitas();    break;
-      case 'reportes':   renderReportes();        break;
-      case 'nuevo':      resetNuevaAtencion();    break;
-      case 'config':     cargarConfig();          break;
-      case 'calendario': renderCalendario();      break;
+      case 'historial':       renderHistorial();       break;
+      case 'citas':           cargarYRenderCitas();    break;
+      case 'reportes':        renderReportes();        break;
+      case 'nuevo':           resetNuevaAtencion();    break;
+      case 'historial-anios': renderHistorialAnios();  break;  // ← solo una vez
+      case 'siagie':          inicializarSiagie();     break;
+      case 'config':          cargarConfig();          break;
+      case 'calendario':      renderCalendario();      break;
     }
   }
 
-  // Limpiar búsqueda global al cambiar de página
   const searchInput   = document.getElementById('global-search');
   const searchResults = document.getElementById('search-results');
   if (searchInput)   searchInput.value = '';
   if (searchResults) searchResults.style.display = 'none';
 }
 
+// ── SIDEBAR MÓVIL ───────────────────────────────
+function toggleSidebar() {
+  const sidebar  = document.querySelector('.sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  sidebar.classList.toggle('open');
+  backdrop.classList.toggle('open');
+}
+
+function cerrarSidebar() {
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+}
 // ── BÚSQUEDA GLOBAL ─────────────────────────────
 let searchTimeout;
 
@@ -208,6 +224,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
    
+
 
   // Construir horario semanal (config)
   buildSchedule();

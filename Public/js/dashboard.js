@@ -14,14 +14,14 @@ function renderDashboard() {
   const pendientes = store.atenciones.filter(a => a.estado === 'pendiente').length;
 
   const statElements = {
-    'stat-registros':  store.estudiantes.length,
-    'stat-citas':      pendientes,
-    'stat-pacientes':  store.estudiantes.length,
-    'stat-reportes':   store.reportes,
-    'stat-reg-delta':  '↑ ' + store.estudiantes.length + ' registros',
+    'stat-registros' : store.estudiantes.filter(e => store.atenciones.some(a => a.idestudiante === e.id)).length,
+    'stat-citas'     : pendientes,
+    'stat-pacientes' : store.estudiantes.filter(e => store.atenciones.some(a => a.idestudiante === e.id)).length,
+    'stat-reportes'  : store.reportes,
+    'stat-reg-delta' : '↑ ' + store.estudiantes.filter(e => store.atenciones.some(a => a.idestudiante === e.id)).length + ' registros',
     'stat-cita-delta': '↑ ' + pendientes + ' pendientes',
-    'badge-historial': store.estudiantes.length,
-    'badge-citas':     pendientes
+    'badge-historial': store.estudiantes.filter(e =>store.atenciones.some(a => a.idestudiante === e.id)).length,
+    'badge-citas'    : pendientes
   };
 
   Object.entries(statElements).forEach(([id, value]) => {
