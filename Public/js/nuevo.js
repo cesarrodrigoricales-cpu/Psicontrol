@@ -309,7 +309,6 @@ async function guardarNuevaAtencion() {
         return;
       }
 
-      // Actualizar contactos si vienen nuevos
       if (contactosEmergencia.length > 0) {
         try {
           await apiFetch(`${API}/estudiantes/${idestudiante}`, {
@@ -319,7 +318,6 @@ async function guardarNuevaAtencion() {
         } catch (_) {}
       }
     } else {
-      // ✅ Crear nuevo estudiante con nivel
       const nivelPagina = window.location.pathname.includes('primaria') ? 'primaria' : 'secundaria';
       const nuevoEst = await apiFetch(`${API}/estudiantes`, {
         method: 'POST',
@@ -332,7 +330,6 @@ async function guardarNuevaAtencion() {
       });
       idestudiante = nuevoEst.id;
 
-      // ✅ Agregar al store local
       store.estudiantes.push({
         id: idestudiante,
         nombres, apellidos, dni, telefono, fechanac, genero,
@@ -342,30 +339,39 @@ async function guardarNuevaAtencion() {
       });
     }
 
-    // Buscar o usar primer motivo
-    let idmotivo = 1;
+    // ✅ Buscar o crear motivo de consulta
+    let idmotivo = null;
     try {
       const motivos = await apiFetch(`${API}/motivosconsulta`);
-      const encontrado = (motivos || []).find(m =>
-        m.descripcion === motivoTexto || m.nombre === motivoTexto
-      );
-      idmotivo = encontrado ? encontrado.idmotivo : (motivos?.[0]?.idmotivo || 1);
-    } catch (_) {}
+      const encontrado = (motivos || []).find(m => m.motivoconsulta === motivoTexto);
+
+      if (encontrado) {
+        idmotivo = encontrado.id;
+      } else {
+        const nuevo = await apiFetch(`${API}/motivosconsulta`, {
+          method: 'POST',
+          body: JSON.stringify({ motivoconsulta: motivoTexto })
+        });
+        idmotivo = nuevo.id;
+      }
+    } catch (eMotivo) {
+      console.error('Error con motivos:', eMotivo);
+    }
 
     const fechahora = `${fecha}T${hora}:00`;
     await apiFetch(`${API}/atenciones`, {
-     method: 'POST',
-     body: JSON.stringify({
-       idestudiante,
-       fechahora,
-       nivelatencion: nivel,
-       idmotivo,
-       estado: 'cerrado',
-       observaciones: obs || null,
-       grado,      
-       seccion     
-    })
-  });
+      method: 'POST',
+      body: JSON.stringify({
+        idestudiante,
+        fechahora,
+        nivelatencion: nivel,
+        idmotivo: idmotivo || null,
+        estado: 'cerrado',
+        observaciones: obs || null,
+        grado,
+        seccion
+      })
+    });
 
     agregarActividad('purple', '📝', `Nueva atención: <strong>${nombres} ${apellidos}</strong>`, 'Ahora');
     toast(`✅ Atención registrada para ${nombres} ${apellidos}`);
@@ -376,7 +382,7 @@ async function guardarNuevaAtencion() {
       if (quiere) {
         abrirFormularioSegundaCita(idestudiante, `${nombres} ${apellidos}`);
       } else {
-        navigateTo('historial');   // ← va al historial, no a atenciones
+        navigateTo('historial');
       }
     });
 
@@ -386,6 +392,7 @@ async function guardarNuevaAtencion() {
   }
 }
 
+// ✅ DOMContentLoaded — FUERA de guardarNuevaAtencion
 document.addEventListener('DOMContentLoaded', function () {
   const naFecha = document.getElementById('na-fecha');
   if (naFecha) {
@@ -405,6 +412,14 @@ document.addEventListener('DOMContentLoaded', function () {
   if (telefonoInput) {
     telefonoInput.addEventListener('input', (e) => {
       e.target.value = e.target.value.replace(/\D/g, '').slice(0, 9);
+    });
+  }
+
+  // ✅ FIX: Cargar secciones cuando cambia el grado
+  const gradoEl = document.getElementById('na-grado');
+  if (gradoEl) {
+    gradoEl.addEventListener('change', function () {
+      buildSeccionSelect('na-seccion', this.value);
     });
   }
 });

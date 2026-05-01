@@ -11,4 +11,21 @@ router.get('/', async (req, res) => {
   }
 });
 
+// ✅ Ruta POST para crear nuevo motivo
+router.post('/', async (req, res) => {
+  try {
+    const { motivoconsulta } = req.body;
+    if (!motivoconsulta) {
+      return res.status(400).json({ error: 'El campo motivoconsulta es requerido' });
+    }
+    const [result] = await sequelize.query(
+      'INSERT INTO motivosconsulta (motivoconsulta) VALUES (?)',
+      { replacements: [motivoconsulta] }
+    );
+    res.json({ id: result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
