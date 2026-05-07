@@ -20,7 +20,7 @@ function renderCalendario() {
   const page = document.getElementById('page-calendario');
   if (!page) return;
 
-  // ✅ Limpiar localStorage de eventos viejos de atenciones
+  //  Limpiar localStorage de eventos viejos de atenciones
   // para que se re-sincronicen correctamente
   const stored = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '[]');
   calEventos = stored.filter(e => !e.fromAtencion); // quitar los de atenciones
