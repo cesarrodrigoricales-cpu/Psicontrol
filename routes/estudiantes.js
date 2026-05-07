@@ -65,11 +65,10 @@ router.post('/', async (req, res) => {
     const {
       nombres, apellidos, telefono, genero,
       fechanac, condicion, dni,
-      grado, seccion,           // ✅ ahora se usan
+      grado, seccion,
       contactosEmergencia
     } = req.body;
 
-    // 1. Insertar persona
     const [idpersona] = await sequelize.query(`
       INSERT INTO personas (nombres, apellidos, telefono, genero, nrodoc, tipodoc)
       VALUES (?, ?, ?, ?, ?, 'DNI')
@@ -78,7 +77,6 @@ router.post('/', async (req, res) => {
       transaction: t
     });
 
-    // 2. Insertar estudiante ✅ con grado y seccion
     const [idestudiante] = await sequelize.query(`
       INSERT INTO estudiantes (idpersona, fechanac, condicion, grado, seccion)
       VALUES (?, ?, ?, ?, ?)
@@ -93,7 +91,6 @@ router.post('/', async (req, res) => {
       transaction: t
     });
 
-    // 3. Contactos de emergencia
     if (Array.isArray(contactosEmergencia) && contactosEmergencia.length > 0) {
       for (const c of contactosEmergencia) {
         if (c.nombre || c.celular) {
@@ -110,11 +107,9 @@ router.post('/', async (req, res) => {
 
     await t.commit();
     res.status(201).json({
-      id: idestudiante,
-      idpersona,
+      id: idestudiante, idpersona,
       nombres, apellidos, telefono, genero,
-      fechanac, condicion, dni,
-      grado, seccion,
+      fechanac, condicion, dni, grado, seccion,
       contactosEmergencia: contactosEmergencia || []
     });
   } catch (err) {
@@ -124,6 +119,90 @@ router.post('/', async (req, res) => {
   }
 });
 
+// ── POST /bulk — inserción/actualización masiva desde SIAGIE ─────────────────
+// Body: { estudiantes: [{nombres, apellidos, dni, grado, seccion, fechanac, genero, condicion}] }
+// Response: { insertados, actualizados, errores, total, detalle[] }
+router.post('/bulk', async (req, res) => {
+  const { estudiantes = [] } = req.body;
+
+  if (!Array.isArray(estudiantes) || estudiantes.length === 0) {
+    return res.status(400).json({ error: 'Lista de estudiantes vacía' });
+  }
+
+  let insertados = 0, actualizados = 0, errores = 0;
+  const detalle = [];
+
+  for (const est of estudiantes) {
+    const t = await sequelize.transaction();
+    try {
+      const { nombres, apellidos, dni, grado, seccion, fechanac, genero, condicion } = est;
+
+      // Buscar si ya existe por DNI
+      const [existe] = await sequelize.query(
+        `SELECT e.id, e.idpersona, e.grado, e.seccion
+         FROM estudiantes e
+         JOIN personas p ON e.idpersona = p.id
+         WHERE p.nrodoc = ? LIMIT 1`,
+        { replacements: [dni || ''], transaction: t }
+      );
+
+      if (existe.length > 0) {
+        const actual = existe[0];
+        // Solo actualizar si cambió algo
+        if (actual.grado !== grado || actual.seccion !== seccion) {
+          await sequelize.query(
+            `UPDATE personas SET nombres=?, apellidos=? WHERE id=?`,
+            { replacements: [nombres || '', apellidos || '', actual.idpersona], transaction: t }
+          );
+          await sequelize.query(
+            `UPDATE estudiantes SET grado=?, seccion=?, condicion='activo' WHERE id=?`,
+            { replacements: [grado || null, seccion || null, actual.id], transaction: t }
+          );
+          actualizados++;
+          detalle.push({ dni, accion: 'actualizado', id: actual.id });
+        } else {
+          detalle.push({ dni, accion: 'sin_cambio', id: actual.id });
+        }
+      } else {
+        // Insertar nuevo
+        const [idpersona] = await sequelize.query(`
+          INSERT INTO personas (nombres, apellidos, genero, nrodoc, tipodoc)
+          VALUES (?, ?, ?, ?, 'DNI')
+        `, {
+          replacements: [nombres || '', apellidos || '', genero || null, dni || null],
+          transaction: t
+        });
+
+        const [idest] = await sequelize.query(`
+          INSERT INTO estudiantes (idpersona, fechanac, condicion, grado, seccion)
+          VALUES (?, ?, ?, ?, ?)
+        `, {
+          replacements: [
+            idpersona,
+            fechanac  || null,
+            condicion || 'activo',
+            grado     || null,
+            seccion   || null
+          ],
+          transaction: t
+        });
+
+        insertados++;
+        detalle.push({ dni, accion: 'insertado', id: idest });
+      }
+
+      await t.commit();
+    } catch (err) {
+      await t.rollback();
+      errores++;
+      detalle.push({ dni: est.dni, accion: 'error', mensaje: err.message });
+      console.error(`[BULK] Error con DNI ${est.dni}:`, err.message);
+    }
+  }
+
+  res.json({ insertados, actualizados, errores, total: estudiantes.length, detalle });
+});
+
 // ── PUT actualizar estudiante ──
 router.put('/:id', async (req, res) => {
   const t = await sequelize.transaction();
@@ -131,7 +210,7 @@ router.put('/:id', async (req, res) => {
     const {
       nombres, apellidos, telefono, genero,
       fechanac, condicion, dni,
-      grado, seccion,           // ✅ ahora se actualizan
+      grado, seccion,
       contactosEmergencia
     } = req.body;
 
@@ -145,7 +224,6 @@ router.put('/:id', async (req, res) => {
     }
     const { idpersona } = rows[0];
 
-    // Actualizar persona
     await sequelize.query(`
       UPDATE personas SET nombres=?, apellidos=?, telefono=?, genero=?, nrodoc=?
       WHERE id=?
@@ -154,7 +232,6 @@ router.put('/:id', async (req, res) => {
       transaction: t
     });
 
-    // Actualizar estudiante ✅ con grado y seccion
     await sequelize.query(`
       UPDATE estudiantes SET fechanac=?, condicion=?, grado=?, seccion=?
       WHERE id=?
@@ -169,7 +246,6 @@ router.put('/:id', async (req, res) => {
       transaction: t
     });
 
-    // Actualizar contactos
     if (Array.isArray(contactosEmergencia)) {
       await sequelize.query(
         `DELETE FROM contacto_emergencia WHERE idestudiante = ?`,

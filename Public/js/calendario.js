@@ -1,5 +1,6 @@
 // ═══════════════════════════════════════════════
 // CALENDARIO.JS — FullCalendar
+// PsiControl · Sistema de Atención Psicológica
 // ═══════════════════════════════════════════════
 
 const CAL_STORAGE_KEY = 'psicontrol_cal_eventos';
@@ -19,8 +20,11 @@ function renderCalendario() {
   const page = document.getElementById('page-calendario');
   if (!page) return;
 
-  calEventos = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '[]');
-  sincronizarAtencionesAlCalendario();
+  // ✅ Limpiar localStorage de eventos viejos de atenciones
+  // para que se re-sincronicen correctamente
+  const stored = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '[]');
+  calEventos = stored.filter(e => !e.fromAtencion); // quitar los de atenciones
+  sincronizarAtencionesAlCalendario();              // re-sincronizar limpios
 
   page.innerHTML = `
     <div class="page-header">
@@ -88,7 +92,9 @@ function renderCalendario() {
             </div>
           </div>
           <div style="margin-top:16px;display:flex;gap:10px;justify-content:space-between;">
-            <button class="btn-secondary" id="cal-btn-eliminar" style="color:var(--rose);border-color:var(--rose);display:none;" onclick="calEliminarEvento()">Eliminar</button>
+            <button class="btn-secondary" id="cal-btn-eliminar"
+              style="color:var(--rose);border-color:var(--rose);display:none;"
+              onclick="calEliminarEvento()">Eliminar</button>
             <div style="display:flex;gap:10px;margin-left:auto;">
               <button class="btn-secondary" onclick="closeModal('modal-calendario')">Cancelar</button>
               <button class="btn-primary" onclick="calGuardarEvento()">Guardar</button>
@@ -98,7 +104,6 @@ function renderCalendario() {
       </div>
     </div>`;
 
-  // Inicializar FullCalendar
   const el = document.getElementById('fullcalendar');
   calInstance = new FullCalendar.Calendar(el, {
     initialView: window.innerWidth < 768 ? 'listWeek' : 'dayGridMonth',
@@ -109,12 +114,7 @@ function renderCalendario() {
       center: 'title',
       right:  window.innerWidth < 768 ? 'listWeek,dayGridMonth' : 'dayGridMonth,timeGridWeek'
     },
-    buttonText: {
-      today:    'Hoy',
-      month:    'Mes',
-      week:     'Semana',
-      list:     'Lista'
-    },
+    buttonText: { today: 'Hoy', month: 'Mes', week: 'Semana', list: 'Lista' },
     events: calEventosParaFC(),
     eventClick(info) {
       const ev = calEventos.find(e => String(e.id) === info.event.id);
@@ -149,23 +149,39 @@ function calEventosParaFC() {
 function sincronizarAtencionesAlCalendario() {
   store.atenciones.forEach(a => {
     if (!a.fechahora) return;
-    const key    = `atencion_${a.id}`;
+
+    const key = `atencion_${a.id}`;
+
+    // ✅ Evitar duplicados
     const existe = calEventos.find(e => e.key === key);
-    if (!existe) {
-      const dt   = new Date(a.fechahora);
-      const fec  = dt.toISOString().split('T')[0];
-      const hora = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
-      calEventos.push({
-        id: key, key,
-        titulo: a.paciente || 'Atención',
-        tipo: a.nivelatencion === 'grave' ? 'urgente' : 'sesion',
-        fecha: fec, hora,
-        notif: 15,
-        obs: a.motivoconsulta || '',
-        fromAtencion: true
-      });
-    }
+    if (existe) return;
+
+    // ✅ Parsear fecha y hora correctamente
+    const dt = new Date(a.fechahora);
+    if (isNaN(dt)) return;
+
+    const fec  = dt.toISOString().split('T')[0];
+    const hora = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
+
+    // ✅ Nombre del estudiante correcto
+    const estudiante = store.estudiantes.find(e => e.id == a.idestudiante);
+    const nombreMostrar = estudiante
+      ? `${estudiante.nombres} ${estudiante.apellidos}`
+      : (a.paciente || 'Atención');
+
+    calEventos.push({
+      id:  key,
+      key,
+      titulo: nombreMostrar,
+      tipo:   a.nivelatencion === 'grave' ? 'urgente' : 'sesion',
+      fecha:  fec,
+      hora,
+      notif: 15,
+      obs:   a.motivoconsulta || a.motivo || '',
+      fromAtencion: true
+    });
   });
+
   calSave();
 }
 
@@ -178,7 +194,7 @@ function calRenderNotifBar() {
   const bar = document.getElementById('cal-notif-bar');
   if (!bar) return;
 
-  const hoyS = hoy();
+  const hoyS   = hoy();
   const hoyCal = calEventos.filter(e => e.fecha === hoyS);
   bar.innerHTML = '';
 
@@ -189,7 +205,7 @@ function calRenderNotifBar() {
 
   hoyCal.slice(0, 3).forEach(ev => {
     const c = document.createElement('div');
-    c.className = 'appt-badge c-teal';
+    c.className   = 'appt-badge c-teal';
     c.style.cursor = 'pointer';
     c.textContent = `${ev.hora} — ${ev.titulo.substring(0, 22)}${ev.titulo.length > 22 ? '…' : ''}`;
     c.onclick = () => calAbrirEditar(ev);
@@ -215,7 +231,7 @@ function calAbrirModal(fechaStr = null) {
 function calAbrirEditar(ev) {
   if (typeof ev === 'string') ev = JSON.parse(ev);
   if (ev.fromAtencion) {
-    toast('Este evento viene de una atención registrada', 'info');
+    toast('Este evento viene de una atención registrada. Edítalo desde Atenciones.', 'info');
     return;
   }
   calEditId = ev.id;
@@ -257,7 +273,6 @@ function calGuardarEvento() {
   calSave();
   closeModal('modal-calendario');
 
-  // Actualizar FullCalendar sin re-renderizar
   if (calInstance) {
     calInstance.removeAllEvents();
     calInstance.addEventSource(calEventosParaFC());
@@ -285,4 +300,19 @@ function calEliminarEvento() {
   calRenderNotifBar();
   toast('Evento eliminado', 'warning');
   calEditId = null;
+}
+
+// ✅ LIMPIAR todo el localStorage del calendario
+// Útil para resetear datos corruptos
+function limpiarCalendario() {
+  if (!confirm('¿Limpiar todos los eventos del calendario? Los de atenciones se recuperarán automáticamente.')) return;
+  localStorage.removeItem(CAL_STORAGE_KEY);
+  calEventos = [];
+  sincronizarAtencionesAlCalendario();
+  if (calInstance) {
+    calInstance.removeAllEvents();
+    calInstance.addEventSource(calEventosParaFC());
+  }
+  calRenderNotifBar();
+  toast('Calendario limpiado correctamente');
 }

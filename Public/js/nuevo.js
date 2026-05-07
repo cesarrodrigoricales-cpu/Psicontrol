@@ -90,8 +90,7 @@ function leerContactosEmergencia() {
 }
 
 function resetNuevaAtencion() {
-  ['na-nombres','na-apellidos','na-tipo-doc','na-telefono','na-fechanac',
-   'na-condicion','na-motivo-texto','na-observaciones']
+    ['na-nombres','na-apellidos','na-tipo-doc','na-telefono','na-telefono-emergencia','na-fechanac','na-condicion','na-motivo-texto','na-observaciones']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
@@ -99,6 +98,9 @@ function resetNuevaAtencion() {
 
   const generoEl = document.getElementById('na-genero');
   if (generoEl) generoEl.value = '';
+  
+  const parentescoEl = document.getElementById('na-parentesco-emergencia'); 
+  if (parentescoEl) parentescoEl.value = '';
 
   const gradoEl   = document.getElementById('na-grado');
   const seccionEl = document.getElementById('na-seccion');
@@ -282,6 +284,8 @@ async function guardarNuevaAtencion() {
   const apellidos = document.getElementById('na-apellidos')?.value?.trim();
   const dni       = document.getElementById('na-doc-numero')?.value?.trim();
   const telefono  = document.getElementById('na-telefono')?.value?.trim();
+  const telefonoEmergencia = document.getElementById('na-telefono-emergencia')?.value?.trim();
+  const parentescoEmergencia = document.getElementById('na-parentesco-emergencia')?.value || ''; 
   const fechanac  = document.getElementById('na-fechanac')?.value;
   const genero    = document.getElementById('na-genero')?.value;
   const grado     = document.getElementById('na-grado')?.value;
@@ -309,37 +313,44 @@ async function guardarNuevaAtencion() {
         return;
       }
 
-      if (contactosEmergencia.length > 0) {
-        try {
-          await apiFetch(`${API}/estudiantes/${idestudiante}`, {
-            method: 'PUT',
-            body: JSON.stringify({ ...existente, contactosEmergencia })
-          });
-        } catch (_) {}
-      }
-    } else {
-      const nivelPagina = window.location.pathname.includes('primaria') ? 'primaria' : 'secundaria';
-      const nuevoEst = await apiFetch(`${API}/estudiantes`, {
-        method: 'POST',
-        body: JSON.stringify({
-          nombres, apellidos, dni, telefono, fechanac, genero,
-          grado, seccion, nivel: nivelPagina,
-          condicion: 'activo',
-          contactosEmergencia
-        })
-      });
-      idestudiante = nuevoEst.id;
+   //  CORRECTO — un solo bloque, sin duplicados:
+try {
+ await apiFetch(`${API}/estudiantes/${idestudiante}`, {
+  method: 'PUT',
+  body: JSON.stringify({
+    ...existente,
+    telefono,
+    telefonoEmergencia,      
+    parentescoEmergencia,    
+    contactosEmergencia
+  })
+});
+} catch (_) {}
+} else {
+  const nivelPagina = window.location.pathname.includes('primaria') ? 'primaria' : 'secundaria';
+  const nuevoEst = await apiFetch(`${API}/estudiantes`, {
+    method: 'POST',
+   body: JSON.stringify({
+     nombres, apellidos, dni, telefono,
+     telefonoEmergencia, parentescoEmergencia,  // 👈
+     fechanac, genero, grado, seccion,
+     nivel: nivelPagina, condicion: 'activo',
+     contactosEmergencia
+   })
+  });
+  idestudiante = nuevoEst.id;
 
-      store.estudiantes.push({
-        id: idestudiante,
-        nombres, apellidos, dni, telefono, fechanac, genero,
-        grado, seccion, nivel: nivelPagina,
-        condicion: 'activo',
-        contactosEmergencia
-      });
-    }
+   store.estudiantes.push({
+    id: idestudiante,
+    nombres, apellidos, dni, telefono,
+    telefonoEmergencia, parentescoEmergencia,  
+    fechanac, genero, grado, seccion,
+    nivel: nivelPagina, condicion: 'activo',
+    contactosEmergencia
+  });
+}
 
-    // ✅ Buscar o crear motivo de consulta
+    // Buscar o crear motivo de consulta
     let idmotivo = null;
     try {
       const motivos = await apiFetch(`${API}/motivosconsulta`);
@@ -392,7 +403,7 @@ async function guardarNuevaAtencion() {
   }
 }
 
-// ✅ DOMContentLoaded — FUERA de guardarNuevaAtencion
+//  DOMContentLoaded — FUERA de guardarNuevaAtencion
 document.addEventListener('DOMContentLoaded', function () {
   const naFecha = document.getElementById('na-fecha');
   if (naFecha) {
@@ -415,7 +426,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // ✅ FIX: Cargar secciones cuando cambia el grado
+  // FIX: Cargar secciones cuando cambia el grado
   const gradoEl = document.getElementById('na-grado');
   if (gradoEl) {
     gradoEl.addEventListener('change', function () {

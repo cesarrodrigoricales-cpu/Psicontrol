@@ -6,15 +6,15 @@
 // ── STORE GLOBAL ────────────────────────────────
 // Compartido con todos los módulos vía window.store
 window.store = {
-  atenciones: [],
+  atenciones:  [],
   estudiantes: [],
   actividad: [
     { tipo: 'purple', icon: '📝', texto: 'Sistema iniciado correctamente', tiempo: 'Ahora' },
   ],
   reportes: 0,
   config: {
-    nombre:    'Consultorio PsiControl',
-    psicologo: 'Dra. Ana López',
+    nombre:    '',
+    psicologo: '',
     tel:       '',
     email:     '',
     dir:       ''
@@ -28,7 +28,7 @@ const pageLabels = {
   citas:      'Atenciones',
   nuevo:      'Nueva atención',
   reportes:   'Reportes',
-  'historial-anios': 'Historial de años anteriores',  // ← AGREGAR
+  'historial-anios': 'Historial de años anteriores',  
   siagie:            'Integración SIAGIE',
   calendario: 'Calendario',
   config:     'Configuración',

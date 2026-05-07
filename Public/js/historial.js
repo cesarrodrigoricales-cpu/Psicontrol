@@ -157,11 +157,17 @@ async function cargarHistorialPaciente(id) {
           <div style="font-size:16px;font-weight:700;color:var(--text-primary);">${p.apellidos}, ${p.nombres}</div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Motivo principal: ${motivoTexto}</div>
         </div>
-        <button class="btn-secondary" style="margin-left:auto;font-size:11px;padding:5px 12px;"
-          onclick="document.getElementById('hist-detail-${id}').style.display='none';
-                   document.querySelector('.hist-row-open')?.classList.remove('hist-row-open')">
-          Cerrar ✕
-        </button>
+      <div style="margin-left:auto;display:flex;gap:8px;">
+  <button class="btn-secondary" style="font-size:11px;padding:5px 12px;"
+    onclick="abrirEditarEstudiante(${id})">
+    ✏️ Editar
+  </button>
+  <button class="btn-secondary" style="font-size:11px;padding:5px 12px;"
+    onclick="document.getElementById('hist-detail-${id}').style.display='none';
+             document.querySelector('.hist-row-open')?.classList.remove('hist-row-open')">
+    Cerrar ✕
+  </button>
+</div>
       </div>
 
       <div class="hist-detail-grid">
@@ -190,7 +196,10 @@ async function cargarHistorialPaciente(id) {
         <div class="hist-info-block">
           <div class="hist-info-label">Teléfono</div>
           <div class="hist-info-value">${p.telefono || '—'}</div>
-        </div>
+          <div class="hist-info-block">
+          <div class="hist-info-label">Tel. emergencia</div>
+          <div class="hist-info-value">${p.telefonoEmergencia? `${p.telefonoEmergencia} · ${p.parentescoEmergencia || 'Sin parentesco'}`: '—'}</div>
+            </div>
         <div class="hist-info-block">
           <div class="hist-info-label">Condición</div>
           <div class="hist-info-value">
@@ -239,7 +248,130 @@ async function cargarHistorialPaciente(id) {
     </div>`;
 }
 
+function abrirEditarEstudiante(id) {
+  const p = store.estudiantes.find(x => x.id == id);
+  if (!p) return;
 
+  let modal = document.getElementById('modal-editar-estudiante');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-editar-estudiante';
+    modal.className = 'modal-overlay';
+    document.body.appendChild(modal);
+  }
+
+  modal.innerHTML = `
+    <div class="modal" style="max-width:560px;">
+      <div class="modal-header">
+        <div class="modal-title">✏️ Editar estudiante</div>
+        <button class="modal-close" onclick="closeModal('modal-editar-estudiante')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-form-grid">
+          <div class="form-group">
+            <label>Nombres *</label>
+            <input type="text" id="edit-nombres" value="${p.nombres || ''}">
+          </div>
+          <div class="form-group">
+            <label>Apellidos *</label>
+            <input type="text" id="edit-apellidos" value="${p.apellidos || ''}">
+          </div>
+          <div class="form-group">
+            <label>Teléfono</label>
+            <input type="tel" id="edit-telefono" maxlength="9"
+              value="${p.telefono || ''}"
+              oninput="this.value=this.value.replace(/\\D/g,'').slice(0,9)">
+          </div>
+          <div class="form-group">
+            <label>Tel. emergencia</label>
+            <input type="tel" id="edit-telefono-emergencia" maxlength="9"
+              value="${p.telefonoEmergencia || ''}"
+              oninput="this.value=this.value.replace(/\\D/g,'').slice(0,9)">
+          </div>
+          <div class="form-group">
+            <label>Parentesco contacto</label>
+            <select id="edit-parentesco-emergencia">
+              <option value="">-- Parentesco --</option>
+              ${['Madre','Padre','Apoderado','Hermano/a','Tío/a','Abuelo/a','Otro'].map(op =>
+                `<option value="${op}" ${p.parentescoEmergencia === op ? 'selected' : ''}>${op}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Género</label>
+            <select id="edit-genero">
+              <option value="">-- Selecciona --</option>
+              ${['Masculino','Femenino','Otro'].map(op =>
+                `<option value="${op}" ${p.genero === op ? 'selected' : ''}>${op}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Condición</label>
+            <select id="edit-condicion">
+              <option value="activo"   ${p.condicion === 'activo'   ? 'selected' : ''}>Activo</option>
+              <option value="inactivo" ${p.condicion === 'inactivo' ? 'selected' : ''}>Inactivo</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-secondary" onclick="closeModal('modal-editar-estudiante')">Cancelar</button>
+          <button class="btn-primary" onclick="guardarEdicionEstudiante(${id})">
+            💾 Guardar cambios
+          </button>
+        </div>
+      </div>
+    </div>`;
+
+  modal.classList.add('open');
+}
+
+async function guardarEdicionEstudiante(id) {
+  const p = store.estudiantes.find(x => x.id == id);
+  if (!p) return;
+
+  const nombres              = document.getElementById('edit-nombres')?.value?.trim();
+  const apellidos            = document.getElementById('edit-apellidos')?.value?.trim();
+  const telefono             = document.getElementById('edit-telefono')?.value?.trim();
+  const telefonoEmergencia   = document.getElementById('edit-telefono-emergencia')?.value?.trim();
+  const parentescoEmergencia = document.getElementById('edit-parentesco-emergencia')?.value;
+  const genero               = document.getElementById('edit-genero')?.value;
+  const condicion            = document.getElementById('edit-condicion')?.value;
+
+  if (!nombres || !apellidos) {
+    toast('Nombres y apellidos son obligatorios', 'warning');
+    return;
+  }
+
+  try {
+    await apiFetch(`${API}/estudiantes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...p,
+        nombres, apellidos, telefono,
+        telefonoEmergencia, parentescoEmergencia,
+        genero, condicion
+      })
+    });
+
+    // Actualizar store local
+    const idx = store.estudiantes.findIndex(x => x.id == id);
+    if (idx !== -1) {
+      store.estudiantes[idx] = {
+        ...p, nombres, apellidos, telefono,
+        telefonoEmergencia, parentescoEmergencia,
+        genero, condicion
+      };
+    }
+
+    closeModal('modal-editar-estudiante');
+    toast('✅ Estudiante actualizado correctamente');
+    await cargarHistorialPaciente(id); // refresca el panel
+  } catch (err) {
+    console.error(err);
+    toast('Error al guardar cambios', 'warning');
+  }
+}
 function filterHistorial() {
   const searchEl = document.getElementById('hist-search');
   if (searchEl) renderHistorial(searchEl.value);

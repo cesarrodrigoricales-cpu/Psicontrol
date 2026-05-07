@@ -13,13 +13,79 @@ function inicializarSiagie() {
 function parsearFechaSiagie(fechaStr) {
   if (!fechaStr) return '';
   const str = String(fechaStr).trim();
+  // DD/MM/YYYY
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
     const [d, m, y] = str.split('/');
     return `${y}-${m}-${d}`;
   }
+  // Número de serie de Excel (ej: 44927)
+  if (/^\d+$/.test(str) && parseInt(str) > 10000) {
+    const date = new Date(Math.round((parseInt(str) - 25569) * 86400 * 1000));
+    return date.toISOString().split('T')[0];
+  }
   return str;
 }
 
+// Quita tildes y pasa a minúsculas para comparar
+function normalizar(str) {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+// Busca el valor de una fila por múltiples nombres de columna posibles
+function getCol(fila, ...claves) {
+  for (const clave of claves) {
+    const val = fila[clave];
+    if (val !== undefined && val !== null && String(val).trim() !== '') {
+      return String(val).trim();
+    }
+  }
+  return '';
+}
+
+// ── Barra de progreso ────────────────────────────────────────────────────────
+function mostrarProgreso(actual, total, mensaje) {
+  let barra = document.getElementById('siagie-barra-progreso');
+
+  if (!barra) {
+    barra = document.createElement('div');
+    barra.id = 'siagie-barra-progreso';
+    barra.innerHTML = `
+      <div style="
+        position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+        background:#1e1b4b; color:#fff; border-radius:12px;
+        padding:14px 24px; min-width:320px; box-shadow:0 8px 32px rgba(0,0,0,0.3);
+        z-index:9999; font-family:inherit;
+      ">
+        <div id="siagie-progreso-msg" style="font-size:13px;margin-bottom:8px;font-weight:500;"></div>
+        <div style="background:rgba(255,255,255,0.15);border-radius:99px;height:6px;overflow:hidden;">
+          <div id="siagie-progreso-fill" style="height:100%;background:#818cf8;border-radius:99px;transition:width 0.3s ease;width:0%"></div>
+        </div>
+        <div id="siagie-progreso-pct" style="font-size:11px;color:rgba(255,255,255,0.6);margin-top:6px;text-align:right;"></div>
+      </div>
+    `;
+    document.body.appendChild(barra);
+  }
+
+  const pct = total > 0 ? Math.round((actual / total) * 100) : 0;
+  document.getElementById('siagie-progreso-msg').textContent = mensaje || 'Importando...';
+  document.getElementById('siagie-progreso-fill').style.width = pct + '%';
+  document.getElementById('siagie-progreso-pct').textContent = `${actual} / ${total} — ${pct}%`;
+}
+
+function ocultarProgreso() {
+  const barra = document.getElementById('siagie-barra-progreso');
+  if (barra) {
+    barra.style.opacity = '0';
+    barra.style.transition = 'opacity 0.5s';
+    setTimeout(() => barra.remove(), 500);
+  }
+}
+
+// ── Importación principal ────────────────────────────────────────────────────
 function importarExcelSiagie(file) {
   if (!file) return;
 
@@ -29,30 +95,91 @@ function importarExcelSiagie(file) {
     try {
       const workbook = XLSX.read(e.target.result, { type: 'array' });
       const hoja = workbook.Sheets[workbook.SheetNames[0]];
-      let filas = XLSX.utils.sheet_to_json(hoja);
-    if (filas.length > 0 && !filas[0]['Nombres'] && !filas[0]['NOMBRES'] && !filas[0]['DNI']) {
-  const range = XLSX.utils.decode_range(hoja['!ref']);
-  let headerRow = 0;
-  for (let r = range.s.r; r <= Math.min(range.e.r, 5); r++) {
-    const cell = hoja[XLSX.utils.encode_cell({ r, c: 0 })];
-    if (cell && /apellido|nombre/i.test(String(cell.v))) {
-      headerRow = r;
-      break;
-    }
-  }
-  if (headerRow > 0) {
-    filas = XLSX.utils.sheet_to_json(hoja, { range: headerRow });
-  }
-}
-      let insertados = 0, actualizados = 0, egresados = 0, duplicados = 0, errores = 0;
+      const range = XLSX.utils.decode_range(hoja['!ref']);
 
-      // ── 1. Construir lista de DNIs del nuevo Excel ──────────────
-      const dnisNuevoExcel = new Set(
-        filas.map(f => String(f['DNI'] || f['Nro Documento'] || f['NRO_DNI'] || '').trim())
-             .filter(Boolean)
-      );
+      // ── Detectar fila de encabezados ───────────────────────────
+      // Exige mínimo 2 columnas clave en la misma fila para evitar
+      // falsos positivos con filas de metadatos (Grado: VARIOS, etc.)
+      let headerRow = 0;
+      const keywordHeader = /^(apellido|nombres?|dni|nro\.?\s*doc|n[uú]mero\s*de\s*doc|fec|fecha|g[eé]nero|sexo)/i;
 
-      // ── 2. Marcar como egresados a los alumnos de 5° que ya no aparecen ──
+      outer:
+      for (let r = range.s.r; r <= Math.min(range.e.r, 15); r++) {
+        let hits = 0;
+        for (let c = range.s.c; c <= Math.min(range.e.c, 15); c++) {
+          const cell = hoja[XLSX.utils.encode_cell({ r, c })];
+          if (cell && keywordHeader.test(String(cell.v).trim())) {
+            hits++;
+          }
+        }
+        if (hits >= 2) {
+          headerRow = r;
+          break outer;
+        }
+      }
+
+      const filas = XLSX.utils.sheet_to_json(hoja, { range: headerRow, defval: '' });
+
+      console.log(`[SIAGIE] Encabezados detectados en fila ${headerRow + 1}`);
+      console.log(`[SIAGIE] Total filas leídas: ${filas.length}`);
+      if (filas.length > 0) console.log('[SIAGIE] Columnas:', Object.keys(filas[0]));
+
+      // ── Parsear todas las filas ────────────────────────────────
+      const nuevos     = [];
+      const actualizar = [];
+      let egresados = 0, duplicados = 0, errores = 0;
+
+      const dnisNuevoExcel = new Set();
+
+      for (const fila of filas) {
+        const dni = getCol(fila,
+          'DNI', 'Nro Documento', 'NRO_DNI', 'Nro. Documento',
+          'NUMDOC', 'NUM_DOC', 'Número de Documento'
+        );
+
+        const nombres = getCol(fila, 'Nombres', 'NOMBRES', 'nombres', 'NOMBRE', 'Nombre');
+
+        const apJunto   = getCol(fila, 'Apellidos', 'APELLIDOS', 'apellidos');
+        const apPaterno = getCol(fila, 'APELLIDO PATERNO', 'Apellido Paterno', 'AP_PATERNO', 'Ap. Paterno');
+        const apMaterno = getCol(fila, 'APELLIDO MATERNO', 'Apellido Materno', 'AP_MATERNO', 'Ap. Materno');
+        const apellidos = (apJunto || `${apPaterno} ${apMaterno}`).trim();
+
+        const grado = getCol(fila, 'Grado', 'GRADO', 'grado', 'GRD')
+          .replace(/°|º/g, '').trim();
+
+        const seccion = getCol(fila, 'Sección', 'Seccion', 'SECCION', 'SECCIÓN', 'seccion', 'SEC');
+
+        const fechanac = parsearFechaSiagie(
+          getCol(fila, 'Fec. Nacimiento', 'FECHA_NACIMIENTO', 'Fecha Nacimiento',
+            'FEC_NAC', 'Fecha de Nacimiento', 'FECNAC')
+        );
+
+        const generoRaw = getCol(fila, 'Género', 'Genero', 'GENERO', 'GÉNERO', 'Sexo', 'SEXO');
+        const genero = normalizar(generoRaw) === 'masculino' ? 'Masculino'
+                     : normalizar(generoRaw) === 'femenino'  ? 'Femenino'
+                     : generoRaw;
+
+        // Saltar filas vacías o de resumen
+        if (!nombres || !apellidos) continue;
+        if (/^total|^resumen|^cantidad/i.test(nombres)) continue;
+
+        if (dni) dnisNuevoExcel.add(dni);
+
+        const existe = store.estudiantes.find(est => est.dni && est.dni === dni);
+
+        if (existe) {
+          if (existe.grado !== grado || existe.seccion !== seccion) {
+            actualizar.push({ ...existe, grado, seccion, condicion: 'activo' });
+          } else {
+            duplicados++;
+          }
+        } else {
+          nuevos.push({ nombres, apellidos, dni, grado, seccion, fechanac, genero, condicion: 'activo' });
+        }
+      }
+
+      // ── Marcar egresados (5° que ya no están en el Excel) ──────
+      mostrarProgreso(0, 1, '🎓 Verificando egresados...');
       for (const est of store.estudiantes) {
         if (est.grado === '5' && !dnisNuevoExcel.has(est.dni)) {
           try {
@@ -63,105 +190,118 @@ function importarExcelSiagie(file) {
             est.condicion = 'egresado';
             egresados++;
           } catch (err) {
-            console.warn(`Error marcando egresado ${est.nombres}:`, err.message);
+            console.warn(`[SIAGIE] Error egresado ${est.nombres}:`, err.message);
           }
         }
       }
 
-      // ── 3. Procesar cada fila del Excel ─────────────────────────
-      for (const fila of filas) {
-        const dni = String(fila['DNI'] || fila['Nro Documento'] || fila['NRO_DNI'] || '').trim();
-        const nombres = (fila['Nombres'] || fila['NOMBRES'] || '').trim();
-        const apellidos = (
-          fila['Apellidos'] ||
-          ((fila['APELLIDO PATERNO'] || fila['Apellido Paterno'] || '') + ' ' +
-           (fila['APELLIDO MATERNO'] || fila['Apellido Materno'] || ''))
-        ).trim();
+      // ── Enviar NUEVOS en lotes de 50 ──────────────────────────
+      const LOTE = 50;
+      const totalOperaciones = nuevos.length + actualizar.length;
+      let procesados = 0;
+      let insertados = 0;
 
-        const grado   = String(fila['Grado']   || fila['GRADO']   || '').trim();
-        const seccion = String(fila['Sección']  || fila['Seccion'] || fila['SECCION'] || '').trim();
-        const fechanac = parsearFechaSiagie(fila['Fec. Nacimiento'] || fila['FECHA_NACIMIENTO'] || '');
-        const generoRaw = String(fila['Género'] || fila['Genero'] || '').trim();
-        const genero = generoRaw === 'Masculino' ? 'Masculino'
-                     : generoRaw === 'Femenino'  ? 'Femenino' : generoRaw || '';
-
-        if (!nombres || !apellidos) continue;
-
-        const existe = store.estudiantes.find(est => est.dni && est.dni === dni);
-
-        if (existe) {
-          // ── Alumno ya existe: ¿cambió de grado/sección? ──
-          if (existe.grado !== grado || existe.seccion !== seccion) {
-            try {
-              await apiFetch(`${API}/estudiantes/${existe.id}`, {
-                method: 'PUT',
-                body: JSON.stringify({ ...existe, grado, seccion, condicion: 'activo' })
-              });
-              existe.grado   = grado;
-              existe.seccion = seccion;
-              existe.condicion = 'activo';
-              actualizados++;
-            } catch (err) {
-              console.warn(`Error actualizando ${nombres}:`, err.message);
-              errores++;
-            }
-          } else {
-            duplicados++; // Mismo grado/sección → sin cambios
-          }
-
-        } else {
-          // ── Alumno nuevo: insertar ──
+      if (nuevos.length > 0) {
+        for (let i = 0; i < nuevos.length; i += LOTE) {
+          const lote = nuevos.slice(i, i + LOTE);
+          mostrarProgreso(
+            procesados, totalOperaciones,
+            `⬆️ Insertando nuevos... (${Math.min(i + LOTE, nuevos.length)}/${nuevos.length})`
+          );
           try {
-            const guardado = await apiFetch(`${API}/estudiantes`, {
+            const resultado = await apiFetch(`${API}/estudiantes/bulk`, {
               method: 'POST',
-              body: JSON.stringify({
-                nombres, apellidos, dni,
-                grado, seccion, fechanac, genero,
-                telefono: '', condicion: 'activo'
-              })
+              body: JSON.stringify({ estudiantes: lote })
             });
+            insertados += resultado.insertados || 0;
+            errores    += resultado.errores    || 0;
 
-            store.estudiantes.push({
-              id: guardado.id,
-              nombres, apellidos, dni,
-              grado, seccion, fechanac, genero,
-              telefono: '', condicion: 'activo',
-              origen: 'siagie'
-            });
-
-            insertados++;
+            // Reflejar en store local
+            if (resultado.detalle) {
+              resultado.detalle
+                .filter(d => d.accion === 'insertado')
+                .forEach((d, idx) => {
+                  const est = lote[idx];
+                  if (est) store.estudiantes.push({ ...est, id: d.id, origen: 'siagie' });
+                });
+            }
           } catch (err) {
-            console.warn(`Error guardando ${nombres}:`, err.message);
-            errores++;
+            console.error('[SIAGIE] Error en lote bulk:', err.message);
+            errores += lote.length;
           }
+          procesados += lote.length;
         }
       }
 
-      // ── 4. Actualizar UI ─────────────────────────────────────────
+      // ── Enviar ACTUALIZACIONES en lotes de 50 ─────────────────
+      let actualizados = 0;
+
+      if (actualizar.length > 0) {
+        for (let i = 0; i < actualizar.length; i += LOTE) {
+          const lote = actualizar.slice(i, i + LOTE);
+          mostrarProgreso(
+            procesados, totalOperaciones,
+            `🔄 Actualizando... (${Math.min(i + LOTE, actualizar.length)}/${actualizar.length})`
+          );
+          try {
+            const resultado = await apiFetch(`${API}/estudiantes/bulk`, {
+              method: 'POST',
+              body: JSON.stringify({ estudiantes: lote })
+            });
+            actualizados += resultado.actualizados || 0;
+            errores      += resultado.errores      || 0;
+
+            // Reflejar en store local
+            lote.forEach(est => {
+              const local = store.estudiantes.find(e => e.id === est.id);
+              if (local) {
+                local.grado     = est.grado;
+                local.seccion   = est.seccion;
+                local.condicion = 'activo';
+              }
+            });
+          } catch (err) {
+            console.error('[SIAGIE] Error en lote actualizar:', err.message);
+            errores += lote.length;
+          }
+          procesados += lote.length;
+        }
+      }
+
+      mostrarProgreso(totalOperaciones, totalOperaciones, '✅ Importación completada');
+      setTimeout(ocultarProgreso, 2000);
+
+      // ── Actualizar UI ──────────────────────────────────────────
       const badge = document.getElementById('badge-historial');
-      if (badge) badge.textContent = store.estudiantes.filter(e =>store.atenciones.some(a => a.idestudiante === e.id)).length;
+      if (badge) {
+        badge.textContent = store.estudiantes.filter(e =>
+          store.atenciones.some(a => a.idestudiante === e.id)
+        ).length;
+      }
 
       renderTablaImportados();
 
       const partes = [
-        insertados  ? ` ${insertados} nuevos`      : '',
-        actualizados? ` ${actualizados} actualizados` : '',
-        egresados   ? ` ${egresados} egresados`    : '',
-        duplicados  ? ` ${duplicados} sin cambios`  : '',
-        errores     ? ` ${errores} errores`         : '',
+        insertados   ? `✅ ${insertados} nuevos`          : '',
+        actualizados ? `🔄 ${actualizados} actualizados`   : '',
+        egresados    ? `🎓 ${egresados} egresados`         : '',
+        duplicados   ? `➖ ${duplicados} sin cambios`      : '',
+        errores      ? `❌ ${errores} errores`             : '',
       ].filter(Boolean);
 
-      toast(partes.join('  '));
+      toast(partes.join('  ') || 'Sin cambios');
 
     } catch (err) {
-      console.error(err);
-      toast('Error al leer el archivo Excel');
+      ocultarProgreso();
+      console.error('[SIAGIE] Error crítico:', err);
+      toast('❌ Error al leer el archivo Excel');
     }
   };
 
   reader.readAsArrayBuffer(file);
 }
 
+// ── Render tabla de importados ───────────────────────────────────────────────
 function renderTablaImportados() {
   const tbody = document.getElementById('siagie-tbody');
   if (!tbody) return;
@@ -181,7 +321,6 @@ function renderTablaImportados() {
     const badge = e.condicion === 'egresado'
       ? `<span class="badge-estado" style="background:#f0f0f0;color:#888;">🎓 Egresado</span>`
       : `<span class="badge-estado activo">✅ Importado</span>`;
-
     return `
     <tr>
       <td><b>${e.apellidos}, ${e.nombres}</b></td>
@@ -217,19 +356,25 @@ function actualizarNombreArchivo(input) {
   }
 }
 
-// ── BUSCADOR EN NUEVA ATENCIÓN ──────────────────
 function buscarEstudianteSiagie(q) {
   const contenedor = document.getElementById('na-resultados-busqueda');
   if (!contenedor) return;
 
-  const query = q.trim().toLowerCase();
+  const query = normalizar(q);
   if (!query) { contenedor.style.display = 'none'; return; }
 
+  // Solo estudiantes con al menos una atención registrada
+  const idsConAtencion = new Set(store.atenciones.map(a => a.idestudiante));
+
   const resultados = store.estudiantes.filter(e => {
-    const nombre = `${e.nombres} ${e.apellidos}`.toLowerCase();
-    return nombre.includes(query) || (e.dni && e.dni.includes(query));
+    if (!idsConAtencion.has(e.id)) return false;
+    const nombre    = normalizar(`${e.nombres} ${e.apellidos}`);
+    const nombreInv = normalizar(`${e.apellidos} ${e.nombres}`);
+    return nombre.includes(query) || nombreInv.includes(query) ||
+           (e.dni && e.dni.includes(query));
   }).slice(0, 6);
 
+  // ← Todo lo de abajo es lo que te faltaba
   if (resultados.length === 0) {
     contenedor.style.display = 'none';
     return;
@@ -241,11 +386,10 @@ function buscarEstudianteSiagie(q) {
       onmouseover="this.style.background='#EEEDFE'"
       onmouseout="this.style.background=''">
       <div style="width:32px;height:32px;border-radius:50%;background:#534AB7;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">
-        ${(e.nombres[0] + e.apellidos[0]).toUpperCase()}
+        ${((e.nombres?.[0] || '') + (e.apellidos?.[0] || '')).toUpperCase()}
       </div>
       <div>
         <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">${e.apellidos}, ${e.nombres}</div>
-        <!--  Grado y sección separados con ° -->
         <div style="font-size:11px;color:var(--color-text-secondary);">
           DNI: ${e.dni || '—'} · ${e.grado ? e.grado + '°' : '—'} ${e.seccion || ''}
         </div>
@@ -256,41 +400,39 @@ function buscarEstudianteSiagie(q) {
   contenedor.style.display = 'block';
 }
 
-function seleccionarEstudianteSiagie(id) {
+  function seleccionarEstudianteSiagie(id) {
   const e = store.estudiantes.find(est => est.id === id);
   if (!e) return;
 
   document.getElementById('na-nombres').value    = e.nombres   || '';
   document.getElementById('na-apellidos').value  = e.apellidos || '';
   document.getElementById('na-doc-numero').value = e.dni       || '';
-  //  fechanac ya está en formato ISO "YYYY-MM-DD", compatible con input type="date"
   document.getElementById('na-fechanac').value   = e.fechanac  || '';
 
   const generoSelect = document.getElementById('na-genero');
   if (generoSelect && e.genero) {
     [...generoSelect.options].forEach(o => {
-      if (o.value.toLowerCase() === e.genero.toLowerCase()) generoSelect.value = o.value;
+      if (normalizar(o.value) === normalizar(e.genero)) generoSelect.value = o.value;
     });
   }
 
- const gradoSelect = document.getElementById('na-grado');
-if (gradoSelect && e.grado) {
-  const gradoStr = String(e.grado).trim();
-  // Buscar coincidencia exacta o parcial
-  let encontrado = false;
-  [...gradoSelect.options].forEach(o => {
-    if (o.value === gradoStr || o.text.includes(gradoStr)) {
-      gradoSelect.value = o.value;
-      encontrado = true;
+  const gradoSelect = document.getElementById('na-grado');
+  if (gradoSelect && e.grado) {
+    const gradoStr = String(e.grado).trim();
+    let encontrado = false;
+    [...gradoSelect.options].forEach(o => {
+      if (o.value === gradoStr || o.text.includes(gradoStr)) {
+        gradoSelect.value = o.value;
+        encontrado = true;
+      }
+    });
+    if (!encontrado && gradoStr) {
+      const opt = new Option(`${gradoStr}°`, gradoStr, true, true);
+      gradoSelect.add(opt);
+      gradoSelect.value = gradoStr;
     }
-  });
-  // Si no hay opción aún, crearla temporalmente
-  if (!encontrado && gradoStr) {
-    const opt = new Option(`${gradoStr}°`, gradoStr, true, true);
-    gradoSelect.add(opt);
-    gradoSelect.value = gradoStr;
   }
-}
+
   const seccionSelect = document.getElementById('na-seccion');
   if (seccionSelect && e.seccion) {
     [...seccionSelect.options].forEach(o => {
@@ -301,7 +443,6 @@ if (gradoSelect && e.grado) {
   const chip = document.getElementById('na-estudiante-seleccionado');
   const chipNombre = document.getElementById('na-estudiante-nombre');
   if (chip && chipNombre) {
-    // Muestra grado y sección correctamente
     chipNombre.textContent = `✓ ${e.apellidos}, ${e.nombres} — ${e.grado ? e.grado + '°' : '—'} ${e.seccion || ''}`;
     chip.style.display = 'flex';
   }
@@ -311,7 +452,7 @@ if (gradoSelect && e.grado) {
 }
 
 function limpiarEstudianteSeleccionado() {
-  ['na-nombres','na-apellidos','na-doc-numero','na-fechanac'].forEach(id => {
+  ['na-nombres', 'na-apellidos', 'na-doc-numero', 'na-fechanac'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
   });

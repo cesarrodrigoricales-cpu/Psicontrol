@@ -1,4 +1,6 @@
+// ═══════════════════════════════════════
 // API BASE
+// ═══════════════════════════════════════
 const API = 'http://localhost:3000/api';
 
 async function apiFetch(url, options = {}) {
@@ -16,7 +18,6 @@ async function apiFetch(url, options = {}) {
   }
 }
 
-// ── CARGAR DATOS INICIALES ──────────────────────
 async function cargarDatos() {
   try {
     const [atenciones, estudiantes] = await Promise.all([
@@ -27,6 +28,14 @@ async function cargarDatos() {
     store.estudiantes = estudiantes || [];
     renderDashboard();
     actualizarSelectEstudiantes();
+
+    // ✅ Cargar config guardada del localStorage
+    const guardado = localStorage.getItem('psicontrol_config');
+    if (guardado) {
+      store.config = JSON.parse(guardado);
+      actualizarDatosEnUI();
+    }
+
   } catch (err) {
     console.error('Error cargando datos iniciales:', err);
   }
