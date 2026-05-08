@@ -1,40 +1,54 @@
 // ═══════════════════════════════════════════════
-// SIAGIE.JS — PsiControl · Primaria
-// Importa nómina Excel de Primaria (1° a 6°)
-// También recibe estudiantes enviados desde Secundaria
+// SIAGIE-PRIMARIA.JS — PsiControl
+// Importación de nómina Excel · Primaria (1° a 6°)
 // ═══════════════════════════════════════════════
 
-// Nivel fijo para este módulo
-const NIVEL_PRIMARIA  = 'primaria';
-const GRADO_MAX       = '6';           // 6° = último grado primaria
-const API_BULK        = `${API}/estudiantes/primaria/bulk`;
+const NIVEL_PRIMARIA = 'primaria';
+const GRADO_MAX_PRIM = '6';
+const API_BULK_PRIM  = `${API}/estudiantes/primaria/bulk`;
 
-// ── Inicialización ────────────────────────────────
+// ── Inicialización ────────────────────────────────────────────────────────────
 function inicializarSiagie() {
   const hora = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
   const el   = document.getElementById('siagie-sync-time');
   if (el) el.textContent = hora;
-
-  // Mostrar estudiantes que ya vinieron de secundaria
   renderTablaImportados();
 }
 
-// ── Parsear fecha desde Excel ─────────────────────
+// ── Parsear fecha desde Excel ─────────────────────────────────────────────────
 function parsearFechaSiagie(fechaStr) {
   if (!fechaStr) return '';
   const str = String(fechaStr).trim();
+
   if (/^\d{2}\/\d{2}\/\d{4}$/.test(str)) {
     const [d, m, y] = str.split('/');
+    if (parseInt(m) < 1 || parseInt(m) > 12) return '';
+    if (parseInt(d) < 1 || parseInt(d) > 31) return '';
     return `${y}-${m}-${d}`;
   }
-  if (/^\d+$/.test(str) && parseInt(str) > 10000) {
-    const date = new Date(Math.round((parseInt(str) - 25569) * 86400 * 1000));
-    return date.toISOString().split('T')[0];
+
+  if (/^\d+$/.test(str) && parseInt(str) > 10000 && parseInt(str) < 100000) {
+    try {
+      const date = new Date(Math.round((parseInt(str) - 25569) * 86400 * 1000));
+      if (isNaN(date.getTime())) return '';
+      return date.toISOString().split('T')[0];
+    } catch { return ''; }
   }
-  return str;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  return '';
 }
 
-// ── Obtener columna por múltiples claves ──────────
+// ── Normalizar texto ──────────────────────────────────────────────────────────
+function normalizar(str) {
+  return String(str || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+}
+
+// ── Obtener columna por múltiples claves ──────────────────────────────────────
 function getCol(fila, ...claves) {
   for (const clave of claves) {
     const val = fila[clave];
@@ -45,7 +59,52 @@ function getCol(fila, ...claves) {
   return '';
 }
 
-// ── Barra de progreso ──────────────────────────────
+// ── Validar DNI peruano ───────────────────────────────────────────────────────
+function validarDNI(dni) {
+  if (!dni) return { valido: false, motivo: 'vacío' };
+  const limpio = String(dni).trim().replace(/\s/g, '');
+  if (!/^\d{8}$/.test(limpio)) return { valido: false, motivo: `"${limpio}" no es un DNI válido (debe tener 8 dígitos)` };
+  return { valido: true, valor: limpio };
+}
+
+// ── Validar estructura mínima de nómina SIAGIE ───────────────────────────────
+function validarEstructuraSiagie(filas) {
+  if (!filas || filas.length === 0)
+    return { valido: false, motivo: 'El archivo está vacío o no contiene datos.' };
+
+  const columnasExcel = Object.keys(filas[0]).map(k => normalizar(k));
+  const gruposRequeridos = [
+    { nombre: 'Nombres',   variantes: ['nombres', 'nombre'] },
+    { nombre: 'Apellidos', variantes: ['apellidos', 'apellido', 'ap. paterno', 'ap paterno', 'apellido paterno'] },
+    { nombre: 'Grado',     variantes: ['grado', 'grd'] },
+  ];
+
+  const faltantes = gruposRequeridos.filter(grupo =>
+    !columnasExcel.some(col => grupo.variantes.some(v => col.includes(v)))
+  );
+
+  if (faltantes.length > 0) {
+    return {
+      valido: false,
+      motivo: `No se encontraron las columnas: ${faltantes.map(g => g.nombre).join(', ')}. ¿Es una nómina SIAGIE?`
+    };
+  }
+  return { valido: true };
+}
+
+// ── Detectar filas basura ─────────────────────────────────────────────────────
+function esFilaBasura(nombres, apellidos) {
+  const regexBasura = /^total|^resumen|^cantidad|^\*+|^-{2,}|^={2,}|^#{2,}|\bturno\b|\bnivel\b|^n[uú]mero|^nro\.?\s*$/i;
+  if (regexBasura.test(nombres))  return true;
+  if (regexBasura.test(apellidos)) return true;
+  if (nombres && /^[\d\s\-\/\.\,\*]+$/.test(nombres)) return true;
+  const encabezadosComunes = ['nombres', 'apellidos', 'dni', 'grado', 'seccion', 'genero', 'fecha'];
+  if (encabezadosComunes.includes(normalizar(nombres))) return true;
+  if ((nombres + apellidos).replace(/[\s\-]/g, '').length < 4) return true;
+  return false;
+}
+
+// ── Barra de progreso ─────────────────────────────────────────────────────────
 function mostrarProgreso(actual, total, mensaje) {
   let barra = document.getElementById('siagie-barra-progreso');
   if (!barra) {
@@ -56,8 +115,7 @@ function mostrarProgreso(actual, total, mensaje) {
         position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
         background:#1e1b4b;color:#fff;border-radius:12px;
         padding:14px 24px;min-width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.3);
-        z-index:9999;font-family:inherit;
-      ">
+        z-index:9999;font-family:inherit;">
         <div id="siagie-progreso-msg" style="font-size:13px;margin-bottom:8px;font-weight:500;"></div>
         <div style="background:rgba(255,255,255,0.15);border-radius:99px;height:6px;overflow:hidden;">
           <div id="siagie-progreso-fill" style="height:100%;background:#818cf8;border-radius:99px;transition:width 0.3s ease;width:0%"></div>
@@ -67,7 +125,7 @@ function mostrarProgreso(actual, total, mensaje) {
     document.body.appendChild(barra);
   }
   const pct = total > 0 ? Math.round((actual / total) * 100) : 0;
-  document.getElementById('siagie-progreso-msg').textContent  = mensaje || 'Importando...';
+  document.getElementById('siagie-progreso-msg').textContent  = mensaje || 'Procesando...';
   document.getElementById('siagie-progreso-fill').style.width = pct + '%';
   document.getElementById('siagie-progreso-pct').textContent  = `${actual} / ${total} — ${pct}%`;
 }
@@ -81,77 +139,226 @@ function ocultarProgreso() {
   }
 }
 
-// ═══════════════════════════════════════════════════
-// IMPORTAR EXCEL — solo primaria (1° a 6°)
-// ═══════════════════════════════════════════════════
+// ── Modal de alerta ───────────────────────────────────────────────────────────
+function mostrarAlertaSiagie(titulo, mensaje, detalle = null) {
+  const previo = document.getElementById('siagie-alerta-modal');
+  if (previo) previo.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'siagie-alerta-modal';
+  modal.innerHTML = `
+    <div style="
+      position:fixed;inset:0;background:rgba(0,0,0,0.45);
+      z-index:10000;display:flex;align-items:center;justify-content:center;">
+      <div style="
+        background:#fff;border-radius:16px;padding:28px 32px;
+        max-width:480px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.25);font-family:inherit;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+          <div style="font-size:28px;">⚠️</div>
+          <div style="font-size:16px;font-weight:700;color:#1e1b4b;">${titulo}</div>
+        </div>
+        <div style="font-size:14px;color:#374151;line-height:1.6;margin-bottom:${detalle ? '12px' : '20px'};">
+          ${mensaje}
+        </div>
+        ${detalle ? `<div style="
+          background:#f8f7ff;border:1px solid #e0deff;border-radius:8px;
+          padding:10px 14px;font-size:12px;color:#534AB7;margin-bottom:20px;
+          max-height:120px;overflow-y:auto;font-family:monospace;line-height:1.7;">
+          ${detalle}</div>` : ''}
+        <button onclick="document.getElementById('siagie-alerta-modal').remove()" style="
+          width:100%;padding:10px;background:#534AB7;color:#fff;border:none;
+          border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+          Entendido
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+// ── Modal de advertencias ─────────────────────────────────────────────────────
+function mostrarResumenAdvertencias(advertencias) {
+  if (!advertencias || advertencias.length === 0) return;
+  const previo = document.getElementById('siagie-advertencias-modal');
+  if (previo) previo.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'siagie-advertencias-modal';
+  modal.innerHTML = `
+    <div style="
+      position:fixed;inset:0;background:rgba(0,0,0,0.45);
+      z-index:10000;display:flex;align-items:center;justify-content:center;">
+      <div style="
+        background:#fff;border-radius:16px;padding:28px 32px;
+        max-width:520px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.25);font-family:inherit;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;">
+          <div style="font-size:24px;">📋</div>
+          <div style="font-size:16px;font-weight:700;color:#1e1b4b;">Advertencias de importación</div>
+        </div>
+        <p style="font-size:13px;color:#6b7280;margin-bottom:12px;">
+          Los siguientes registros tuvieron problemas:
+        </p>
+        <div style="max-height:200px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:16px;">
+          ${advertencias.map((adv, i) => `
+            <div style="
+              padding:8px 14px;font-size:12px;
+              border-bottom:1px solid #f3f4f6;
+              background:${i % 2 === 0 ? '#fff' : '#fafafa'};
+              display:flex;gap:8px;align-items:flex-start;">
+              <span style="color:#f59e0b;font-size:14px;flex-shrink:0;">⚠</span>
+              <span style="color:#374151;line-height:1.5;">${adv}</span>
+            </div>`).join('')}
+        </div>
+        <button onclick="document.getElementById('siagie-advertencias-modal').remove()" style="
+          width:100%;padding:10px;background:#534AB7;color:#fff;border:none;
+          border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;">
+          Cerrar
+        </button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// IMPORTAR EXCEL — Primaria (1° a 6°)
+// ═══════════════════════════════════════════════════════════════════════════════
 function importarExcelSiagie(file) {
   if (!file) return;
 
+  const ext = file.name.split('.').pop().toLowerCase();
+  if (!['xlsx', 'xls'].includes(ext)) {
+    mostrarAlertaSiagie(
+      'Formato de archivo incorrecto',
+      `El archivo "<b>${file.name}</b>" no es un archivo Excel válido.<br><br>
+       Solo se aceptan archivos <b>.xlsx</b> o <b>.xls</b> exportados desde SIAGIE.`
+    );
+    return;
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    mostrarAlertaSiagie(
+      'Archivo demasiado grande',
+      'El archivo supera los 10 MB. Verifica que sea la nómina correcta de SIAGIE.'
+    );
+    return;
+  }
+
   const reader = new FileReader();
+
   reader.onload = async function (e) {
     try {
+      mostrarProgreso(0, 1, '📂 Leyendo archivo...');
+
       const workbook = XLSX.read(e.target.result, { type: 'array' });
-      const hoja     = workbook.Sheets[workbook.SheetNames[0]];
-      const range    = XLSX.utils.decode_range(hoja['!ref']);
 
-      // ── Detectar fila de encabezados ──────────
-      let headerRow = 0;
-      const keywordHeader = /^(apellido|nombres?|dni|nro\.?\s*doc|n[uú]mero\s*de\s*doc|fec|fecha|g[eé]nero|sexo)/i;
+      if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+        ocultarProgreso();
+        mostrarAlertaSiagie('Archivo sin hojas',
+          'El archivo Excel no contiene ninguna hoja de datos. Verifica que sea la nómina correcta de SIAGIE.');
+        return;
+      }
 
-      outer:
-      for (let r = range.s.r; r <= Math.min(range.e.r, 15); r++) {
+      const hoja = workbook.Sheets[workbook.SheetNames[0]];
+      if (!hoja || !hoja['!ref']) {
+        ocultarProgreso();
+        mostrarAlertaSiagie('Hoja vacía',
+          'La primera hoja del archivo está vacía. Verifica que sea la nómina correcta de SIAGIE.');
+        return;
+      }
+
+      const range = XLSX.utils.decode_range(hoja['!ref']);
+
+      // ── Detectar fila de encabezados ──────────────────────────────────
+      let headerRow = -1;
+      const keywordHeader = /^(apellido|nombres?|dni|nro\.?\s*doc|n[uú]mero\s*de\s*doc|fec|fecha|g[eé]nero|sexo|grado|secci[oó]n)/i;
+
+      for (let r = range.s.r; r <= Math.min(range.e.r, 20); r++) {
         let hits = 0;
         for (let c = range.s.c; c <= Math.min(range.e.c, 15); c++) {
           const cell = hoja[XLSX.utils.encode_cell({ r, c })];
-          if (cell && keywordHeader.test(String(cell.v).trim())) hits++;
+          if (cell && keywordHeader.test(String(cell.v || '').trim())) hits++;
         }
-        if (hits >= 2) { headerRow = r; break outer; }
+        if (hits >= 2) { headerRow = r; break; }
+      }
+
+      if (headerRow === -1) {
+        ocultarProgreso();
+        mostrarAlertaSiagie(
+          'Estructura no reconocida',
+          'No se encontraron los encabezados de columna esperados en el archivo.<br><br>' +
+          'Una nómina SIAGIE debe tener columnas como <b>Apellidos</b>, <b>Nombres</b>, <b>DNI</b>, <b>Grado</b>, etc.',
+          'Columnas buscadas: Apellidos, Nombres, DNI / Nro Documento, Fecha Nacimiento, Género, Grado, Sección'
+        );
+        return;
       }
 
       const filas = XLSX.utils.sheet_to_json(hoja, { range: headerRow, defval: '' });
 
-      console.log(`[SIAGIE-PRIMARIA] Total filas: ${filas.length}`);
-      if (filas.length > 0) console.log('[SIAGIE-PRIMARIA] Columnas:', Object.keys(filas[0]));
+      console.log(`[SIAGIE-PRIM] Total filas: ${filas.length}`);
+      if (filas.length > 0) console.log('[SIAGIE-PRIM] Columnas:', Object.keys(filas[0]));
 
-      // ── Parsear filas ─────────────────────────
-      const nuevos     = [];
-      const actualizar = [];
-      let egresados = 0, duplicados = 0, errores = 0;
+      // ── Validar estructura mínima ─────────────────────────────────────
+      const validacion = validarEstructuraSiagie(filas);
+      if (!validacion.valido) {
+        ocultarProgreso();
+        mostrarAlertaSiagie(
+          'El archivo no es una nómina SIAGIE',
+          validacion.motivo,
+          `Columnas encontradas: ${Object.keys(filas[0] || {}).join(', ') || '(ninguna)'}`
+        );
+        return;
+      }
+
+      // ── Parsear filas ─────────────────────────────────────────────────
+      const nuevos      = [];
+      const actualizar  = [];
+      const advertencias = [];
+      let egresados = 0, duplicados = 0, errores = 0, filasBasura = 0;
       const dnisDelExcel = new Set();
 
       for (const fila of filas) {
-        const dni = getCol(fila,
-          'DNI','Nro Documento','NRO_DNI','Nro. Documento','NUMDOC','NUM_DOC','Número de Documento'
-        );
-        const nombres = getCol(fila, 'Nombres','NOMBRES','nombres','NOMBRE','Nombre');
-
-        const apJunto   = getCol(fila, 'Apellidos','APELLIDOS','apellidos');
-        const apPaterno = getCol(fila, 'APELLIDO PATERNO','Apellido Paterno','AP_PATERNO','Ap. Paterno');
-        const apMaterno = getCol(fila, 'APELLIDO MATERNO','Apellido Materno','AP_MATERNO','Ap. Materno');
+        const nombres   = getCol(fila, 'Nombres', 'NOMBRES', 'nombres', 'NOMBRE', 'Nombre');
+        const apJunto   = getCol(fila, 'Apellidos', 'APELLIDOS', 'apellidos');
+        const apPaterno = getCol(fila, 'APELLIDO PATERNO', 'Apellido Paterno', 'AP_PATERNO', 'Ap. Paterno');
+        const apMaterno = getCol(fila, 'APELLIDO MATERNO', 'Apellido Materno', 'AP_MATERNO', 'Ap. Materno');
         const apellidos = (apJunto || `${apPaterno} ${apMaterno}`).trim();
 
-        const grado   = getCol(fila, 'Grado','GRADO','grado','GRD').replace(/°|º/g, '').trim();
-        const seccion = getCol(fila, 'Sección','Seccion','SECCION','SECCIÓN','seccion','SEC');
+        if (!nombres && !apellidos) { filasBasura++; continue; }
+        if (esFilaBasura(nombres, apellidos)) { filasBasura++; continue; }
+
+        const dniRaw = getCol(fila, 'DNI', 'Nro Documento', 'NRO_DNI', 'Nro. Documento', 'NUMDOC', 'NUM_DOC', 'Número de Documento');
+        const dniVal = validarDNI(dniRaw);
+        const dni    = dniVal.valido ? dniVal.valor : '';
+        if (dniRaw && !dniVal.valido) {
+          advertencias.push(`${apellidos}, ${nombres} — DNI inválido: ${dniVal.motivo}. Se importará sin DNI.`);
+        }
+
+        const grado   = getCol(fila, 'Grado', 'GRADO', 'grado', 'GRD').replace(/[°º]/g, '').trim();
+        const seccion = getCol(fila, 'Sección', 'Seccion', 'SECCION', 'SECCIÓN', 'seccion', 'SEC');
         const fechanac = parsearFechaSiagie(
-          getCol(fila, 'Fec. Nacimiento','FECHA_NACIMIENTO','Fecha Nacimiento','FEC_NAC','FECNAC')
+          getCol(fila, 'Fec. Nacimiento', 'FECHA_NACIMIENTO', 'Fecha Nacimiento', 'FEC_NAC', 'Fecha de Nacimiento', 'FECNAC')
         );
 
-        const generoRaw = getCol(fila, 'Género','Genero','GENERO','GÉNERO','Sexo','SEXO');
-        const genero    = normalizar(generoRaw) === 'masculino' ? 'Masculino'
-                        : normalizar(generoRaw) === 'femenino'  ? 'Femenino'
-                        : generoRaw;
+        const generoRaw  = getCol(fila, 'Género', 'Genero', 'GENERO', 'GÉNERO', 'Sexo', 'SEXO');
+        const generoNorm = normalizar(generoRaw);
+        const genero     = generoNorm === 'masculino' || generoNorm === 'm' ? 'Masculino'
+                         : generoNorm === 'femenino'  || generoNorm === 'f' ? 'Femenino'
+                         : generoRaw;
 
-        // Saltar filas vacías o totales
-        if (!nombres || !apellidos) continue;
-        if (/^total|^resumen|^cantidad/i.test(nombres)) continue;
-
-        // Solo aceptar grados de primaria (1 al 6)
+        // Solo aceptar grados válidos de primaria (1 al 6)
         const gradoNum = parseInt(grado);
-        if (gradoNum < 1 || gradoNum > 6) continue;
+        if (grado && (gradoNum < 1 || gradoNum > 6)) {
+          advertencias.push(`${apellidos}, ${nombres} — Grado "${grado}" no corresponde a Primaria (1°-6°). Se omitirá.`);
+          filasBasura++;
+          continue;
+        }
+
+        if (!grado) {
+          advertencias.push(`${apellidos}, ${nombres} — no tiene Grado definido. Se importará sin grado.`);
+        }
 
         if (dni) dnisDelExcel.add(dni);
 
-        const existe = store.estudiantes.find(est => est.dni && est.dni === dni);
+        const existe = store.estudiantes.find(est => est.dni && est.dni === dni && dni !== '');
         if (existe) {
           if (existe.grado !== grado || existe.seccion !== seccion) {
             actualizar.push({ ...existe, grado, seccion, condicion: 'activo' });
@@ -159,14 +366,31 @@ function importarExcelSiagie(file) {
             duplicados++;
           }
         } else {
-          nuevos.push({ nombres, apellidos, dni, grado, seccion, fechanac, genero, condicion: 'activo', nivel: NIVEL_PRIMARIA });
+          nuevos.push({
+            nombres, apellidos, dni, grado, seccion,
+            fechanac, genero, condicion: 'activo',
+            nivel: NIVEL_PRIMARIA, origen: 'siagie'
+          });
         }
       }
 
-      // ── Marcar egresados de 6° que ya no están ──
+      console.log(`[SIAGIE-PRIM] Basura: ${filasBasura} | Nuevos: ${nuevos.length} | Actualizar: ${actualizar.length}`);
+
+      if (nuevos.length === 0 && actualizar.length === 0) {
+        ocultarProgreso();
+        mostrarAlertaSiagie(
+          'No se encontraron estudiantes válidos',
+          `Se leyeron <b>${filas.length} filas</b> pero ninguna contiene datos válidos de Primaria.<br><br>
+           Verifica que el archivo sea la nómina de <b>Primaria</b> (grados 1° a 6°).`,
+          advertencias.length > 0 ? advertencias.slice(0, 5).join('\n') : null
+        );
+        return;
+      }
+
+      // ── Marcar egresados de 6° ────────────────────────────────────────
       mostrarProgreso(0, 1, '🎓 Verificando egresados de 6°...');
       for (const est of store.estudiantes) {
-        if (est.grado === GRADO_MAX && !dnisDelExcel.has(est.dni)) {
+        if (est.nivel === NIVEL_PRIMARIA && est.grado === GRADO_MAX_PRIM && !dnisDelExcel.has(est.dni)) {
           try {
             await apiFetch(`${API}/estudiantes/${est.id}`, {
               method: 'PUT',
@@ -175,21 +399,22 @@ function importarExcelSiagie(file) {
             est.condicion = 'egresado';
             egresados++;
           } catch (err) {
-            console.warn(`[SIAGIE-PRIMARIA] Error egresado ${est.nombres}:`, err.message);
+            console.warn(`[SIAGIE-PRIM] Error egresado ${est.nombres}:`, err.message);
           }
         }
       }
 
-      // ── Enviar nuevos en lotes de 50 ──────────
+      // ── Enviar nuevos en lotes ────────────────────────────────────────
       const LOTE = 50;
       const totalOps = nuevos.length + actualizar.length;
       let procesados = 0, insertados = 0;
 
       for (let i = 0; i < nuevos.length; i += LOTE) {
         const lote = nuevos.slice(i, i + LOTE);
-        mostrarProgreso(procesados, totalOps, `⬆️ Insertando... (${Math.min(i + LOTE, nuevos.length)}/${nuevos.length})`);
+        mostrarProgreso(procesados, totalOps,
+          `⬆️ Insertando... (${Math.min(i + LOTE, nuevos.length)}/${nuevos.length})`);
         try {
-          const res = await apiFetch(API_BULK, {
+          const res = await apiFetch(API_BULK_PRIM, {
             method: 'POST',
             body: JSON.stringify({ estudiantes: lote, nivel: NIVEL_PRIMARIA })
           });
@@ -198,23 +423,24 @@ function importarExcelSiagie(file) {
           if (res.detalle) {
             res.detalle.filter(d => d.accion === 'insertado').forEach((d, idx) => {
               const est = lote[idx];
-              if (est) store.estudiantes.push({ ...est, id: d.id, origen: 'siagie' });
+              if (est) store.estudiantes.push({ ...est, id: d.id });
             });
           }
         } catch (err) {
-          console.error('[SIAGIE-PRIMARIA] Error bulk:', err.message);
+          console.error('[SIAGIE-PRIM] Error bulk:', err.message);
           errores += lote.length;
         }
         procesados += lote.length;
       }
 
-      // ── Actualizar en lotes de 50 ─────────────
+      // ── Actualizar existentes ─────────────────────────────────────────
       let actualizados = 0;
       for (let i = 0; i < actualizar.length; i += LOTE) {
         const lote = actualizar.slice(i, i + LOTE);
-        mostrarProgreso(procesados, totalOps, `🔄 Actualizando... (${Math.min(i + LOTE, actualizar.length)}/${actualizar.length})`);
+        mostrarProgreso(procesados, totalOps,
+          `🔄 Actualizando... (${Math.min(i + LOTE, actualizar.length)}/${actualizar.length})`);
         try {
-          const res = await apiFetch(API_BULK, {
+          const res = await apiFetch(API_BULK_PRIM, {
             method: 'POST',
             body: JSON.stringify({ estudiantes: lote, nivel: NIVEL_PRIMARIA })
           });
@@ -225,7 +451,7 @@ function importarExcelSiagie(file) {
             if (local) { local.grado = est.grado; local.seccion = est.seccion; local.condicion = 'activo'; }
           });
         } catch (err) {
-          console.error('[SIAGIE-PRIMARIA] Error actualizar:', err.message);
+          console.error('[SIAGIE-PRIM] Error actualizar:', err.message);
           errores += lote.length;
         }
         procesados += lote.length;
@@ -237,90 +463,49 @@ function importarExcelSiagie(file) {
       renderTablaImportados();
 
       const partes = [
-        insertados   ? `✅ ${insertados} nuevos`      : '',
-        actualizados ? `🔄 ${actualizados} actualizados` : '',
-        egresados    ? `🎓 ${egresados} egresados`    : '',
-        duplicados   ? `➖ ${duplicados} sin cambios` : '',
-        errores      ? `❌ ${errores} errores`         : '',
+        insertados   ? `✅ ${insertados} nuevos`          : '',
+        actualizados ? `🔄 ${actualizados} actualizados`  : '',
+        egresados    ? `🎓 ${egresados} egresados`        : '',
+        duplicados   ? `➖ ${duplicados} sin cambios`     : '',
+        errores      ? `❌ ${errores} errores`            : '',
       ].filter(Boolean);
-      toast(partes.join('  ') || 'Sin cambios');
+      toast(partes.join('  ') || 'Sin cambios detectados');
+
+      if (advertencias.length > 0) {
+        setTimeout(() => mostrarResumenAdvertencias(advertencias), 800);
+      }
 
     } catch (err) {
       ocultarProgreso();
-      console.error('[SIAGIE-PRIMARIA] Error crítico:', err);
-      toast('❌ Error al leer el archivo Excel');
+      console.error('[SIAGIE-PRIM] Error crítico:', err);
+      mostrarAlertaSiagie(
+        'Error al procesar el archivo',
+        `Ocurrió un error inesperado al leer el archivo.<br><br>
+         <b>Detalle:</b> ${err.message || 'Error desconocido'}`
+      );
     }
+  };
+
+  reader.onerror = function () {
+    ocultarProgreso();
+    mostrarAlertaSiagie(
+      'No se pudo leer el archivo',
+      'El navegador no pudo acceder al archivo. Intenta de nuevo o verifica que no esté abierto en otro programa.'
+    );
   };
 
   reader.readAsArrayBuffer(file);
 }
 
-// ═══════════════════════════════════════════════════
-// RECIBIR ESTUDIANTES DESDE SECUNDARIA
-// El módulo de secundaria llama: window.recibirDeSecundaria(estudiantes)
-// ═══════════════════════════════════════════════════
-window.recibirDeSecundaria = async function (estudiantesDeSecundaria) {
-  if (!Array.isArray(estudiantesDeSecundaria) || estudiantesDeSecundaria.length === 0) {
-    toast('⚠️ No hay estudiantes para transferir');
-    return;
-  }
-
-  let insertados = 0, duplicados = 0, errores = 0;
-  const LOTE = 50;
-
-  // Marcar que vienen de secundaria (para identificarlos)
-  const preparados = estudiantesDeSecundaria.map(e => ({
-    ...e,
-    nivel:     NIVEL_PRIMARIA,
-    condicion: 'activo',
-    origen:    'transferido-secundaria'
-  }));
-
-  mostrarProgreso(0, preparados.length, '📥 Recibiendo desde Secundaria...');
-
-  for (let i = 0; i < preparados.length; i += LOTE) {
-    const lote = preparados.slice(i, i + LOTE);
-    mostrarProgreso(i, preparados.length, `📥 Transfiriendo... (${Math.min(i + LOTE, preparados.length)}/${preparados.length})`);
-    try {
-      const res = await apiFetch(API_BULK, {
-        method: 'POST',
-        body: JSON.stringify({ estudiantes: lote, nivel: NIVEL_PRIMARIA })
-      });
-      insertados += res.insertados  || 0;
-      duplicados += res.duplicados  || 0;
-      errores    += res.errores     || 0;
-
-      if (res.detalle) {
-        res.detalle.filter(d => d.accion === 'insertado').forEach((d, idx) => {
-          const est = lote[idx];
-          if (est) store.estudiantes.push({ ...est, id: d.id });
-        });
-      }
-    } catch (err) {
-      console.error('[SIAGIE-PRIMARIA] Error recibiendo de secundaria:', err.message);
-      errores += lote.length;
-    }
-  }
-
-  mostrarProgreso(preparados.length, preparados.length, '✅ Transferencia completada');
-  setTimeout(ocultarProgreso, 2000);
-  renderTablaImportados();
-
-  const partes = [
-    insertados ? `✅ ${insertados} transferidos a Primaria` : '',
-    duplicados ? `➖ ${duplicados} ya existían`             : '',
-    errores    ? `❌ ${errores} errores`                    : '',
-  ].filter(Boolean);
-  toast(partes.join('  ') || 'Sin cambios');
-};
-
-// ── Tabla de estudiantes importados ───────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// TABLA DE IMPORTADOS — Primaria
+// Muestra también los transferidos desde Secundaria (origen: transferido-secundaria)
+// ═══════════════════════════════════════════════════════════════════════════════
 function renderTablaImportados() {
   const tbody = document.getElementById('siagie-tbody');
   if (!tbody) return;
 
-  // Mostrar todos los estudiantes de primaria (importados + transferidos)
-  const lista = store.estudiantes;
+  const lista = store.estudiantes.filter(e => e.nivel === NIVEL_PRIMARIA);
 
   if (lista.length === 0) {
     tbody.innerHTML = `<tr><td colspan="6">
@@ -336,7 +521,7 @@ function renderTablaImportados() {
       ? `<span class="badge-estado" style="background:#f0f0f0;color:#888;">🎓 Egresado</span>`
       : e.origen === 'transferido-secundaria'
         ? `<span class="badge-estado" style="background:#fff7ed;color:#c2410c;">🔀 De Secundaria</span>`
-        : `<span class="badge-estado activo">✅ Importado</span>`;
+        : `<span class="badge-estado activo">✅ Activo</span>`;
 
     return `<tr>
       <td><b>${e.apellidos || ''}, ${e.nombres || ''}</b></td>
@@ -352,7 +537,7 @@ function renderTablaImportados() {
   }).join('');
 }
 
-// ── Helpers UI ────────────────────────────────────
+// ── Helpers UI ────────────────────────────────────────────────────────────────
 function actualizarNombreArchivo(input) {
   const el = document.getElementById('siagie-archivo');
   if (!el) return;
@@ -366,7 +551,7 @@ function sincronizarSiagie() {
   toast('ℹ Usa el botón "Importar Excel" para cargar la nómina de Primaria');
 }
 
-// ── Búsqueda en formulario "Nuevo" ────────────────
+// ── Búsqueda en formulario "Nuevo" ────────────────────────────────────────────
 function buscarEstudianteSiagie(q) {
   const contenedor = document.getElementById('na-resultados-busqueda');
   if (!contenedor) return;
@@ -386,7 +571,7 @@ function buscarEstudianteSiagie(q) {
 
   contenedor.innerHTML = resultados.map(e => `
     <div onclick="seleccionarEstudianteSiagie(${e.id})"
-      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);
+      style="padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--color-border-tertiary);
              display:flex;align-items:center;gap:10px;"
       onmouseover="this.style.background='#EEEDFE'" onmouseout="this.style.background=''">
       <div style="width:32px;height:32px;border-radius:50%;background:#534AB7;color:#fff;
@@ -395,8 +580,12 @@ function buscarEstudianteSiagie(q) {
         ${((e.nombres?.[0] || '') + (e.apellidos?.[0] || '')).toUpperCase()}
       </div>
       <div>
-        <div style="font-size:13px;font-weight:600;">${e.apellidos}, ${e.nombres}</div>
-        <div style="font-size:11px;color:var(--text3);">DNI: ${e.dni || '—'} · ${e.grado ? e.grado + '°' : '—'} ${e.seccion || ''}</div>
+        <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">
+          ${e.apellidos}, ${e.nombres}
+        </div>
+        <div style="font-size:11px;color:var(--color-text-secondary);">
+          DNI: ${e.dni || '—'} · ${e.grado ? e.grado + '°' : '—'} ${e.seccion || ''}
+        </div>
       </div>
     </div>`).join('');
 
@@ -440,7 +629,7 @@ function seleccionarEstudianteSiagie(id) {
     });
   }
 
-  const chip      = document.getElementById('na-estudiante-seleccionado');
+  const chip       = document.getElementById('na-estudiante-seleccionado');
   const chipNombre = document.getElementById('na-estudiante-nombre');
   if (chip && chipNombre) {
     chipNombre.textContent = `✓ ${e.apellidos}, ${e.nombres} — ${e.grado ? e.grado + '°' : '—'} ${e.seccion || ''}`;
@@ -452,8 +641,9 @@ function seleccionarEstudianteSiagie(id) {
 }
 
 function limpiarEstudianteSeleccionado() {
-  ['na-nombres','na-apellidos','na-doc-numero','na-fechanac'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '';
+  ['na-nombres', 'na-apellidos', 'na-doc-numero', 'na-fechanac'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
   });
   const chip = document.getElementById('na-estudiante-seleccionado');
   if (chip) chip.style.display = 'none';

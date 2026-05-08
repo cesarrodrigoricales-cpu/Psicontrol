@@ -7,7 +7,6 @@ async function renderHistorial(filtro = '') {
   tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--text-muted);">Cargando...</td></tr>';
 
   try {
-    // Cargar atenciones y estudiantes frescos
     const [todasAtenciones, todosEstudiantes] = await Promise.all([
       apiFetch(`${API}/atenciones`),
       apiFetch(`${API}/estudiantes`)
@@ -15,11 +14,9 @@ async function renderHistorial(filtro = '') {
     store.atenciones  = todasAtenciones  || [];
     store.estudiantes = todosEstudiantes || [];
 
-    // ✅ Solo estudiantes que tienen al menos una atención
     const idsConAtencion = [...new Set(store.atenciones.map(a => a.idestudiante))];
     let lista = store.estudiantes.filter(e => idsConAtencion.includes(e.id));
 
-    // Filtro de búsqueda
     if (filtro) {
       const f = filtro.toLowerCase();
       lista = lista.filter(p => {
@@ -37,9 +34,9 @@ async function renderHistorial(filtro = '') {
     }
 
     tbody.innerHTML = lista.map(p => {
-      const atencionEst    = store.atenciones.find(a => a.idestudiante == p.id);
-      const gradoMostrar   = p.grado   || atencionEst?.grado   || '—';
-      const seccionMostrar = p.seccion || atencionEst?.seccion || '—';
+      const atencionEst     = store.atenciones.find(a => a.idestudiante == p.id);
+      const gradoMostrar    = p.grado   || atencionEst?.grado   || '—';
+      const seccionMostrar  = p.seccion || atencionEst?.seccion || '—';
       const totalAtenciones = store.atenciones.filter(a => a.idestudiante == p.id).length;
 
       const generoIcono = p.genero === 'Masculino' ? '👦 Masculino'
@@ -138,7 +135,7 @@ async function cargarHistorialPaciente(id) {
               <div style="font-size:20px;">${c.parentesco === 'Madre' ? '👩' : c.parentesco === 'Padre' ? '👨' : '👤'}</div>
               <div>
                 <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${c.nombre}</div>
-                <div style="font-size:11px;color:var(--text-muted);">${c.parentesco} · ${c.celular}</div>
+                <div style="font-size:11px;color:var(--text-muted);">${c.parentesco || '—'} · ${c.celular || '—'}</div>
               </div>
             </div>
           `).join('')}
@@ -157,17 +154,17 @@ async function cargarHistorialPaciente(id) {
           <div style="font-size:16px;font-weight:700;color:var(--text-primary);">${p.apellidos}, ${p.nombres}</div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">Motivo principal: ${motivoTexto}</div>
         </div>
-      <div style="margin-left:auto;display:flex;gap:8px;">
-  <button class="btn-secondary" style="font-size:11px;padding:5px 12px;"
-    onclick="abrirEditarEstudiante(${id})">
-    ✏️ Editar
-  </button>
-  <button class="btn-secondary" style="font-size:11px;padding:5px 12px;"
-    onclick="document.getElementById('hist-detail-${id}').style.display='none';
-             document.querySelector('.hist-row-open')?.classList.remove('hist-row-open')">
-    Cerrar ✕
-  </button>
-</div>
+        <div style="margin-left:auto;display:flex;gap:8px;">
+          <button class="btn-secondary" style="font-size:11px;padding:5px 12px;"
+            onclick="abrirEditarEstudiante(${id})">
+            ✏️ Editar
+          </button>
+          <button class="btn-secondary" style="font-size:11px;padding:5px 12px;"
+            onclick="document.getElementById('hist-detail-${id}').style.display='none';
+                     document.querySelector('.hist-row-open')?.classList.remove('hist-row-open')">
+            Cerrar ✕
+          </button>
+        </div>
       </div>
 
       <div class="hist-detail-grid">
@@ -182,8 +179,8 @@ async function cargarHistorialPaciente(id) {
         <div class="hist-info-block">
           <div class="hist-info-label">Género</div>
           <div class="hist-info-value">
-            ${p.genero === 'Masculino' ? ' Masculino'
-            : p.genero === 'Femenino'  ? ' Femenino'
+            ${p.genero === 'Masculino' ? '👦 Masculino'
+            : p.genero === 'Femenino'  ? '👧 Femenino'
             : p.genero || '—'}
           </div>
         </div>
@@ -196,10 +193,7 @@ async function cargarHistorialPaciente(id) {
         <div class="hist-info-block">
           <div class="hist-info-label">Teléfono</div>
           <div class="hist-info-value">${p.telefono || '—'}</div>
-          <div class="hist-info-block">
-          <div class="hist-info-label">Tel. emergencia</div>
-          <div class="hist-info-value">${p.telefonoEmergencia? `${p.telefonoEmergencia} · ${p.parentescoEmergencia || 'Sin parentesco'}`: '—'}</div>
-            </div>
+        </div>
         <div class="hist-info-block">
           <div class="hist-info-label">Condición</div>
           <div class="hist-info-value">
@@ -248,6 +242,8 @@ async function cargarHistorialPaciente(id) {
     </div>`;
 }
 
+// ── EDITAR ESTUDIANTE ──────────────────────────────────
+
 function abrirEditarEstudiante(id) {
   const p = store.estudiantes.find(x => x.id == id);
   if (!p) return;
@@ -260,8 +256,44 @@ function abrirEditarEstudiante(id) {
     document.body.appendChild(modal);
   }
 
+  // Contactos iniciales desde el store
+  window._editContactos = (p.contactosEmergencia?.length > 0)
+    ? p.contactosEmergencia.map(c => ({ ...c }))
+    : [{ nombre: '', parentesco: '', celular: '' }];
+
+  const renderFilasContactos = () => window._editContactos.map((c, i) => `
+    <div class="contacto-row" id="contacto-row-${i}"
+         style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;">
+      <div class="form-group" style="flex:2;margin:0;">
+        <label style="font-size:11px;">Nombre</label>
+        <input type="text" class="cont-nombre" data-i="${i}"
+               value="${c.nombre || ''}" placeholder="Nombre del contacto">
+      </div>
+      <div class="form-group" style="flex:1.5;margin:0;">
+        <label style="font-size:11px;">Parentesco</label>
+        <select class="cont-parentesco" data-i="${i}">
+          <option value="">-- --</option>
+          ${['Madre','Padre','Apoderado','Hermano/a','Tío/a','Abuelo/a','Otro'].map(op =>
+            `<option value="${op}" ${c.parentesco === op ? 'selected' : ''}>${op}</option>`
+          ).join('')}
+        </select>
+      </div>
+      <div class="form-group" style="flex:1.5;margin:0;">
+        <label style="font-size:11px;">Celular</label>
+        <input type="tel" class="cont-celular" data-i="${i}" maxlength="9"
+               value="${c.celular || ''}" placeholder="999999999"
+               oninput="this.value=this.value.replace(/\\D/g,'').slice(0,9)">
+      </div>
+      <button onclick="eliminarContactoRow(${i})"
+              style="background:none;border:1px solid #e57373;color:#e57373;
+                     border-radius:6px;padding:6px 10px;cursor:pointer;
+                     font-size:13px;flex-shrink:0;margin-bottom:1px;"
+              title="Eliminar">✕</button>
+    </div>
+  `).join('');
+
   modal.innerHTML = `
-    <div class="modal" style="max-width:560px;">
+    <div class="modal" style="max-width:580px;">
       <div class="modal-header">
         <div class="modal-title">✏️ Editar estudiante</div>
         <button class="modal-close" onclick="closeModal('modal-editar-estudiante')">✕</button>
@@ -283,21 +315,6 @@ function abrirEditarEstudiante(id) {
               oninput="this.value=this.value.replace(/\\D/g,'').slice(0,9)">
           </div>
           <div class="form-group">
-            <label>Tel. emergencia</label>
-            <input type="tel" id="edit-telefono-emergencia" maxlength="9"
-              value="${p.telefonoEmergencia || ''}"
-              oninput="this.value=this.value.replace(/\\D/g,'').slice(0,9)">
-          </div>
-          <div class="form-group">
-            <label>Parentesco contacto</label>
-            <select id="edit-parentesco-emergencia">
-              <option value="">-- Parentesco --</option>
-              ${['Madre','Padre','Apoderado','Hermano/a','Tío/a','Abuelo/a','Otro'].map(op =>
-                `<option value="${op}" ${p.parentescoEmergencia === op ? 'selected' : ''}>${op}</option>`
-              ).join('')}
-            </select>
-          </div>
-          <div class="form-group">
             <label>Género</label>
             <select id="edit-genero">
               <option value="">-- Selecciona --</option>
@@ -314,6 +331,26 @@ function abrirEditarEstudiante(id) {
             </select>
           </div>
         </div>
+
+        <!-- CONTACTOS DE EMERGENCIA -->
+        <div style="margin-top:16px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);
+                          text-transform:uppercase;letter-spacing:.05em;">
+              📞 Contactos de emergencia
+            </label>
+            <button onclick="agregarContactoRow()"
+                    style="background:none;border:1px solid var(--primary);
+                           color:var(--primary);border-radius:6px;
+                           padding:4px 12px;cursor:pointer;font-size:12px;">
+              + Agregar
+            </button>
+          </div>
+          <div id="contactos-wrapper">
+            ${renderFilasContactos()}
+          </div>
+        </div>
+
         <div class="modal-actions">
           <button class="btn-secondary" onclick="closeModal('modal-editar-estudiante')">Cancelar</button>
           <button class="btn-primary" onclick="guardarEdicionEstudiante(${id})">
@@ -326,22 +363,121 @@ function abrirEditarEstudiante(id) {
   modal.classList.add('open');
 }
 
+// Lee los contactos actuales del DOM
+function leerContactosDelDOM() {
+  const nombres     = [...document.querySelectorAll('.cont-nombre')].map(el => el.value.trim());
+  const parentescos = [...document.querySelectorAll('.cont-parentesco')].map(el => el.value);
+  const celulares   = [...document.querySelectorAll('.cont-celular')].map(el => el.value.trim());
+  return nombres.map((nombre, i) => ({
+    nombre,
+    parentesco: parentescos[i] || '',
+    celular:    celulares[i]   || ''
+  }));
+}
+
+// Agrega una fila nueva de contacto
+function agregarContactoRow() {
+  window._editContactos = leerContactosDelDOM();
+  window._editContactos.push({ nombre: '', parentesco: '', celular: '' });
+
+  const wrapper = document.getElementById('contactos-wrapper');
+  if (!wrapper) return;
+
+  const i = window._editContactos.length - 1;
+  const div = document.createElement('div');
+  div.className = 'contacto-row';
+  div.id = `contacto-row-${i}`;
+  div.style.cssText = 'display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;';
+  div.innerHTML = `
+    <div class="form-group" style="flex:2;margin:0;">
+      <label style="font-size:11px;">Nombre</label>
+      <input type="text" class="cont-nombre" data-i="${i}"
+             value="" placeholder="Nombre del contacto">
+    </div>
+    <div class="form-group" style="flex:1.5;margin:0;">
+      <label style="font-size:11px;">Parentesco</label>
+      <select class="cont-parentesco" data-i="${i}">
+        <option value="">-- --</option>
+        ${['Madre','Padre','Apoderado','Hermano/a','Tío/a','Abuelo/a','Otro'].map(op =>
+          `<option value="${op}">${op}</option>`
+        ).join('')}
+      </select>
+    </div>
+    <div class="form-group" style="flex:1.5;margin:0;">
+      <label style="font-size:11px;">Celular</label>
+      <input type="tel" class="cont-celular" data-i="${i}" maxlength="9"
+             value="" placeholder="999999999"
+             oninput="this.value=this.value.replace(/\\D/g,'').slice(0,9)">
+    </div>
+    <button onclick="eliminarContactoRow(${i})"
+            style="background:none;border:1px solid #e57373;color:#e57373;
+                   border-radius:6px;padding:6px 10px;cursor:pointer;
+                   font-size:13px;flex-shrink:0;margin-bottom:1px;"
+            title="Eliminar">✕</button>
+  `;
+  wrapper.appendChild(div);
+}
+
+// Elimina una fila de contacto
+function eliminarContactoRow(i) {
+  window._editContactos = leerContactosDelDOM();
+  window._editContactos.splice(i, 1);
+
+  const wrapper = document.getElementById('contactos-wrapper');
+  if (!wrapper) return;
+
+  wrapper.innerHTML = window._editContactos.map((c, idx) => `
+    <div class="contacto-row" id="contacto-row-${idx}"
+         style="display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;">
+      <div class="form-group" style="flex:2;margin:0;">
+        <label style="font-size:11px;">Nombre</label>
+        <input type="text" class="cont-nombre" data-i="${idx}"
+               value="${c.nombre || ''}" placeholder="Nombre del contacto">
+      </div>
+      <div class="form-group" style="flex:1.5;margin:0;">
+        <label style="font-size:11px;">Parentesco</label>
+        <select class="cont-parentesco" data-i="${idx}">
+          <option value="">-- --</option>
+          ${['Madre','Padre','Apoderado','Hermano/a','Tío/a','Abuelo/a','Otro'].map(op =>
+            `<option value="${op}" ${c.parentesco === op ? 'selected' : ''}>${op}</option>`
+          ).join('')}
+        </select>
+      </div>
+      <div class="form-group" style="flex:1.5;margin:0;">
+        <label style="font-size:11px;">Celular</label>
+        <input type="tel" class="cont-celular" data-i="${idx}" maxlength="9"
+               value="${c.celular || ''}" placeholder="999999999"
+               oninput="this.value=this.value.replace(/\\D/g,'').slice(0,9)">
+      </div>
+      <button onclick="eliminarContactoRow(${idx})"
+              style="background:none;border:1px solid #e57373;color:#e57373;
+                     border-radius:6px;padding:6px 10px;cursor:pointer;
+                     font-size:13px;flex-shrink:0;margin-bottom:1px;"
+              title="Eliminar">✕</button>
+    </div>
+  `).join('');
+}
+
+// ── GUARDAR EDICIÓN ────────────────────────────────────
+
 async function guardarEdicionEstudiante(id) {
   const p = store.estudiantes.find(x => x.id == id);
   if (!p) return;
 
-  const nombres              = document.getElementById('edit-nombres')?.value?.trim();
-  const apellidos            = document.getElementById('edit-apellidos')?.value?.trim();
-  const telefono             = document.getElementById('edit-telefono')?.value?.trim();
-  const telefonoEmergencia   = document.getElementById('edit-telefono-emergencia')?.value?.trim();
-  const parentescoEmergencia = document.getElementById('edit-parentesco-emergencia')?.value;
-  const genero               = document.getElementById('edit-genero')?.value;
-  const condicion            = document.getElementById('edit-condicion')?.value;
+  const nombres   = document.getElementById('edit-nombres')?.value?.trim();
+  const apellidos = document.getElementById('edit-apellidos')?.value?.trim();
+  const telefono  = document.getElementById('edit-telefono')?.value?.trim();
+  const genero    = document.getElementById('edit-genero')?.value;
+  const condicion = document.getElementById('edit-condicion')?.value;
 
   if (!nombres || !apellidos) {
     toast('Nombres y apellidos son obligatorios', 'warning');
     return;
   }
+
+  // Leer contactos del DOM y filtrar los que están completamente vacíos
+  const contactosEmergencia = leerContactosDelDOM()
+    .filter(c => c.nombre || c.celular);
 
   try {
     await apiFetch(`${API}/estudiantes/${id}`, {
@@ -349,8 +485,8 @@ async function guardarEdicionEstudiante(id) {
       body: JSON.stringify({
         ...p,
         nombres, apellidos, telefono,
-        telefonoEmergencia, parentescoEmergencia,
-        genero, condicion
+        genero, condicion,
+        contactosEmergencia
       })
     });
 
@@ -359,19 +495,22 @@ async function guardarEdicionEstudiante(id) {
     if (idx !== -1) {
       store.estudiantes[idx] = {
         ...p, nombres, apellidos, telefono,
-        telefonoEmergencia, parentescoEmergencia,
-        genero, condicion
+        genero, condicion,
+        contactosEmergencia
       };
     }
 
     closeModal('modal-editar-estudiante');
     toast('✅ Estudiante actualizado correctamente');
-    await cargarHistorialPaciente(id); // refresca el panel
+    await cargarHistorialPaciente(id);
   } catch (err) {
     console.error(err);
     toast('Error al guardar cambios', 'warning');
   }
 }
+
+// ── FILTRO DE BÚSQUEDA ─────────────────────────────────
+
 function filterHistorial() {
   const searchEl = document.getElementById('hist-search');
   if (searchEl) renderHistorial(searchEl.value);

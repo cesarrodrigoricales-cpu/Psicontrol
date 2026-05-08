@@ -138,12 +138,29 @@ function resetNuevaAtencion() {
   const lista = document.getElementById('contactos-lista');
   if (lista) lista.innerHTML = '';
 
-  // ✅ Limpiar buscador SIAGIE
+  //  Limpiar buscador SIAGIE
   const buscarEl = document.getElementById('na-buscar-estudiante');
   if (buscarEl) buscarEl.value = '';
   const chip = document.getElementById('na-estudiante-seleccionado');
   if (chip) chip.style.display = 'none';
+
+  //  Limpiar filtros de grado y sección del buscador
+  const filtroGrado   = document.getElementById('na-filtro-grado');
+  const filtroSeccion = document.getElementById('na-filtro-seccion');
+  if (filtroGrado)   filtroGrado.value   = '';
+  if (filtroSeccion) filtroSeccion.value = '';
+
+  //  Restaurar estado inicial del buscador
+  const estadoInicial = document.getElementById('na-estado-inicial');
+  const resEl         = document.getElementById('na-resultados-busqueda');
+  const sinEl         = document.getElementById('na-sin-resultados');
+  const clearBtn      = document.getElementById('na-buscar-clear');
+  if (estadoInicial) estadoInicial.style.display = 'flex';
+  if (resEl)         resEl.style.display         = 'none';
+  if (sinEl)         sinEl.style.display         = 'none';
+  if (clearBtn)      clearBtn.style.display      = 'none';
 }
+
 
 function calcularEdad(fechaNacStr) {
   const nacimiento = new Date(fechaNacStr);

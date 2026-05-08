@@ -12,7 +12,7 @@ router.get('/', async (req, res) => {
     const [rows] = await sequelize.query(`
       SELECT
         e.id, e.idpersona, e.fechanac, e.condicion, e.codigomatricula,
-        e.grado, e.seccion,
+        e.grado, e.seccion, e.nivel,
         p.nombres, p.apellidos, p.telefono, p.genero,
         p.nrodoc AS dni
       FROM estudiantes e
@@ -35,18 +35,18 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ── GET estudiantes de PRIMARIA (grados 1 al 6) ───────
+// ── GET estudiantes de PRIMARIA ────────────────────────
 router.get('/primaria', async (req, res) => {
   try {
     const [rows] = await sequelize.query(`
       SELECT
         e.id, e.idpersona, e.fechanac, e.condicion, e.codigomatricula,
-        e.grado, e.seccion,
+        e.grado, e.seccion, e.nivel,
         p.nombres, p.apellidos, p.telefono, p.genero,
         p.nrodoc AS dni
       FROM estudiantes e
       JOIN personas p ON e.idpersona = p.id
-      WHERE CAST(e.grado AS UNSIGNED) BETWEEN 1 AND 6
+      WHERE e.nivel = 'primaria'
       ORDER BY CAST(e.grado AS UNSIGNED) ASC, p.apellidos ASC
     `);
     res.json(rows);
@@ -56,18 +56,18 @@ router.get('/primaria', async (req, res) => {
   }
 });
 
-// ── GET estudiantes de SECUNDARIA (grados 1 al 5) ─────
+// ── GET estudiantes de SECUNDARIA ─────────────────────
 router.get('/secundaria', async (req, res) => {
   try {
     const [rows] = await sequelize.query(`
       SELECT
         e.id, e.idpersona, e.fechanac, e.condicion, e.codigomatricula,
-        e.grado, e.seccion,
+        e.grado, e.seccion, e.nivel,
         p.nombres, p.apellidos, p.telefono, p.genero,
         p.nrodoc AS dni
       FROM estudiantes e
       JOIN personas p ON e.idpersona = p.id
-      WHERE CAST(e.grado AS UNSIGNED) BETWEEN 1 AND 5
+      WHERE e.nivel = 'secundaria'
       ORDER BY CAST(e.grado AS UNSIGNED) ASC, p.apellidos ASC
     `);
     res.json(rows);
@@ -82,7 +82,7 @@ router.get('/:id', async (req, res) => {
   try {
     const [rows] = await sequelize.query(`
       SELECT e.id, e.idpersona, e.fechanac, e.condicion, e.codigomatricula,
-             e.grado, e.seccion,
+             e.grado, e.seccion, e.nivel,
              p.nombres, p.apellidos, p.telefono, p.genero, p.nrodoc AS dni
       FROM estudiantes e
       JOIN personas p ON e.idpersona = p.id
@@ -111,7 +111,7 @@ router.post('/', async (req, res) => {
     const {
       nombres, apellidos, telefono, genero,
       fechanac, condicion, dni,
-      grado, seccion,
+      grado, seccion, nivel,
       contactosEmergencia
     } = req.body;
 
@@ -124,15 +124,16 @@ router.post('/', async (req, res) => {
     });
 
     const [idestudiante] = await sequelize.query(`
-      INSERT INTO estudiantes (idpersona, fechanac, condicion, grado, seccion)
-      VALUES (?, ?, ?, ?, ?)
+      INSERT INTO estudiantes (idpersona, fechanac, condicion, grado, seccion, nivel)
+      VALUES (?, ?, ?, ?, ?, ?)
     `, {
       replacements: [
         idpersona,
         fechanac  || null,
         condicion || 'activo',
         grado     || null,
-        seccion   || null
+        seccion   || null,
+        nivel     || 'secundaria'
       ],
       transaction: t
     });
@@ -155,7 +156,7 @@ router.post('/', async (req, res) => {
     res.status(201).json({
       id: idestudiante, idpersona,
       nombres, apellidos, telefono, genero,
-      fechanac, condicion, dni, grado, seccion,
+      fechanac, condicion, dni, grado, seccion, nivel,
       contactosEmergencia: contactosEmergencia || []
     });
   } catch (err) {
@@ -197,7 +198,7 @@ router.post('/bulk', async (req, res) => {
             { replacements: [nombres || '', apellidos || '', actual.idpersona], transaction: t }
           );
           await sequelize.query(
-            `UPDATE estudiantes SET grado=?, seccion=?, condicion='activo' WHERE id=?`,
+            `UPDATE estudiantes SET grado=?, seccion=?, condicion='activo', nivel='secundaria' WHERE id=?`,
             { replacements: [grado || null, seccion || null, actual.id], transaction: t }
           );
           actualizados++;
@@ -215,8 +216,8 @@ router.post('/bulk', async (req, res) => {
         });
 
         const [idest] = await sequelize.query(`
-          INSERT INTO estudiantes (idpersona, fechanac, condicion, grado, seccion)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO estudiantes (idpersona, fechanac, condicion, grado, seccion, nivel)
+          VALUES (?, ?, ?, ?, ?, 'secundaria')
         `, {
           replacements: [
             idpersona,
@@ -262,7 +263,7 @@ router.post('/primaria/bulk', async (req, res) => {
 
       // Solo aceptar grados 1-6 (primaria)
       const gradoNum = parseInt(grado);
-      if (gradoNum < 1 || gradoNum > 6) {
+      if (isNaN(gradoNum) || gradoNum < 1 || gradoNum > 6) {
         await t.rollback();
         detalle.push({ dni, accion: 'ignorado', mensaje: `Grado ${grado} no es de primaria` });
         continue;
@@ -284,7 +285,7 @@ router.post('/primaria/bulk', async (req, res) => {
             { replacements: [nombres || '', apellidos || '', actual.idpersona], transaction: t }
           );
           await sequelize.query(
-            `UPDATE estudiantes SET grado=?, seccion=?, condicion='activo' WHERE id=?`,
+            `UPDATE estudiantes SET grado=?, seccion=?, condicion='activo', nivel='primaria' WHERE id=?`,
             { replacements: [grado || null, seccion || null, actual.id], transaction: t }
           );
           actualizados++;
@@ -302,8 +303,8 @@ router.post('/primaria/bulk', async (req, res) => {
         });
 
         const [idest] = await sequelize.query(`
-          INSERT INTO estudiantes (idpersona, fechanac, condicion, grado, seccion)
-          VALUES (?, ?, ?, ?, ?)
+          INSERT INTO estudiantes (idpersona, fechanac, condicion, grado, seccion, nivel)
+          VALUES (?, ?, ?, ?, ?, 'primaria')
         `, {
           replacements: [
             idpersona,
@@ -338,7 +339,7 @@ router.put('/:id', async (req, res) => {
     const {
       nombres, apellidos, telefono, genero,
       fechanac, condicion, dni,
-      grado, seccion,
+      grado, seccion, nivel,
       contactosEmergencia
     } = req.body;
 
@@ -361,7 +362,7 @@ router.put('/:id', async (req, res) => {
     });
 
     await sequelize.query(`
-      UPDATE estudiantes SET fechanac=?, condicion=?, grado=?, seccion=?
+      UPDATE estudiantes SET fechanac=?, condicion=?, grado=?, seccion=?, nivel=?
       WHERE id=?
     `, {
       replacements: [
@@ -369,6 +370,7 @@ router.put('/:id', async (req, res) => {
         condicion || 'activo',
         grado     || null,
         seccion   || null,
+        nivel     || 'secundaria',
         req.params.id
       ],
       transaction: t
