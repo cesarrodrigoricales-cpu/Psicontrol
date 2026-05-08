@@ -23,7 +23,7 @@ window.store = {
 
 // ── NAVEGACIÓN ──────────────────────────────────
 const pageLabels = {
-  dashboard:  'Dashboard',
+  dashboard:  'Inicio ',
   historial:  'Historial de registros',
   citas:      'Atenciones',
   nuevo:      'Nueva atención',
@@ -58,7 +58,7 @@ function navigateTo(page) {
       case 'citas':           cargarYRenderCitas();    break;
       case 'reportes':        renderReportes();        break;
       case 'nuevo':           resetNuevaAtencion();    break;
-      case 'historial-anios': renderHistorialAnios();  break;  // ← solo una vez
+      case 'historial-anios': renderHistorialAnios();  break;  
       case 'siagie':          inicializarSiagie();     break;
       case 'config':          cargarConfig();          break;
       case 'calendario':      renderCalendario();      break;

@@ -3,165 +3,246 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PsiControl Primaria</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;0,9..144,700;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
- 
+<title>PsiControl — Primaria</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style-primary.css">
-
+<link rel="icon" href="/favicon.ico" type="image/x-icon">
 </head>
 <body>
 
+<!-- BACKDROP -->
+<div class="sidebar-backdrop" id="sidebar-backdrop" onclick="cerrarSidebar()"></div>
+
 <!-- SIDEBAR -->
 <aside class="sidebar">
-  <div class="sidebar-top">
-    <div class="logo">
-      <div class="logo-text">Psi<span>Control</span></div>
-    </div>
-    <div class="logo-sub">Primaria · Psicología</div>
+  <div class="sidebar-logo">
+    <div class="logo-tag">Primaria</div>
+    <div class="logo-name">Psi<span>Control</span></div>
   </div>
 
-  <nav class="nav-section scrollbar-thin">
+  <nav class="nav-section">
     <div class="nav-label">Principal</div>
-    <div class="nav-item active" onclick="goPage('dashboard')">
-      <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+
+    <div class="nav-item active" data-page="dashboard">
+      <span class="nav-icon">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+      </span>
       Inicio
     </div>
-    <div class="nav-item" onclick="goPage('historial')">
-      <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 12h6M9 16h6M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/></svg>
-      Historial de estudiantes
-      <span class="nav-badge" id="nb-hist">0</span>
+
+    <div class="nav-item" data-page="historial">
+      <span class="nav-icon">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path d="M9 12h6M9 16h6M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/>
+        </svg>
+      </span>
+      Historial de registros
+      <span class="badge" id="badge-historial">0</span>
     </div>
-    <div class="nav-item" onclick="goPage('atenciones')">
-      <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+
+    <div class="nav-item" data-page="citas">
+      <span class="nav-icon">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <path d="M16 2v4M8 2v4M3 10h18"/>
+        </svg>
+      </span>
       Atenciones
-      <span class="nav-badge" id="nb-citas">0</span>
+      <span class="badge" id="badge-citas">0</span>
     </div>
-    <div class="nav-item" onclick="goPage('nuevo')">
-      <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
+
+    <div class="nav-item" data-page="nuevo">
+      <span class="nav-icon">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+      </span>
       Nueva atención
     </div>
-    
-    
 
-    <div class="nav-label" style="margin-top:14px;">Análisis</div>
-    <div class="nav-item" onclick="goPage('reportes')">
-      <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+    <div class="nav-label nav-label--mt">Análisis</div>
+
+    <div class="nav-item" data-page="reportes">
+      <span class="nav-icon">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path d="M18 20V10M12 20V4M6 20v-6"/>
+        </svg>
+      </span>
       Reportes
     </div>
-    <div class="nav-item" onclick="goPage('calendario')">
-      <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+
+    <div class="nav-item" data-page="calendario">
+      <span class="nav-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+      </span>
       Calendario
     </div>
 
-    <div class="nav-label" style="margin-top:14px;">Sistema</div>
-    <div class="nav-item" onclick="goPage('config')">
-      <svg class="nav-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06A1.65 1.65 0 0015 19.4a1.65 1.65 0 00-1.65 1.65V21a2 2 0 01-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.6 12a1.65 1.65 0 00-1.65-1.65H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 5.1"/></svg>
+    <div class="nav-item" data-page="historial-anios">
+      <span class="nav-icon">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </span>
+      Historial de años
+    </div>
+
+    <div class="nav-label nav-label--mt">Sistema</div>
+
+    <div class="nav-item" data-page="config">
+      <span class="nav-icon">
+        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06A1.65 1.65 0 0015 19.4a1.65 1.65 0 00-1.65 1.65V21a2 2 0 01-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.6 12a1.65 1.65 0 00-1.65-1.65H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 5.1l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 2.6a1.65 1.65 0 001.65-1.65V1a2 2 0 014 0v.09a1.65 1.65 0 001.65 1.65z"/>
+        </svg>
+      </span>
       Configuración
     </div>
   </nav>
 
   <div class="sidebar-footer">
     <div class="profile-pill">
-      <div class="avatar">MP</div>
-      <div>
-        <div class="profile-name">María Paredes</div>
-        <div class="profile-role">Psicóloga escolar</div>
+      <div class="avatar" id="sidebar-avatar">PS</div>
+      <div class="profile-info">
+        <div class="profile-name" id="sidebar-nombre">Sin configurar</div>
+        <div class="profile-role" id="sidebar-rol">Psicólogo/a</div>
       </div>
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.3)" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
     </div>
   </div>
 </aside>
 
 <!-- MAIN -->
 <div class="main">
+
   <!-- TOPBAR -->
   <div class="topbar">
+    <button class="btn-hamburger" id="btn-hamburger" onclick="toggleSidebar()">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path d="M4 6h16M4 12h16M4 18h16"/>
+      </svg>
+    </button>
+
     <div class="breadcrumb">
-      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" style="color:var(--text3)"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
-      <span class="breadcrumb-sub" id="bc-text">Inicio </span>
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="breadcrumb-icon">
+        <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+        <polyline points="9,22 9,12 15,12 15,22"/>
+      </svg>
+      <strong id="breadcrumb-text">Inicio</strong>
     </div>
-    <div class="search-wrap">
+
+    <div class="search-wrap" id="search-wrap">
       <span class="search-icon">
-        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
       </span>
-      <input type="text" placeholder="Buscar estudiante..." id="global-search" oninput="onGlobalSearch(this.value)">
+      <input type="text" class="search" id="global-search" placeholder="Buscar estudiante por nombre o DNI..." autocomplete="off">
+      <div class="search-results" id="search-results" style="display:none;"></div>
     </div>
-    <button class="topbar-btn" title="Notificaciones" onclick="toast('📬 Sin notificaciones nuevas')">
-      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-      <span class="notif-dot"></span>
+
+    <button class="topbar-btn" id="notif-btn" title="Notificaciones">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+      </svg>
+      <span class="notif-dot" id="notif-dot"></span>
     </button>
+
     <button class="topbar-btn" title="Perfil">
-      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </svg>
     </button>
+
+    <!-- Botón volver a Secundaria -->
+    <a href="/index.html" class="btn-volver-sec" title="Ir a Secundaria">
+      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path d="M19 12H5M12 5l-7 7 7 7"/>
+      </svg>
+      Secundaria
+    </a>
   </div>
 
   <!-- CONTENT -->
-  <div class="content scrollbar-thin" id="content">
+  <div class="content">
 
-    <!-- ══ DASHBOARD ══ -->
+    <!-- DASHBOARD -->
     <div class="page active" id="page-dashboard">
       <div class="page-header">
         <div>
-          <div class="page-title">Primaria</div>
-          <div class="page-subtitle" id="fecha-hoy">—</div>
+          <div class="page-title">Panel de control</div>
+          <div class="page-subtitle" id="fecha-hoy">Cargando...</div>
         </div>
-        <button class="btn-primary" onclick="goPage('nuevo')">
-          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Nueva atención
-        </button>
-    <a id="btn-retornar" href="/index.html" style="display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:9px;background:#EEEDFE;color:#534AB7;font-size:13px;font-weight:600;text-decoration:none;border:1.5px solid #CECBF6;transition:all .15s;" onmouseover="this.style.background='#CECBF6'" onmouseout="this.style.background='#EEEDFE'">
-  Retornar secundaria
-</a>
+        <div class="page-header-actions">
+          <button class="btn-primary" onclick="goPage('nuevo')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Nueva atención
+          </button>
+        </div>
       </div>
 
       <div class="stat-strip">
         <div class="stat-card">
-          <div class="stat-icon c-blue">🧒</div>
-          <div>
-            <div class="stat-value" id="s-estudiantes">0</div>
+          <div class="stat-icon c-purple">📋</div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-registros">0</div>
             <div class="stat-label">Estudiantes registrados</div>
-            <div class="stat-delta delta-up">↑ primaria completa</div>
+            <div class="stat-delta delta-up" id="stat-reg-delta">↑ 0 registros</div>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon c-amber">📋</div>
-          <div>
-            <div class="stat-value" id="s-pendientes">0</div>
+          <div class="stat-icon c-teal">📅</div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-citas">0</div>
             <div class="stat-label">Atenciones pendientes</div>
-            <div class="stat-delta delta-neutral" id="s-pend-delta">Este mes</div>
+            <div class="stat-delta delta-up" id="stat-cita-delta">↑ 0 pendientes</div>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon c-green">✅</div>
-          <div>
-            <div class="stat-value" id="s-activas">0</div>
-            <div class="stat-label">Sesiones activas</div>
-            <div class="stat-delta delta-up">↑ En seguimiento</div>
+          <div class="stat-icon c-amber">👤</div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-pacientes">0</div>
+            <div class="stat-label">Estudiantes activos</div>
+            <div class="stat-delta delta-up">↑ Total activos</div>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon c-rose">⚠️</div>
-          <div>
-            <div class="stat-value" id="s-urgentes">0</div>
-            <div class="stat-label">Casos urgentes</div>
-            <div class="stat-delta" style="color:var(--rose);">Requieren atención</div>
+          <div class="stat-icon c-rose">📊</div>
+          <div class="stat-body">
+            <div class="stat-value" id="stat-reportes">0</div>
+            <div class="stat-label">Reportes generados</div>
+            <div class="stat-delta delta-up">Este mes</div>
           </div>
         </div>
       </div>
 
       <div class="main-grid">
-        <div class="col-stack">
+        <div class="col-flex">
           <div class="card">
             <div class="card-header">
               <div>
                 <div class="card-title">Atenciones recientes</div>
-                <div class="card-meta" id="dash-fecha-citas"></div>
+                <div class="card-meta" id="fecha-citas-hoy"></div>
               </div>
-              <button class="card-link" onclick="goPage('atenciones')">Ver todas →</button>
+              <button class="card-link" onclick="goPage('citas')">Ver todas →</button>
             </div>
-            <div id="dash-appt-list">
-              <div class="empty-state"><div class="es-icon">📅</div><div class="es-text">Sin atenciones registradas</div></div>
+            <div class="appt-list" id="appt-list-dash">
+              <div class="empty-state"><div class="es-icon">📅</div><div class="es-text">Cargando atenciones...</div></div>
             </div>
           </div>
+
           <div class="card">
             <div class="card-header"><div class="card-title">Acciones rápidas</div></div>
             <div class="quick-grid">
@@ -169,13 +250,13 @@
                 <span class="quick-btn-icon">📄</span>
                 <span class="quick-btn-label">Nueva atención</span>
               </div>
-              <div class="quick-btn" onclick="goPage('atenciones')">
+              <div class="quick-btn" onclick="goPage('citas')">
                 <span class="quick-btn-icon">📅</span>
                 <span class="quick-btn-label">Ver atenciones</span>
               </div>
-              <div class="quick-btn" onclick="toast('📊 Generando reporte PDF...')">
+              <div class="quick-btn" onclick="generarReporte()">
                 <span class="quick-btn-icon">📊</span>
-                <span class="quick-btn-label">Generar reporte</span>
+                <span class="quick-btn-label">Generar PDF reporte</span>
               </div>
               <div class="quick-btn" onclick="goPage('historial')">
                 <span class="quick-btn-icon">👥</span>
@@ -185,173 +266,215 @@
           </div>
         </div>
 
-        <div class="col-stack">
+        <div class="col-flex">
           <div class="card">
             <div class="card-header">
               <div class="card-title">Actividad reciente</div>
               <button class="card-link" onclick="goPage('historial')">Ver todo</button>
             </div>
-            <div id="activity-feed"></div>
+            <div class="activity-list" id="activity-feed"></div>
           </div>
           <div class="card">
-            <div class="card-header"><div class="card-title">Motivos frecuentes</div></div>
-            <div id="prog-wrap"></div>
+            <div class="card-header"><div class="card-title">Resumen del mes</div></div>
+            <div class="prog-wrap" id="prog-wrap"></div>
           </div>
         </div>
       </div>
-    </div>
+    </div><!-- /page-dashboard -->
 
-    <!-- ══ HISTORIAL ══ -->
+
+    <!-- HISTORIAL -->
     <div class="page" id="page-historial">
       <div class="page-header">
         <div>
-          <div class="page-title">Historial de estudiantes</div>
-          <div class="page-subtitle">Haz clic en un estudiante para ver su expediente completo</div>
+          <div class="page-title">Historial de registros</div>
+          <div class="page-subtitle">Haz clic en un estudiante para ver su historial completo</div>
         </div>
       </div>
       <div class="card">
         <div class="card-header">
-          <div class="card-title">Estudiantes de primaria</div>
-          <input type="text" class="filter-input" placeholder="Buscar por nombre o DNI..." oninput="filtrarHistorial(this.value)" id="hist-search">
+          <div class="card-title">Estudiantes registrados</div>
+          <input type="text" id="hist-search" class="filter-input"
+            placeholder="Buscar por nombre, DNI o grado..."
+            oninput="filterHistorial()">
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Estudiante</th>
-                <th>DNI</th>
-                <th>Grado</th>
-                <th>Sección</th>
-                <th>Teléfono</th>
-                <th>Último caso</th>
-                <th>Acción</th>
+                <th>Estudiante</th><th>DNI</th><th>Grado</th>
+                <th>Sección</th><th>Género</th><th>Nacimiento</th><th>Acción</th>
               </tr>
             </thead>
-            <tbody id="hist-tbody"></tbody>
+            <tbody id="hist-tbody">
+              <tr><td colspan="7"><div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Cargando registros...</div></div></td></tr>
+            </tbody>
           </table>
         </div>
       </div>
-    </div>
+    </div><!-- /page-historial -->
 
-    <!-- ══ ATENCIONES ══ -->
-    <div class="page" id="page-atenciones">
+
+    <!-- ATENCIONES -->
+    <div class="page" id="page-citas">
       <div class="page-header">
         <div>
           <div class="page-title">Atenciones</div>
-          <div class="page-subtitle">Gestión de sesiones y seguimientos psicológicos</div>
+          <div class="page-subtitle">Gestión de atenciones y seguimientos psicológicos</div>
         </div>
-        <button class="btn-primary" onclick="openModal('modal-sesion')">
-          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        <button class="btn-primary" onclick="openModal('modal-cita')">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
           Nueva sesión
         </button>
       </div>
       <div class="card">
         <div class="card-header">
           <div class="card-title">Listado de atenciones</div>
-          <div style="display:flex;gap:8px;">
-            <button class="btn-secondary" onclick="filtrarCitas('todas')" style="font-size:11px;padding:5px 11px;">Todas</button>
-            <button class="btn-secondary" onclick="filtrarCitas('pendiente')" style="font-size:11px;padding:5px 11px;">Pendientes</button>
-            <button class="btn-secondary" onclick="filtrarCitas('activo')" style="font-size:11px;padding:5px 11px;">Activas</button>
-            <button class="btn-secondary" onclick="filtrarCitas('cerrado')" style="font-size:11px;padding:5px 11px;">Cerradas</button>
+          <div class="filter-btn-group">
+            <button class="btn-secondary btn-sm" onclick="filterCitas('todas')">Todas</button>
+            <button class="btn-secondary btn-sm" onclick="filterCitas('pendiente')">Pendientes</button>
+            <button class="btn-secondary btn-sm" onclick="filterCitas('activo')">Activas</button>
+            <button class="btn-secondary btn-sm" onclick="filterCitas('cerrado')">Cerradas</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Fecha</th>
-                <th>Hora</th>
-                <th>Estudiante</th>
-                <th>Grado</th>
-                <th>Motivo</th>
-                <th>Nivel</th>
-                <th>Estado</th>
-                <th>Acciones</th>
+                <th>Fecha</th><th>Hora</th><th>Motivo</th><th>Grado</th>
+                <th>Nivel</th><th>Estado</th><th>Estudiante</th><th>Acciones</th>
               </tr>
             </thead>
-            <tbody id="citas-tbody"></tbody>
+            <tbody id="citas-tbody">
+              <tr><td colspan="8"><div class="empty-state"><div class="es-icon">📅</div><div class="es-text">Cargando atenciones...</div></div></td></tr>
+            </tbody>
           </table>
         </div>
       </div>
-    </div>
+    </div><!-- /page-citas -->
 
-    <!-- ══ NUEVO ══ -->
+
+    <!-- NUEVA ATENCIÓN -->
     <div class="page" id="page-nuevo">
       <div class="page-header">
         <div>
           <div class="page-title">Nueva atención</div>
-          <div class="page-subtitle">Registra un estudiante y su primera sesión psicológica</div>
+          <div class="page-subtitle">Busca al estudiante y registra su sesión psicológica</div>
         </div>
       </div>
 
-      <div class="card" style="margin-bottom:16px;">
-        <div class="paso-indicator">
-          <div class="paso-step active" id="paso-ind-1">
+      <div class="card card--overflow-visible card--mb">
+        <div class="card-header">
+          <div>
+            <div class="card-title">🔍 Buscar estudiante</div>
+            <div class="card-meta">Escribe el nombre o DNI del estudiante importado desde SIAGIE</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="search-student-wrap">
+            <input type="text" id="na-buscar-estudiante"
+              class="search-student-input"
+              placeholder="Ej: García López o 75234891..."
+              oninput="buscarEstudianteSiagie(this.value)">
+            <div id="na-resultados-busqueda" class="search-student-dropdown" style="display:none;"></div>
+          </div>
+          <div id="na-estudiante-seleccionado" class="student-chip" style="display:none;">
+            <span id="na-estudiante-nombre"></span>
+            <button onclick="limpiarEstudianteSeleccionado()" class="student-chip-close">✕</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card--mb">
+        <div class="pasos-wrap">
+          <div class="paso-item active" id="paso-ind-1">
             <div class="paso-circle">1</div>
-            <div class="paso-label-txt">Datos del estudiante</div>
+            <div class="paso-label">Datos del estudiante</div>
           </div>
-          <div class="paso-line"></div>
-          <div class="paso-step" id="paso-ind-2">
+          <div class="paso-linea" id="paso-linea"></div>
+          <div class="paso-item" id="paso-ind-2">
             <div class="paso-circle">2</div>
-            <div class="paso-label-txt">Primera sesión</div>
+            <div class="paso-label">Primera sesión</div>
           </div>
         </div>
       </div>
 
-      <div class="card" id="paso1-card">
+      <div class="card" id="paso-1">
         <div class="card-header">
           <div>
             <div class="card-title">📋 Datos del estudiante</div>
-            <div class="card-meta">Información personal del nuevo estudiante de primaria</div>
+            <div class="card-meta">Se autocompleta si seleccionas un estudiante de SIAGIE</div>
           </div>
         </div>
         <div class="form-grid">
           <div class="form-group">
             <label>Nombres *</label>
-            <input type="text" id="na-nombres" placeholder="Ej: Carlos Andrés">
+            <input type="text" id="na-nombres" placeholder="Ej: Juan Carlos" required>
           </div>
           <div class="form-group">
             <label>Apellidos *</label>
-            <input type="text" id="na-apellidos" placeholder="Ej: Quispe Mamani">
+            <input type="text" id="na-apellidos" placeholder="Ej: García López" required>
           </div>
           <div class="form-group">
-            <label>DNI</label>
-            <input type="text" id="na-dni" placeholder="Número de DNI" maxlength="8">
+            <label>Tipo de documento</label>
+            <select id="na-tipo-doc">
+              <option value="dni">DNI (Perú)</option>
+              <option value="ce">Carnet de extranjería</option>
+            </select>
+            <label class="label-mt">Número de documento</label>
+            <input type="text" id="na-doc-numero" autocomplete="off">
           </div>
           <div class="form-group">
-            <label>Teléfono del apoderado</label>
+            <label>Teléfono</label>
             <input type="tel" id="na-telefono" placeholder="Ej: 987654321" maxlength="9">
+            <label class="label-mt">Teléfono de emergencia</label>
+            <input type="tel" id="na-telefono-emergencia" placeholder="Ej: 987654321" maxlength="9">
+            <label class="label-mt">Parentesco del contacto</label>
+            <select id="na-parentesco-emergencia">
+              <option value="">-- Parentesco --</option>
+              <option value="Madre">Madre</option>
+              <option value="Padre">Padre</option>
+              <option value="Apoderado">Apoderado</option>
+              <option value="Hermano/a">Hermano/a</option>
+              <option value="Tío/a">Tío/a</option>
+              <option value="Abuelo/a">Abuelo/a</option>
+              <option value="Otro">Otro familiar</option>
+            </select>
           </div>
           <div class="form-group">
             <label>Fecha de nacimiento</label>
-            <input type="date" id="na-fechanac">
+            <input type="date" id="na-fechanac" required>
           </div>
           <div class="form-group">
             <label>Género</label>
             <select id="na-genero">
               <option value="">-- Selecciona --</option>
-              <option>Masculino</option>
-              <option>Femenino</option>
-              <option>Otro</option>
+              <option value="Masculino">Masculino</option>
+              <option value="Femenino">Femenino</option>
+              <option value="Otro">Otro</option>
             </select>
           </div>
           <div class="form-group">
             <label>Grado (Primaria)</label>
             <select id="na-grado">
-              <option value="">-- Selecciona --</option>
-              <option>1° Primaria</option>
-              <option>2° Primaria</option>
-              <option>3° Primaria</option>
-              <option>4° Primaria</option>
-              <option>5° Primaria</option>
-              <option>6° Primaria</option>
+              <option value="">-- Selecciona grado --</option>
+              <option value="1">1°</option>
+              <option value="2">2°</option>
+              <option value="3">3°</option>
+              <option value="4">4°</option>
+              <option value="5">5°</option>
+              <option value="6">6°</option>
             </select>
           </div>
           <div class="form-group">
             <label>Sección</label>
             <select id="na-seccion">
-              <option value="">-- Selecciona --</option>
-              <option>A</option><option>B</option><option>C</option><option>D</option><option>E</option>
+              <option value="">-- Selecciona sección --</option>
+              <option value="A">A</option>
+              <option value="B">B</option>
+              <option value="C">C</option>
+              <option value="D">D</option>
+              <option value="E">E</option>
             </select>
           </div>
         </div>
@@ -360,111 +483,155 @@
         </div>
       </div>
 
-      <div class="card" id="paso2-card" style="display:none;">
+      <div class="card" id="paso-2" style="display:none;">
         <div class="card-header">
           <div>
             <div class="card-title">📅 Primera sesión</div>
-            <div class="card-meta" id="paso2-sub">Datos de la primera sesión</div>
+            <div class="card-meta" id="paso2-subtitulo">Datos de la primera sesión</div>
           </div>
-          <button class="btn-secondary" style="font-size:12px;" onclick="volverPaso1()">← Volver</button>
+          <button class="btn-secondary btn-sm" onclick="volverPaso1()">← Volver</button>
         </div>
         <div class="form-grid">
           <div class="form-group full">
             <label>Motivo de consulta *</label>
-            <input type="text" id="na-motivo" placeholder="Ej: Problemas de conducta, ansiedad, bullying...">
+            <input type="text" id="na-motivo-texto" placeholder="Ej: Ansiedad, problemas de conducta, acoso escolar...">
           </div>
           <div class="form-group">
             <label>Nivel de atención</label>
             <select id="na-nivel">
               <option value="leve">🟢 Leve</option>
               <option value="moderado" selected>🟡 Moderado</option>
-              <option value="urgente">🔴 Urgente</option>
+              <option value="grave">🔴 Grave</option>
             </select>
           </div>
           <div class="form-group">
             <label>Fecha de la sesión *</label>
-            <input type="date" id="na-fecha">
+            <input type="date" id="na-fecha" min onchange="actualizarHorasSelect('na-hora', this.value)">
           </div>
           <div class="form-group">
-            <label>Hora *</label>
+            <label>Hora disponible *</label>
             <select id="na-hora">
               <option value="">-- Selecciona hora --</option>
-              <option>08:00</option><option>08:30</option><option>09:00</option><option>09:30</option>
-              <option>10:00</option><option>10:30</option><option>11:00</option><option>11:30</option>
-              <option>12:00</option><option>14:00</option><option>14:30</option><option>15:00</option>
-              <option>15:30</option><option>16:00</option>
             </select>
           </div>
           <div class="form-group full">
             <label>Observaciones</label>
-            <textarea id="na-obs" placeholder="Observaciones adicionales sobre la primera sesión..."></textarea>
+            <textarea id="na-observaciones" placeholder="Observaciones adicionales sobre la primera sesión..."></textarea>
           </div>
         </div>
         <div class="form-actions">
           <button class="btn-secondary" onclick="volverPaso1()">← Volver</button>
-          <button class="btn-primary" onclick="guardarAtencion()">
-            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+          <button class="btn-primary" onclick="guardarNuevaAtencion()">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
             Registrar atención
           </button>
         </div>
       </div>
-    </div>
+    </div><!-- /page-nuevo -->
 
-    <!-- ══ REPORTES ══ -->
+
+    <!-- REPORTES -->
     <div class="page" id="page-reportes">
       <div class="page-header">
         <div>
           <div class="page-title">Reportes</div>
-          <div class="page-subtitle">Estadísticas y análisis del área de psicología</div>
+          <div class="page-subtitle">Estadísticas y análisis del sistema</div>
         </div>
-        <button class="btn-primary" onclick="toast('📄 Generando reporte PDF...')">
-          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Exportar PDF
+        <button class="btn-primary" onclick="generarReporte()">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Generar PDF
+        </button>
+      </div>
+      <div class="stat-strip" id="rep-stats"></div>
+      <div class="main-grid">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Atenciones por mes</div></div>
+          <div class="chart-area" id="chart-area"></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Indicadores generales</div></div>
+          <div class="prog-wrap" id="rep-prog"></div>
+        </div>
+      </div>
+    </div><!-- /page-reportes -->
+
+    <!-- CALENDARIO -->
+    <div class="page" id="page-calendario"></div>
+
+    <!-- HISTORIAL DE AÑOS ANTERIORES -->
+    <div class="page" id="page-historial-anios">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Historial de años anteriores</div>
+          <div class="page-subtitle">Registro histórico de atenciones psicológicas por año escolar</div>
+        </div>
+        <button class="btn-primary" onclick="exportarAnio()">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+          Exportar año
         </button>
       </div>
 
-      <div class="main-grid">
-        <div class="col-stack">
-          <div class="card">
-            <div class="card-header"><div class="card-title">Atenciones por mes (2025)</div></div>
-            <div class="bar-chart-wrap" id="bar-chart-wrap"></div>
-          </div>
-          <div class="card">
-            <div class="card-header"><div class="card-title">Distribución por grado</div></div>
-            <div id="grade-prog-wrap"></div>
-          </div>
-        </div>
-        <div class="col-stack">
-          <div class="card">
-            <div class="card-header"><div class="card-title">Indicadores clave</div></div>
-            <div class="rep-ind-grid" id="rep-ind-grid"></div>
-          </div>
-          <div class="card">
-            <div class="card-header"><div class="card-title">Motivos de consulta</div></div>
-            <div id="motivos-prog"></div>
-          </div>
+      <div class="card card--mb">
+        <div class="card-header"><div class="card-title">Seleccionar año escolar</div></div>
+        <div class="anios-btn-group">
+          <button class="btn-secondary anio-btn anio-btn--active" id="anio-btn-2025" onclick="seleccionarAnio(2025)">2025</button>
+          <button class="btn-secondary anio-btn" id="anio-btn-2024" onclick="seleccionarAnio(2024)">2024</button>
+          <button class="btn-secondary anio-btn" id="anio-btn-2023" onclick="seleccionarAnio(2023)">2023</button>
+          <button class="btn-secondary anio-btn" id="anio-btn-2022" onclick="seleccionarAnio(2022)">2022</button>
+          <button class="btn-secondary anio-btn" id="anio-btn-2021" onclick="seleccionarAnio(2021)">2021</button>
+          <button class="btn-secondary anio-btn" id="anio-btn-2020" onclick="seleccionarAnio(2020)">2020</button>
         </div>
       </div>
-    </div>
 
-    <!-- ══ CALENDARIO ══ -->
-    <div class="page" id="page-calendario">
-      <div class="page-header">
-        <div>
-          <div class="page-title">Calendario</div>
-          <div class="page-subtitle" id="cal-mes-titulo">—</div>
+      <div class="anio-stats-grid" id="anio-stats"></div>
+
+      <div class="card card--mb">
+        <div class="card-header">
+          <div class="card-title" id="anio-chart-title">Atenciones por mes — 2025</div>
         </div>
-        <div style="display:flex;gap:8px;">
-          <button class="btn-secondary" onclick="cambiarMes(-1)">← Anterior</button>
-          <button class="btn-secondary" onclick="cambiarMes(1)">Siguiente →</button>
-        </div>
+        <div class="chart-area" id="anio-chart"></div>
       </div>
+
       <div class="card">
-        <div class="cal-grid" id="cal-grid"></div>
+        <div class="card-header">
+          <div class="card-title" id="anio-tabla-title">Casos registrados — 2025</div>
+          <input type="text" class="filter-input" placeholder="Buscar por nombre o motivo..." oninput="filtrarAnio(this.value)">
+        </div>
+        <p class="readonly-note">Los datos históricos son de solo lectura.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Estudiante</th><th>DNI</th><th>Grado</th>
+                <th>Motivo</th><th>Nivel</th><th>Fecha</th><th>Estado final</th>
+              </tr>
+            </thead>
+            <tbody id="anio-tbody"></tbody>
+          </table>
+        </div>
       </div>
-    </div>
+    </div><!-- /page-historial-anios -->
 
-    <!-- ══ CONFIG ══ -->
+
+    <!-- 404 -->
+    <div class="page" id="page-404">
+      <div class="not-found">
+        <div class="not-found-icon">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#2D9656" stroke-width="1.8">
+            <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+          </svg>
+        </div>
+        <div class="not-found-code">404</div>
+        <div class="not-found-title">Página no encontrada</div>
+        <div class="not-found-text">La sección que buscas no existe o fue movida.</div>
+        <button class="btn-primary" onclick="goPage('dashboard')">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Volver al inicio
+        </button>
+      </div>
+    </div><!-- /page-404 -->
+
+    <!-- CONFIGURACIÓN -->
     <div class="page" id="page-config">
       <div class="page-header">
         <div>
@@ -472,124 +639,181 @@
           <div class="page-subtitle">Preferencias del sistema y horario de atención</div>
         </div>
       </div>
-      <div class="card" style="margin-bottom:16px;">
+      <div class="card">
         <div class="card-header"><div class="card-title">Datos del consultorio</div></div>
         <div class="form-grid">
           <div class="form-group">
-            <label>Nombre de la institución</label>
-            <input type="text" id="cfg-inst" placeholder="Ej: I.E. Primaria N° 22521">
+            <label>Nombre del consultorio</label>
+            <input type="text" id="cfg-nombre" placeholder="Ej: Consultorio PsiControl">
           </div>
           <div class="form-group">
-            <label>Psicóloga responsable</label>
-            <input type="text" id="cfg-psi" value="María Paredes" placeholder="Nombre completo">
+            <label>Psicólogo/a responsable</label>
+            <input type="text" id="cfg-psicologo" placeholder="Ej: Dra. Ana López">
           </div>
           <div class="form-group">
-            <label>Teléfono</label>
-            <input type="tel" id="cfg-tel" placeholder="056 123456">
+            <label>Teléfono de contacto</label>
+            <input type="tel" id="cfg-tel" placeholder="Ej: 01 234 5678" maxlength="9">
           </div>
           <div class="form-group">
             <label>Correo electrónico</label>
-            <input type="email" id="cfg-email" placeholder="psicologia@ie.edu.pe">
+            <input type="email" id="cfg-email" placeholder="consultorio@email.com">
           </div>
           <div class="form-group full">
             <label>Dirección</label>
-            <input type="text" id="cfg-dir" placeholder="Av. Principal s/n, Chincha Alta">
+            <input type="text" id="cfg-dir" placeholder="Av. Principal 123, Piso 2">
           </div>
         </div>
         <div class="form-actions">
-          <button class="btn-primary" onclick="toast('✅ Configuración guardada')">Guardar cambios</button>
+          <button class="btn-primary" onclick="guardarConfig()">Guardar cambios</button>
         </div>
       </div>
 
       <div class="card">
         <div class="card-header">
           <div>
-            <div class="card-title">Horario de atención</div>
-            <div class="card-meta">Días y horas disponibles para sesiones</div>
+            <div class="card-title">Horario y disponibilidad</div>
+            <div class="card-meta">Configura los días y horas de atención</div>
           </div>
         </div>
-        <div id="schedule-rows"></div>
+        <div class="schedule-grid">
+          <div class="schedule-row schedule-row--header">
+            <span>Día</span><span>Desde</span><span>Hasta</span><span>Activo</span>
+          </div>
+          <div id="schedule-rows"></div>
+        </div>
         <div class="form-actions">
-          <button class="btn-primary" onclick="toast('✅ Horario guardado')">Guardar horario</button>
+          <button class="btn-primary" onclick="guardarHorario()">Guardar horario</button>
         </div>
       </div>
-    </div>
+    </div><!-- /page-config -->
 
   </div><!-- /content -->
 </div><!-- /main -->
 
-<!-- MODAL SESIÓN -->
-<div class="modal-overlay" id="modal-sesion">
+
+<!-- MODAL — NUEVA SESIÓN -->
+<div class="modal-overlay" id="modal-cita">
   <div class="modal">
     <div class="modal-header">
       <div class="modal-title">📅 Registrar sesión</div>
-      <button class="modal-close" onclick="closeModal('modal-sesion')">✕</button>
+      <button class="modal-close" onclick="closeModal('modal-cita')">✕</button>
     </div>
     <div class="modal-body">
-      <div class="form-grid">
+      <div class="modal-form-grid">
         <div class="form-group full">
           <label>Estudiante *</label>
-          <select id="ms-estudiante"><option value="">-- Selecciona --</option></select>
+          <select id="mc-paciente">
+            <option value="">-- Selecciona un estudiante --</option>
+          </select>
         </div>
         <div class="form-group full">
           <label>Motivo de consulta *</label>
-          <input type="text" id="ms-motivo" placeholder="Ej: Seguimiento, conducta, ansiedad...">
+          <input type="text" id="mc-motivo" placeholder="Ej: Seguimiento, ansiedad, conducta...">
         </div>
         <div class="form-group">
-          <label>Nivel</label>
-          <select id="ms-nivel">
-            <option value="leve">🟢 Leve</option>
-            <option value="moderado" selected>🟡 Moderado</option>
-            <option value="urgente">🔴 Urgente</option>
+          <label>Tipo de sesión</label>
+          <select id="mc-tipo">
+            <option>Sesión de seguimiento</option>
+            <option>Atención psicológica</option>
+            <option>Terapia cognitiva</option>
+            <option>Terapia familiar</option>
           </select>
         </div>
         <div class="form-group">
           <label>Estado</label>
-          <select id="ms-estado">
+          <select id="mc-estado">
             <option value="pendiente">Pendiente</option>
             <option value="activo">Activo</option>
           </select>
         </div>
         <div class="form-group">
           <label>Fecha *</label>
-          <input type="date" id="ms-fecha">
+          <input type="date" id="mc-fecha" onchange="actualizarHorasDisponibles(this.value)">
         </div>
         <div class="form-group">
-          <label>Hora *</label>
-          <select id="ms-hora">
-            <option value="">-- Selecciona --</option>
-            <option>08:00</option><option>08:30</option><option>09:00</option><option>09:30</option>
-            <option>10:00</option><option>10:30</option><option>11:00</option><option>11:30</option>
-            <option>12:00</option><option>14:00</option><option>14:30</option><option>15:00</option>
+          <label>Hora disponible *</label>
+          <select id="mc-hora">
+            <option value="">-- Selecciona hora --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Nivel de atención</label>
+          <select id="mc-nivel">
+            <option value="leve">🟢 Leve</option>
+            <option value="moderado" selected>🟡 Moderado</option>
+            <option value="alta">🔴 Grave</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Grado</label>
+          <select id="mc-grado">
+            <option value="">-- Selecciona grado --</option>
+            <option value="1">1°</option>
+            <option value="2">2°</option>
+            <option value="3">3°</option>
+            <option value="4">4°</option>
+            <option value="5">5°</option>
+            <option value="6">6°</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Sección</label>
+          <select id="mc-seccion">
+            <option value="">-- Selecciona sección --</option>
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+            <option value="D">D</option>
+            <option value="E">E</option>
           </select>
         </div>
         <div class="form-group full">
           <label>Observaciones</label>
-          <textarea id="ms-obs" placeholder="Notas adicionales..." style="min-height:70px;"></textarea>
+          <textarea id="mc-observaciones" placeholder="Observaciones adicionales..."></textarea>
         </div>
       </div>
-      <div style="margin-top:16px;display:flex;gap:10px;justify-content:flex-end;">
-        <button class="btn-secondary" onclick="closeModal('modal-sesion')">Cancelar</button>
-        <button class="btn-primary" onclick="guardarSesion()">Guardar sesión</button>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal('modal-cita')">Cancelar</button>
+        <button class="btn-primary" onclick="guardarCita()">Guardar sesión</button>
       </div>
     </div>
   </div>
 </div>
 
-<!-- MODAL ESTUDIANTE -->
-<div class="modal-overlay" id="modal-estudiante">
+<!-- MODAL — VER ESTUDIANTE -->
+<div class="modal-overlay" id="modal-paciente">
   <div class="modal">
     <div class="modal-header">
-      <div class="modal-title" id="me-titulo">Expediente del estudiante</div>
-      <button class="modal-close" onclick="closeModal('modal-estudiante')">✕</button>
+      <div class="modal-title" id="mp-titulo">Detalle del estudiante</div>
+      <button class="modal-close" onclick="closeModal('modal-paciente')">✕</button>
     </div>
-    <div class="modal-body" id="me-body"></div>
+    <div class="modal-body" id="mp-body"></div>
   </div>
 </div>
 
 <!-- TOAST -->
 <div class="toast-container" id="toast-container"></div>
 
-<script src="script-primary.js"></script>
+<!-- Canvas oculto para PDF -->
+<canvas id="graficoPDF" width="400" height="200" class="canvas-hidden"></canvas>
+
+<!-- SCRIPTS — mismos que secundaria -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+
+<script src="js/api.js"></script>        
+<script src="js/utils.js"></script>      
+<script src="js/dashboard.js"></script>  
+<script src="js/historial.js"></script>  
+<script src="js/atenciones.js"></script> 
+<script src="js/nuevo.js"></script>      
+<script src="js/reportes.js"></script>   
+<script src="js/calendario.js"></script> 
+<script src="js/config.js"></script>     
+<script src="js/siagie.js"></script>     
+<script src="js/main.js"></script> 
+
 </body>
 </html>

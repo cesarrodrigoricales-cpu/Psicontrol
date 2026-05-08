@@ -138,7 +138,6 @@
 
   <!-- TOPBAR -->
   <div class="topbar">
-  <!-- HAMBURGUESA -->
   <button class="btn-hamburger" id="btn-hamburger" onclick="toggleSidebar()">
     <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
       <path d="M4 6h16M4 12h16M4 18h16"/>
@@ -173,7 +172,16 @@
     </svg>
   </button>
 
+  <a href="/primaria/index.html" class="btn-primaria" title="Ir a Primaria">
+    Primaria
+    <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+      <path d="M5 12h14M12 5l7 7-7 7"/>
+    </svg>
+  </a>
+  
   </div>
+
+
 
   <!-- CONTENT -->
   <div class="content">
@@ -186,9 +194,6 @@
           <div class="page-subtitle" id="fecha-hoy">Cargando...</div>
         </div>
         <div class="page-header-actions">
-          <a id="btn-ir-primaria" href="/primaria/index.html" class="btn-primaria">
-            Ir a Primaria
-          </a>
           <button class="btn-primary" onclick="navigateTo('nuevo')">
             <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
             Nueva atención
@@ -366,7 +371,6 @@
         </div>
       </div>
 
-      <!-- BUSCADOR SIAGIE -->
       <div class="card card--overflow-visible card--mb">
         <div class="card-header">
           <div>
@@ -389,7 +393,6 @@
         </div>
       </div>
 
-      <!-- PASOS -->
       <div class="card card--mb">
         <div class="pasos-wrap">
           <div class="paso-item active" id="paso-ind-1">
@@ -404,7 +407,6 @@
         </div>
       </div>
 
-      <!-- PASO 1 -->
       <div class="card" id="paso-1">
         <div class="card-header">
           <div>
@@ -478,7 +480,6 @@
         </div>
       </div>
 
-      <!-- PASO 2 -->
       <div class="card" id="paso-2" style="display:none;">
         <div class="card-header">
           <div>
@@ -609,12 +610,14 @@
     </div><!-- /page-historial-anios -->
 
 
-    <!-- SIAGIE -->
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- SIAGIE — CON SELECTOR DE NIVEL                  -->
+    <!-- ════════════════════════════════════════════════ -->
     <div class="page" id="page-siagie">
       <div class="page-header">
         <div>
           <div class="page-title">Integración SIAGIE</div>
-          <div class="page-subtitle">Importa la nómina de estudiantes del nivel secundaria</div>
+          <div class="page-subtitle">Importa la nómina de estudiantes — Primaria o Secundaria</div>
         </div>
       </div>
 
@@ -623,7 +626,8 @@
         <div class="siagie-banner-logo">SIAGIE</div>
         <div>
           <div class="siagie-banner-title">Ministerio de Educación — Perú</div>
-          <div class="siagie-banner-sub">Importación de nómina — Nivel Secundaria</div>
+          <!-- Este texto se actualiza dinámicamente con actualizarNivelSiagie() -->
+          <div class="siagie-banner-sub" id="siagie-nivel-texto">Importación de nómina — Nivel Secundaria</div>
         </div>
         <div class="siagie-banner-time">
           <div class="siagie-banner-time-label">Última importación</div>
@@ -631,20 +635,61 @@
         </div>
       </div>
 
-      <!-- Drop zone -->
+      <!-- Selector de nivel + Drop zone -->
       <div class="card card--mb">
         <div class="card-header">
           <div class="card-title">Importar nómina desde Excel</div>
-          <div class="card-meta">Descarga el Excel de SIAGIE y súbelo aquí</div>
+          <div class="card-meta">Selecciona el nivel educativo y sube el archivo de SIAGIE</div>
         </div>
         <div class="card-body">
+
+          <!-- ── SELECTOR DE NIVEL ─────────────────────────────── -->
+          <div style="margin-bottom:20px;">
+            <label style="font-weight:600;font-size:13px;color:var(--color-text-primary);display:block;margin-bottom:10px;">
+              📚 ¿A qué nivel pertenece este Excel?
+            </label>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;">
+
+              <label class="siagie-nivel-label" style="
+                display:flex;align-items:center;gap:8px;cursor:pointer;
+                padding:10px 20px;border-radius:8px;
+                border:2px solid #534AB7;background:#EEEDFE;
+                color:#534AB7;font-weight:600;font-size:13px;
+                transition:all 0.2s;
+              ">
+                <input type="radio" name="siagie-nivel" value="secundaria"
+                  checked onchange="actualizarNivelSiagie(this.value)"
+                  style="accent-color:#534AB7;">
+                 Secundaria
+              </label>
+
+              <label class="siagie-nivel-label" style="
+                display:flex;align-items:center;gap:8px;cursor:pointer;
+                padding:10px 20px;border-radius:8px;
+                border:2px solid var(--color-border, #e5e7eb);background:'';
+                color:var(--color-text-secondary, #6b7280);font-weight:600;font-size:13px;
+                transition:all 0.2s;
+              ">
+                <input type="radio" name="siagie-nivel" value="primaria"
+                  onchange="actualizarNivelSiagie(this.value)"
+                  style="accent-color:#534AB7;">
+                 Primaria
+              </label>
+
+            </div>
+          </div>
+          <!-- ── FIN SELECTOR ──────────────────────────────────── -->
+
+          <!-- Instrucciones dinámicas -->
           <div class="siagie-instructions">
             <b>¿Cómo obtener el Excel?</b><br>
             1. Ingresa a <b>siagie.minedu.gob.pe</b> con tu cuenta del colegio<br>
             2. Ve a <b>Matrícula → Nómina de matrícula</b><br>
-            3. Selecciona el nivel <b>Secundaria</b> y exporta en Excel<br>
+            3. Selecciona el nivel <b id="siagie-instrucciones-nivel">Secundaria</b> y exporta en Excel<br>
             4. Sube el archivo descargado aquí abajo
           </div>
+
+          <!-- Drop zone -->
           <label id="drop-zone" class="drop-zone">
             <div class="drop-zone-icon">📂</div>
             <div class="drop-zone-title">Haz clic para seleccionar el archivo Excel</div>
@@ -653,10 +698,11 @@
               onchange="importarExcelSiagie(this.files[0]); actualizarNombreArchivo(this)">
           </label>
           <div id="siagie-archivo" class="siagie-filename" style="display:none;"></div>
+
         </div>
       </div>
 
-      <!-- Tabla importados -->
+      <!-- Tabla importados — ahora con columna Nivel -->
       <div class="card">
         <div class="card-header">
           <div class="card-title">Estudiantes importados</div>
@@ -665,15 +711,19 @@
           <table>
             <thead>
               <tr>
-                <th>Apellidos y nombres</th><th>DNI</th>
-                <th>Grado</th><th>Sección</th><th>Estado</th>
+                <th>Apellidos y nombres</th>
+                <th>DNI</th>
+                <th>Grado</th>
+                <th>Sección</th>
+                <th>Nivel</th>   <!-- ← columna nueva -->
+                <th>Estado</th>
               </tr>
             </thead>
             <tbody id="siagie-tbody">
-              <tr><td colspan="5">
+              <tr><td colspan="6">
                 <div class="empty-state">
                   <div class="es-icon">📋</div>
-                  <div class="es-text">Importa un Excel de SIAGIE para ver los estudiantes aquí</div>
+                  <div class="es-text">Selecciona el nivel e importa un Excel de SIAGIE para ver los estudiantes aquí</div>
                 </div>
               </td></tr>
             </tbody>

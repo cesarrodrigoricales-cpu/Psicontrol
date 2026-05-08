@@ -9,6 +9,35 @@ function inicializarSiagie() {
   if (el) el.textContent = hora;
 }
 
+// Actualiza el banner y los estilos del selector cuando cambia el nivel
+function actualizarNivelSiagie(nivel) {
+  // Actualiza texto del banner
+  const texto = document.getElementById('siagie-nivel-texto');
+  if (texto) {
+    texto.textContent = `Importación de nómina — Nivel ${nivel === 'primaria' ? 'Primaria' : 'Secundaria'}`;
+  }
+
+  // Actualiza instrucciones dinámicas
+  const instrucciones = document.getElementById('siagie-instrucciones-nivel');
+  if (instrucciones) {
+    instrucciones.textContent = nivel === 'primaria' ? 'Primaria' : 'Secundaria';
+  }
+
+  // Resalta visualmente el label seleccionado
+  document.querySelectorAll('.siagie-nivel-label').forEach(label => {
+    const input = label.querySelector('input[type="radio"]');
+    if (input && input.value === nivel) {
+      label.style.border = '2px solid #534AB7';
+      label.style.background = '#EEEDFE';
+      label.style.color = '#534AB7';
+    } else {
+      label.style.border = '2px solid var(--color-border, #e5e7eb)';
+      label.style.background = '';
+      label.style.color = 'var(--color-text-secondary, #6b7280)';
+    }
+  });
+}
+
 // Convierte "15/03/2009" → "2009-03-15" (formato ISO para guardar)
 function parsearFechaSiagie(fechaStr) {
   if (!fechaStr) return '';
@@ -89,6 +118,18 @@ function ocultarProgreso() {
 function importarExcelSiagie(file) {
   if (!file) return;
 
+  // ── Leer nivel seleccionado ──────────────────────────────────────
+  const nivelRadio = document.querySelector('input[name="siagie-nivel"]:checked');
+  const nivelSeleccionado = nivelRadio ? nivelRadio.value : 'secundaria';
+
+  // Endpoint dinámico según nivel
+  const API_BULK = nivelSeleccionado === 'primaria'
+    ? `${API}/estudiantes/primaria/bulk`
+    : `${API}/estudiantes/bulk`;
+
+  // Grado máximo para marcar egresados según nivel
+  const GRADO_EGRESO = nivelSeleccionado === 'primaria' ? '6' : '5';
+
   const reader = new FileReader();
 
   reader.onload = async function (e) {
@@ -98,8 +139,6 @@ function importarExcelSiagie(file) {
       const range = XLSX.utils.decode_range(hoja['!ref']);
 
       // ── Detectar fila de encabezados ───────────────────────────
-      // Exige mínimo 2 columnas clave en la misma fila para evitar
-      // falsos positivos con filas de metadatos (Grado: VARIOS, etc.)
       let headerRow = 0;
       const keywordHeader = /^(apellido|nombres?|dni|nro\.?\s*doc|n[uú]mero\s*de\s*doc|fec|fecha|g[eé]nero|sexo)/i;
 
@@ -120,6 +159,7 @@ function importarExcelSiagie(file) {
 
       const filas = XLSX.utils.sheet_to_json(hoja, { range: headerRow, defval: '' });
 
+      console.log(`[SIAGIE] Nivel: ${nivelSeleccionado.toUpperCase()}`);
       console.log(`[SIAGIE] Encabezados detectados en fila ${headerRow + 1}`);
       console.log(`[SIAGIE] Total filas leídas: ${filas.length}`);
       if (filas.length > 0) console.log('[SIAGIE] Columnas:', Object.keys(filas[0]));
@@ -174,14 +214,18 @@ function importarExcelSiagie(file) {
             duplicados++;
           }
         } else {
-          nuevos.push({ nombres, apellidos, dni, grado, seccion, fechanac, genero, condicion: 'activo' });
+          nuevos.push({
+            nombres, apellidos, dni, grado, seccion,
+            fechanac, genero, condicion: 'activo',
+            nivel: nivelSeleccionado   // ← guardamos el nivel en cada estudiante
+          });
         }
       }
 
-      // ── Marcar egresados (5° que ya no están en el Excel) ──────
+      // ── Marcar egresados (último grado que ya no están en el Excel) ──
       mostrarProgreso(0, 1, '🎓 Verificando egresados...');
       for (const est of store.estudiantes) {
-        if (est.grado === '5' && !dnisNuevoExcel.has(est.dni)) {
+        if (est.grado === GRADO_EGRESO && !dnisNuevoExcel.has(est.dni)) {
           try {
             await apiFetch(`${API}/estudiantes/${est.id}`, {
               method: 'PUT',
@@ -206,17 +250,16 @@ function importarExcelSiagie(file) {
           const lote = nuevos.slice(i, i + LOTE);
           mostrarProgreso(
             procesados, totalOperaciones,
-            `⬆️ Insertando nuevos... (${Math.min(i + LOTE, nuevos.length)}/${nuevos.length})`
+            `⬆️ Insertando ${nivelSeleccionado}... (${Math.min(i + LOTE, nuevos.length)}/${nuevos.length})`
           );
           try {
-            const resultado = await apiFetch(`${API}/estudiantes/bulk`, {
+            const resultado = await apiFetch(API_BULK, {
               method: 'POST',
-              body: JSON.stringify({ estudiantes: lote })
+              body: JSON.stringify({ estudiantes: lote, nivel: nivelSeleccionado })
             });
             insertados += resultado.insertados || 0;
             errores    += resultado.errores    || 0;
 
-            // Reflejar en store local
             if (resultado.detalle) {
               resultado.detalle
                 .filter(d => d.accion === 'insertado')
@@ -244,14 +287,13 @@ function importarExcelSiagie(file) {
             `🔄 Actualizando... (${Math.min(i + LOTE, actualizar.length)}/${actualizar.length})`
           );
           try {
-            const resultado = await apiFetch(`${API}/estudiantes/bulk`, {
+            const resultado = await apiFetch(API_BULK, {
               method: 'POST',
-              body: JSON.stringify({ estudiantes: lote })
+              body: JSON.stringify({ estudiantes: lote, nivel: nivelSeleccionado })
             });
             actualizados += resultado.actualizados || 0;
             errores      += resultado.errores      || 0;
 
-            // Reflejar en store local
             lote.forEach(est => {
               const local = store.estudiantes.find(e => e.id === est.id);
               if (local) {
@@ -281,12 +323,13 @@ function importarExcelSiagie(file) {
 
       renderTablaImportados();
 
+      const nivelLabel = nivelSeleccionado === 'primaria' ? 'Primaria' : 'Secundaria';
       const partes = [
-        insertados   ? `✅ ${insertados} nuevos`          : '',
-        actualizados ? `🔄 ${actualizados} actualizados`   : '',
-        egresados    ? `🎓 ${egresados} egresados`         : '',
-        duplicados   ? `➖ ${duplicados} sin cambios`      : '',
-        errores      ? `❌ ${errores} errores`             : '',
+        insertados   ? `✅ ${insertados} nuevos (${nivelLabel})`  : '',
+        actualizados ? `🔄 ${actualizados} actualizados`          : '',
+        egresados    ? `🎓 ${egresados} egresados`                : '',
+        duplicados   ? `➖ ${duplicados} sin cambios`             : '',
+        errores      ? `❌ ${errores} errores`                    : '',
       ].filter(Boolean);
 
       toast(partes.join('  ') || 'Sin cambios');
@@ -309,7 +352,7 @@ function renderTablaImportados() {
   const importados = store.estudiantes.filter(e => e.origen === 'siagie');
 
   if (importados.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5">
+    tbody.innerHTML = `<tr><td colspan="6">
       <div class="empty-state">
         <div class="es-icon">📋</div>
         <div class="es-text">Ningún estudiante importado aún</div>
@@ -321,12 +364,18 @@ function renderTablaImportados() {
     const badge = e.condicion === 'egresado'
       ? `<span class="badge-estado" style="background:#f0f0f0;color:#888;">🎓 Egresado</span>`
       : `<span class="badge-estado activo">✅ Importado</span>`;
+
+    const nivelBadge = e.nivel === 'primaria'
+      ? `<span style="font-size:11px;background:#d1fae5;color:#065f46;padding:2px 8px;border-radius:99px;font-weight:600;">Primaria</span>`
+      : `<span style="font-size:11px;background:#ede9fe;color:#4c1d95;padding:2px 8px;border-radius:99px;font-weight:600;">Secundaria</span>`;
+
     return `
     <tr>
       <td><b>${e.apellidos}, ${e.nombres}</b></td>
       <td>${e.dni || '—'}</td>
       <td>${e.grado ? e.grado + '°' : '—'}</td>
       <td>${e.seccion || '—'}</td>
+      <td>${nivelBadge}</td>
       <td>${badge}</td>
     </tr>`;
   }).join('');
@@ -363,7 +412,6 @@ function buscarEstudianteSiagie(q) {
   const query = normalizar(q);
   if (!query) { contenedor.style.display = 'none'; return; }
 
-  // Solo estudiantes con al menos una atención registrada
   const idsConAtencion = new Set(store.atenciones.map(a => a.idestudiante));
 
   const resultados = store.estudiantes.filter(e => {
@@ -374,7 +422,6 @@ function buscarEstudianteSiagie(q) {
            (e.dni && e.dni.includes(query));
   }).slice(0, 6);
 
-  // ← Todo lo de abajo es lo que te faltaba
   if (resultados.length === 0) {
     contenedor.style.display = 'none';
     return;
@@ -392,6 +439,7 @@ function buscarEstudianteSiagie(q) {
         <div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">${e.apellidos}, ${e.nombres}</div>
         <div style="font-size:11px;color:var(--color-text-secondary);">
           DNI: ${e.dni || '—'} · ${e.grado ? e.grado + '°' : '—'} ${e.seccion || ''}
+          ${e.nivel ? `· <b>${e.nivel === 'primaria' ? 'Primaria' : 'Secundaria'}</b>` : ''}
         </div>
       </div>
     </div>
@@ -400,7 +448,7 @@ function buscarEstudianteSiagie(q) {
   contenedor.style.display = 'block';
 }
 
-  function seleccionarEstudianteSiagie(id) {
+function seleccionarEstudianteSiagie(id) {
   const e = store.estudiantes.find(est => est.id === id);
   if (!e) return;
 
