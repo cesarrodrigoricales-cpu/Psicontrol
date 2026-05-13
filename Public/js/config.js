@@ -9,7 +9,6 @@ const HORARIO_KEY   = 'psicontrol_horario';
 // ── CONFIGURACIÓN DEL CONSULTORIO ──────────────
 
 function cargarConfig() {
-  // ✅ Cargar desde localStorage si existe
   const guardado = localStorage.getItem(CONFIG_KEY);
   if (guardado) {
     store.config = JSON.parse(guardado);

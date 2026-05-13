@@ -1,0 +1,188 @@
+    :root {
+      --rojo:     #C0392B;
+      --rojo-osc: #922B21;
+      --amarillo: #F1C40F;
+      --blanco:   #FFFFFF;
+      --gris-cl:  #F5F5F5;
+      --gris-bd:  #E0E0E0;
+      --texto:    #1A1A1A;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Source Sans 3', sans-serif;
+      background: var(--blanco);
+      color: var(--texto);
+      width: 794px; /* A4 aprox */
+    }
+
+    /* ── CABECERA ─────────────────────────── */
+    .cabecera {
+      background: var(--rojo);
+      color: var(--blanco);
+      padding: 20px 28px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      border-bottom: 6px solid var(--amarillo);
+    }
+    .cabecera img {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+      background: white;
+      border-radius: 6px;
+      padding: 4px;
+    }
+    .cabecera-texto h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      letter-spacing: .5px;
+    }
+    .cabecera-texto p {
+      font-size: 12px;
+      opacity: .85;
+      margin-top: 3px;
+    }
+    .cabecera-meta {
+      margin-left: auto;
+      text-align: right;
+      font-size: 11px;
+      opacity: .85;
+      line-height: 1.8;
+    }
+    .nivel-badge {
+      display: inline-block;
+      background: var(--amarillo);
+      color: #333;
+      font-weight: 700;
+      font-size: 11px;
+      padding: 2px 10px;
+      border-radius: 20px;
+      margin-top: 4px;
+      letter-spacing: .5px;
+    }
+
+    /* ── STATS ────────────────────────────── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+      padding: 18px 24px;
+      background: var(--gris-cl);
+      border-bottom: 2px solid var(--gris-bd);
+    }
+    .stat-box {
+      background: var(--blanco);
+      border-top: 4px solid var(--rojo);
+      border-radius: 6px;
+      padding: 12px 14px;
+      text-align: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,.08);
+    }
+    .stat-box.amarillo { border-top-color: var(--amarillo); }
+    .stat-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      color: var(--rojo);
+      line-height: 1;
+    }
+    .stat-box.amarillo .stat-num { color: #B7950B; }
+    .stat-lbl {
+      font-size: 10px;
+      color: #666;
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: .4px;
+    }
+
+    /* ── SECCIÓN ──────────────────────────── */
+    .seccion {
+      padding: 18px 24px 0;
+    }
+    .seccion-titulo {
+      font-family: 'Playfair Display', serif;
+      font-size: 14px;
+      color: var(--rojo-osc);
+      border-left: 4px solid var(--amarillo);
+      padding-left: 10px;
+      margin-bottom: 12px;
+    }
+
+    /* ── GRÁFICOS GRID ────────────────────── */
+    .graficos-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      padding: 14px 24px;
+    }
+    .grafico-card {
+      background: var(--gris-cl);
+      border-radius: 8px;
+      padding: 14px;
+      border: 1px solid var(--gris-bd);
+    }
+    .grafico-card.full {
+      grid-column: 1 / -1;
+    }
+    .grafico-titulo {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--rojo-osc);
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-bottom: 10px;
+    }
+    canvas { width: 100% !important; }
+
+    /* ── TABLA ────────────────────────────── */
+    .tabla-wrap {
+      padding: 0 24px 20px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+    }
+    thead tr {
+      background: var(--rojo);
+      color: var(--blanco);
+    }
+    thead th {
+      padding: 8px 10px;
+      text-align: left;
+      font-weight: 600;
+      letter-spacing: .3px;
+    }
+    tbody tr:nth-child(even) { background: #FEF9E7; }
+    tbody tr:nth-child(odd)  { background: var(--blanco); }
+    tbody td {
+      padding: 7px 10px;
+      border-bottom: 1px solid var(--gris-bd);
+      color: #333;
+    }
+    .badge-gen {
+      display: inline-block;
+      padding: 1px 7px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+    .badge-f { background: #FADBD8; color: #922B21; }
+    .badge-m { background: #D6EAF8; color: #1A5276; }
+
+    /* ── PIE ──────────────────────────────── */
+   .pie-reporte {
+  background: var(--rojo);
+  color: rgba(255,255,255,.75);
+  font-size: 9px;
+  text-align: center;
+  padding: 8px 24px;
+  margin-top: auto;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  letter-spacing: .3px;
+}
+    .pie-reporte strong { color: var(--amarillo); }

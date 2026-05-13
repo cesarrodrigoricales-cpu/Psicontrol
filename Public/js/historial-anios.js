@@ -5,8 +5,8 @@
 let anioSeleccionado = new Date().getFullYear();
 
 async function renderHistorialAnios() {
-  // Botones: resaltar el activo
-  [2025,2024,2023,2022,2021,2020].forEach(a => {
+  // Botones: resaltar el activo — incluye 2026
+  [2026,2025,2024,2023,2022,2021,2020].forEach(a => {
     const btn = document.getElementById(`anio-btn-${a}`);
     if (!btn) return;
     const activo = a === anioSeleccionado;
@@ -16,7 +16,6 @@ async function renderHistorialAnios() {
     btn.style.fontWeight     = activo ? '700'     : '';
   });
 
-  // Títulos
   const tChart = document.getElementById('anio-chart-title');
   const tTabla = document.getElementById('anio-tabla-title');
   if (tChart) tChart.textContent = `Atenciones por mes — ${anioSeleccionado}`;
@@ -27,7 +26,6 @@ async function renderHistorialAnios() {
   renderTablaAnio();
 }
 
-// ── Stats (tarjetas resumen) ─────────────────────────────────
 function renderStatsAnio() {
   const contenedor = document.getElementById('anio-stats');
   if (!contenedor) return;
@@ -38,13 +36,13 @@ function renderStatsAnio() {
 
   const estudiantes = [...new Set(atenciones.map(a => a.idestudiante))];
   const graves      = atenciones.filter(a => a.nivelatencion === 'grave').length;
-  const cerrados    = atenciones.filter(a => a.estado === 'cerrado').length;
+  const cerrados    = atenciones.filter(a => ESTADOS_ARCHIVADOS.includes(a.estado)).length;
 
   const cards = [
-    { icon: '📋', valor: atenciones.length,    label: 'Atenciones totales' },
-    { icon: '👥', valor: estudiantes.length,   label: 'Estudiantes atendidos' },
-    { icon: '🔴', valor: graves,               label: 'Casos graves' },
-    { icon: '✅', valor: cerrados,             label: 'Casos cerrados' },
+    { icon: '📋', valor: atenciones.length,  label: 'Atenciones totales' },
+    { icon: '👥', valor: estudiantes.length, label: 'Estudiantes atendidos' },
+    { icon: '🔴', valor: graves,             label: 'Casos graves' },
+    { icon: '✅', valor: cerrados,           label: 'Casos cerrados' },
   ];
 
   contenedor.innerHTML = cards.map(c => `
@@ -58,7 +56,6 @@ function renderStatsAnio() {
   `).join('');
 }
 
-// ── Gráfico de barras por mes ────────────────────────────────
 function renderChartAnio() {
   const contenedor = document.getElementById('anio-chart');
   if (!contenedor) return;
@@ -105,7 +102,6 @@ function renderChartAnio() {
     </div>`;
 }
 
-// ── Tabla de casos ────────────────────────────────────────────
 function renderTablaAnio(filtro = '') {
   const tbody = document.getElementById('anio-tbody');
   if (!tbody) return;
@@ -139,7 +135,7 @@ function renderTablaAnio(filtro = '') {
     .sort((a, b) => new Date(b.fechahora) - new Date(a.fechahora))
     .map(a => {
       const est    = store.estudiantes.find(e => e.id == a.idestudiante);
-      const nombre = est ? `${est.apellidos}, ${est.nombres}` : '—';
+      const nombre = est ? `${est.apellidos}, ${est.nombres}` : (a.paciente || '—');
       const dni    = est?.dni  || '—';
       const grado  = (a.grado  || est?.grado)
                    ? (a.grado  || est?.grado) + '°' : '—';
@@ -165,18 +161,15 @@ function renderTablaAnio(filtro = '') {
     }).join('');
 }
 
-// ── Buscador ─────────────────────────────────────────────────
 function filtrarAnio(q) {
   renderTablaAnio(q);
 }
 
-// ── Cambiar año ───────────────────────────────────────────────
 function seleccionarAnio(anio) {
   anioSeleccionado = parseInt(anio);
   renderHistorialAnios();
 }
 
-// ── Exportar a Excel ─────────────────────────────────────────
 function exportarAnio() {
   const atenciones = store.atenciones.filter(a =>
     new Date(a.fechahora).getFullYear() === anioSeleccionado
@@ -192,7 +185,7 @@ function exportarAnio() {
     .map(a => {
       const est = store.estudiantes.find(e => e.id == a.idestudiante);
       return {
-        'Estudiante' : est ? `${est.apellidos}, ${est.nombres}` : '—',
+        'Estudiante' : est ? `${est.apellidos}, ${est.nombres}` : (a.paciente || '—'),
         'DNI'        : est?.dni || '—',
         'Grado'      : (a.grado || est?.grado) ? (a.grado || est?.grado) + '°' : '—',
         'Sección'    : a.seccion || est?.seccion || '—',
@@ -204,12 +197,9 @@ function exportarAnio() {
     });
 
   const ws = XLSX.utils.json_to_sheet(filas);
-
-  // Ancho de columnas
   ws['!cols'] = [
     {wch:30},{wch:12},{wch:8},{wch:8},{wch:28},{wch:10},{wch:14},{wch:12}
   ];
-
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, `Atenciones ${anioSeleccionado}`);
   XLSX.writeFile(wb, `PsiControl_${anioSeleccionado}.xlsx`);

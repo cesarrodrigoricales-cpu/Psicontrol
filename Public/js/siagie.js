@@ -115,7 +115,7 @@ function ocultarProgreso() {
 }
 
 // ── Importación principal ────────────────────────────────────────────────────
-function importarExcelSiagie(file) {
+function importarCSVSiagie(file) {
   if (!file) return;
 
   // ── Leer nivel seleccionado ──────────────────────────────────────
@@ -134,7 +134,8 @@ function importarExcelSiagie(file) {
 
   reader.onload = async function (e) {
     try {
-      const workbook = XLSX.read(e.target.result, { type: 'array' });
+      const text = new TextDecoder('utf-8').decode(e.target.result);
+      const workbook = XLSX.read(text, { type: 'string' }); 
       const hoja = workbook.Sheets[workbook.SheetNames[0]];
       const range = XLSX.utils.decode_range(hoja['!ref']);
 
@@ -201,8 +202,10 @@ function importarExcelSiagie(file) {
 
         // Saltar filas vacías o de resumen
         if (!nombres || !apellidos) continue;
+        if (!dni || dni.length < 7) continue;
         if (/^total|^resumen|^cantidad/i.test(nombres)) continue;
-
+        if (/^total|^resumen|^cantidad/i.test(apellidos)) continue;
+        if (/^total|^resumen|^cantidad/i.test(apPaterno)) continue;
         if (dni) dnisNuevoExcel.add(dni);
 
         const existe = store.estudiantes.find(est => est.dni && est.dni === dni);
@@ -405,27 +408,57 @@ function actualizarNombreArchivo(input) {
   }
 }
 
-function buscarEstudianteSiagie(q) {
-  const contenedor = document.getElementById('na-resultados-busqueda');
+function buscarEstudianteSiagie() {
+  const contenedor    = document.getElementById('na-resultados-busqueda');
   if (!contenedor) return;
 
+  const q       = document.getElementById('na-buscar-estudiante')?.value || '';
+  const grado   = document.getElementById('na-filtro-grado')?.value || '';
+  const seccion = document.getElementById('na-filtro-seccion')?.value || '';
+
+  const estadoInicial = document.getElementById('na-estado-inicial');
+  const sinResultados = document.getElementById('na-sin-resultados');
+
   const query = normalizar(q);
-  if (!query) { contenedor.style.display = 'none'; return; }
 
-  const idsConAtencion = new Set(store.atenciones.map(a => a.idestudiante));
+  // Mostrar/ocultar botón limpiar
+  const clearBtn = document.getElementById('na-buscar-clear');
+  if (clearBtn) clearBtn.style.display = q ? 'block' : 'none';
 
-  const resultados = store.estudiantes.filter(e => {
-    if (!idsConAtencion.has(e.id)) return false;
-    const nombre    = normalizar(`${e.nombres} ${e.apellidos}`);
-    const nombreInv = normalizar(`${e.apellidos} ${e.nombres}`);
-    return nombre.includes(query) || nombreInv.includes(query) ||
-           (e.dni && e.dni.includes(query));
-  }).slice(0, 6);
-
-  if (resultados.length === 0) {
+  // Sin búsqueda → mostrar estado inicial
+  if (!query && !grado && !seccion) {
     contenedor.style.display = 'none';
+    if (estadoInicial) estadoInicial.style.display = 'flex';
+    if (sinResultados) sinResultados.style.display = 'none';
     return;
   }
+
+  // Hay búsqueda → ocultar estado inicial
+  if (estadoInicial) estadoInicial.style.display = 'none';
+  const resultados = store.estudiantes.filter(e => {
+    const nombre    = normalizar(`${e.nombres} ${e.apellidos}`);
+    const nombreInv = normalizar(`${e.apellidos} ${e.nombres}`);
+    // Limpiar la query: quitar comas y espacios extra
+    const q_limpia  = query.replace(/,/g, ' ').replace(/\s+/g, ' ').trim();
+    // Buscar cada palabra por separado
+    const palabras  = q_limpia.split(' ').filter(Boolean);
+    const coincideNombre  = !query || palabras.every(p =>
+      nombre.includes(p) || nombreInv.includes(p)
+    ) || (e.dni && e.dni.includes(q_limpia));
+    const coincideGrado   = !grado   || String(e.grado).trim()   === grado;
+    const coincideSeccion = !seccion || String(e.seccion).trim() === seccion;
+    return coincideNombre && coincideGrado && coincideSeccion;
+  }).slice(0, 8);
+
+  // Sin resultados
+  if (resultados.length === 0) {
+    contenedor.style.display = 'none';
+    if (sinResultados) sinResultados.style.display = 'block';
+    return;
+  }
+
+  // Con resultados
+  if (sinResultados) sinResultados.style.display = 'none';
 
   contenedor.innerHTML = resultados.map(e => `
     <div onclick="seleccionarEstudianteSiagie(${e.id})"
