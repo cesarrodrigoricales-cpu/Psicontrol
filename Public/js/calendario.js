@@ -1,12 +1,11 @@
-// ═══════════════════════════════════════════════
 // CALENDARIO.JS — FullCalendar
-// PsiControl · Sistema de Atención Psicológica
-// ═══════════════════════════════════════════════
 
-const CAL_STORAGE_KEY = 'psicontrol_cal_eventos';
-let calEventos = [];
+const CAL_STORAGE_KEY      = 'psicontrol_cal_eventos';
+const CAL_NOTIF_SHOWN_KEY  = 'psicontrol_notif_shown'; 
+let calEventos  = [];
 let calInstance = null;
 let calEditId   = null;
+let calNotifInterval = null; 
 
 const CAL_TIPO_COLORS = {
   sesion:  '#534AB7',
@@ -15,16 +14,137 @@ const CAL_TIPO_COLORS = {
   otro:    '#888780',
 };
 
-// ── RENDER PRINCIPAL ────────────────────────────
+// SISTEMA DE NOTIFICACIONES DEL NAVEGADOR
+async function calIniciarNotificaciones() {
+  if (!('Notification' in window)) {
+    console.warn('PsiControl: Este navegador no soporta notificaciones.');
+    return false;
+  }
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') return false;
+
+  const resultado = await Notification.requestPermission();
+  return resultado === 'granted';
+}
+
+/**
+ * Muestra una notificación nativa del navegador.
+ * @param {object} ev - Evento del calendario
+ */
+
+function calMostrarNotificacion(ev) {
+  if (Notification.permission !== 'granted') return;
+
+  const minutos = ev.notif || 0;
+  const cuerpo  = minutos > 0
+    ? `En ${minutos} minuto${minutos !== 1 ? 's' : ''}${ev.obs ? '\n' + ev.obs : ''}`
+    : (ev.obs || 'Sesión programada ahora');
+
+  const notif = new Notification(`📅 PsiControl — ${ev.titulo}`, {
+    body: cuerpo,
+    icon: '/favicon.ico',   
+    badge: '/favicon.ico',
+    tag: `psicontrol_${ev.id}`, 
+    requireInteraction: ev.tipo === 'urgente', 
+  });
+
+  // Al hacer clic, enfocar la ventana y abrir el evento
+  notif.onclick = () => {
+    window.focus();
+    const evObj = calEventos.find(e => String(e.id) === String(ev.id));
+    if (evObj) calAbrirEditar(evObj);
+    notif.close();
+  };
+}
+
+/**
+ * Registra el ID de un evento como "ya notificado" en localStorage,
+ * para no volver a mostrarlo aunque el usuario recargue la página.
+ * @param {string|number} id
+ */
+
+function calMarcarNotificado(id) {
+  const mostrados = JSON.parse(localStorage.getItem(CAL_NOTIF_SHOWN_KEY) || '[]');
+  if (!mostrados.includes(String(id))) {
+    mostrados.push(String(id));
+    // Limpiar notificaciones viejas (> 7 días) para no acumular
+    const recientes = mostrados.slice(-200);
+    localStorage.setItem(CAL_NOTIF_SHOWN_KEY, JSON.stringify(recientes));
+  }
+}
+
+/**
+ * Comprueba si un evento ya fue notificado.
+ * @param {string|number} id
+ */
+
+function calYaNotificado(id) {
+  const mostrados = JSON.parse(localStorage.getItem(CAL_NOTIF_SHOWN_KEY) || '[]');
+  return mostrados.includes(String(id));
+}
+
+/**
+ * Revisa todos los eventos y dispara notificaciones para los que
+ * estén dentro de su ventana de aviso.
+ * Se llama cada 60 segundos por el intervalo interno.
+ */
+
+function calRevisarNotificaciones() {
+  if (Notification.permission !== 'granted') return;
+
+  const ahora = new Date();
+
+  calEventos.forEach(ev => {
+    if (!ev.fecha || !ev.hora) return;
+
+    const fechaEvento = new Date(`${ev.fecha}T${ev.hora}`);
+    if (isNaN(fechaEvento)) return;
+
+    const minutosRestantes = (fechaEvento - ahora) / 60000;
+    const ventanaNotif     = ev.notif ?? 15; 
+
+    // Disparar si estamos dentro de ±1 minuto de la ventana de aviso
+    const dentroDeVentana =
+      minutosRestantes >= (ventanaNotif - 1) &&
+      minutosRestantes <= (ventanaNotif + 1);
+
+    // También notificar en el momento exacto (minutosRestantes entre -1 y 1)
+    const esAhora = minutosRestantes >= -1 && minutosRestantes <= 1;
+
+    const notifKey = ventanaNotif > 0
+      ? `${ev.id}_aviso_${ventanaNotif}`
+      : `${ev.id}_ahora`;
+
+    if ((dentroDeVentana || esAhora) && !calYaNotificado(notifKey)) {
+      calMostrarNotificacion(ev);
+      calMarcarNotificado(notifKey);
+    }
+  });
+}
+
+/**
+ * Inicia el intervalo que revisa notificaciones cada 60 segundos.
+ * Limpia el intervalo anterior si existía.
+ */
+
+function calIniciarIntervaloNotificaciones() {
+  if (calNotifInterval) clearInterval(calNotifInterval);
+  calNotifInterval = setInterval(calRevisarNotificaciones, 60 * 1000);
+  // Revisar inmediatamente al cargar
+  calRevisarNotificaciones();
+}
+
+// RENDER PRINCIPAL
+
 function renderCalendario() {
   const page = document.getElementById('page-calendario');
   if (!page) return;
 
-  //  Limpiar localStorage de eventos viejos de atenciones
+  // Limpiar localStorage de eventos viejos de atenciones
   // para que se re-sincronicen correctamente
   const stored = JSON.parse(localStorage.getItem(CAL_STORAGE_KEY) || '[]');
-  calEventos = stored.filter(e => !e.fromAtencion); // quitar los de atenciones
-  sincronizarAtencionesAlCalendario();              // re-sincronizar limpios
+  calEventos = stored.filter(e => !e.fromAtencion);
+  sincronizarAtencionesAlCalendario();
 
   page.innerHTML = `
     <div class="page-header">
@@ -32,13 +152,25 @@ function renderCalendario() {
         <div class="page-title">Calendario</div>
         <div class="page-subtitle">Sesiones y atenciones programadas</div>
       </div>
-      <button class="btn-primary" onclick="calAbrirModal()">
-        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-        Nuevo evento
-      </button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <button class="btn-secondary" id="cal-btn-notif" onclick="calSolicitarPermiso()" title="Estado de notificaciones">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+          </svg>
+          Notificaciones
+        </button>
+        <button class="btn-primary" onclick="calAbrirModal()">
+          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Nuevo evento
+        </button>
+      </div>
     </div>
+
+    <!-- Barra de estado de notificaciones -->
+    <div id="cal-notif-status" style="display:none;margin-bottom:12px;padding:10px 14px;border-radius:8px;font-size:13px;"></div>
 
     <div id="cal-notif-bar" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;"></div>
 
@@ -133,9 +265,70 @@ function renderCalendario() {
   document.getElementById('modal-calendario')?.addEventListener('click', e => {
     if (e.target.id === 'modal-calendario') closeModal('modal-calendario');
   });
+
+  // Iniciar sistema de notificaciones
+  calIniciarNotificaciones().then(permitido => {
+    calActualizarBtnNotif(permitido);
+    if (permitido) calIniciarIntervaloNotificaciones();
+  });
 }
 
-// ── CONVERTIR EVENTOS AL FORMATO FULLCALENDAR ───
+// UI DE NOTIFICACIONES
+
+/**
+ * Actualiza el botón de notificaciones según el estado del permiso.
+ * @param {boolean} permitido
+ */
+
+function calActualizarBtnNotif(permitido) {
+  const btn = document.getElementById('cal-btn-notif');
+  const bar = document.getElementById('cal-notif-status');
+  if (!btn || !bar) return;
+
+  if (permitido) {
+    btn.style.color       = 'var(--teal, #1D9E75)';
+    btn.style.borderColor = 'var(--teal, #1D9E75)';
+    btn.title = 'Notificaciones activas';
+    bar.style.display = 'none';
+  } else if (Notification.permission === 'denied') {
+    btn.style.color       = 'var(--rose, #E24B4A)';
+    btn.style.borderColor = 'var(--rose, #E24B4A)';
+    btn.title = 'Notificaciones bloqueadas';
+    bar.style.display    = 'block';
+    bar.style.background = '#FCEBEB';
+    bar.style.color      = '#A32D2D';
+    bar.style.border     = '1px solid #F09595';
+    bar.innerHTML = `
+      ⚠ Las notificaciones están bloqueadas en este navegador.
+      Para activarlas ve a <strong>Configuración del navegador → Permisos del sitio → Notificaciones</strong>
+      y permite este sitio.`;
+  } else {
+    btn.title = 'Clic para activar notificaciones';
+    bar.style.display = 'none';
+  }
+}
+
+/**
+ * Solicita permiso manualmente al hacer clic en el botón.
+ */
+
+async function calSolicitarPermiso() {
+  if (Notification.permission === 'denied') {
+    toast('Las notificaciones están bloqueadas. Actívalas desde la configuración del navegador.', 'warning');
+    return;
+  }
+  const permitido = await calIniciarNotificaciones();
+  calActualizarBtnNotif(permitido);
+  if (permitido) {
+    calIniciarIntervaloNotificaciones();
+    toast('✓ Notificaciones activadas correctamente');
+  } else {
+    toast('No se pudo activar las notificaciones', 'warning');
+  }
+}
+
+// CONVERTIR EVENTOS AL FORMATO FULLCALENDAR
+
 function calEventosParaFC() {
   return calEventos.map(ev => ({
     id:    String(ev.id),
@@ -145,26 +338,24 @@ function calEventosParaFC() {
   }));
 }
 
-// ── SINCRONIZAR ATENCIONES → CALENDARIO ─────────
+// SINCRONIZAR ATENCIONES → CALENDARIO
+
 function sincronizarAtencionesAlCalendario() {
   store.atenciones.forEach(a => {
     if (!a.fechahora) return;
 
     const key = `atencion_${a.id}`;
 
-    // ✅ Evitar duplicados
     const existe = calEventos.find(e => e.key === key);
     if (existe) return;
 
-    // ✅ Parsear fecha y hora correctamente
     const dt = new Date(a.fechahora);
     if (isNaN(dt)) return;
 
     const fec  = dt.toISOString().split('T')[0];
     const hora = `${String(dt.getHours()).padStart(2,'0')}:${String(dt.getMinutes()).padStart(2,'0')}`;
 
-    // ✅ Nombre del estudiante correcto
-    const estudiante = store.estudiantes.find(e => e.id == a.idestudiante);
+    const estudiante    = store.estudiantes.find(e => e.id == a.idestudiante);
     const nombreMostrar = estudiante
       ? `${estudiante.nombres} ${estudiante.apellidos}`
       : (a.paciente || 'Atención');
@@ -178,7 +369,7 @@ function sincronizarAtencionesAlCalendario() {
       hora,
       notif: 15,
       obs:   a.motivoconsulta || a.motivo || '',
-      fromAtencion: true
+      fromAtencion: true,
     });
   });
 
@@ -189,7 +380,8 @@ function calSave() {
   localStorage.setItem(CAL_STORAGE_KEY, JSON.stringify(calEventos));
 }
 
-// ── BARRA DE HOY ─────────────────────────────────
+// BARRA DE HOY
+ 
 function calRenderNotifBar() {
   const bar = document.getElementById('cal-notif-bar');
   if (!bar) return;
@@ -199,21 +391,21 @@ function calRenderNotifBar() {
   bar.innerHTML = '';
 
   const chip = document.createElement('div');
-  chip.className = 'appt-badge c-purple';
+  chip.className   = 'appt-badge c-purple';
   chip.textContent = `${hoyCal.length} sesión${hoyCal.length !== 1 ? 'es' : ''} hoy`;
   bar.appendChild(chip);
 
   hoyCal.slice(0, 3).forEach(ev => {
     const c = document.createElement('div');
-    c.className   = 'appt-badge c-teal';
+    c.className    = 'appt-badge c-teal';
     c.style.cursor = 'pointer';
-    c.textContent = `${ev.hora} — ${ev.titulo.substring(0, 22)}${ev.titulo.length > 22 ? '…' : ''}`;
+    c.textContent  = `${ev.hora} — ${ev.titulo.substring(0, 22)}${ev.titulo.length > 22 ? '…' : ''}`;
     c.onclick = () => calAbrirEditar(ev);
     bar.appendChild(c);
   });
 }
 
-// ── MODAL CREAR ──────────────────────────────────
+// MODAL CREAR
 function calAbrirModal(fechaStr = null) {
   calEditId = null;
   document.getElementById('cal-modal-titulo').textContent = 'Nuevo evento';
@@ -227,7 +419,8 @@ function calAbrirModal(fechaStr = null) {
   openModal('modal-calendario');
 }
 
-// ── MODAL EDITAR ─────────────────────────────────
+
+// MODAL EDITAR
 function calAbrirEditar(ev) {
   if (typeof ev === 'string') ev = JSON.parse(ev);
   if (ev.fromAtencion) {
@@ -240,13 +433,13 @@ function calAbrirEditar(ev) {
   document.getElementById('cal-ev-tipo').value   = ev.tipo;
   document.getElementById('cal-ev-fecha').value  = ev.fecha;
   document.getElementById('cal-ev-hora').value   = ev.hora || '08:00';
-  document.getElementById('cal-ev-notif').value  = String(ev.notif || 15);
+  document.getElementById('cal-ev-notif').value  = String(ev.notif ?? 15);
   document.getElementById('cal-ev-obs').value    = ev.obs || '';
   document.getElementById('cal-btn-eliminar').style.display = 'inline-flex';
   openModal('modal-calendario');
 }
 
-// ── GUARDAR ──────────────────────────────────────
+// GUARDAR EVENTO
 function calGuardarEvento() {
   const titulo = document.getElementById('cal-ev-titulo')?.value?.trim();
   const fecha  = document.getElementById('cal-ev-fecha')?.value;
@@ -279,11 +472,19 @@ function calGuardarEvento() {
   }
 
   calRenderNotifBar();
+
+  // Revisar si corresponde notificar de inmediato tras guardar
+  if (Notification.permission === 'granted') {
+    calRevisarNotificaciones();
+  }
+
   toast(calEditId ? 'Evento actualizado' : 'Evento guardado');
   calEditId = null;
 }
 
-// ── ELIMINAR ─────────────────────────────────────
+// ELIMINAR EVENTO
+
+
 function calEliminarEvento() {
   if (!calEditId) return;
   if (!confirm('¿Eliminar este evento?')) return;
@@ -302,17 +503,39 @@ function calEliminarEvento() {
   calEditId = null;
 }
 
-// ✅ LIMPIAR todo el localStorage del calendario
-// Útil para resetear datos corruptos
+// LIMPIAR CALENDARIO
+
+/**
+ * Limpia todos los eventos del localStorage del calendario.
+ * Los eventos de atenciones se recuperan automáticamente.
+ */
 function limpiarCalendario() {
   if (!confirm('¿Limpiar todos los eventos del calendario? Los de atenciones se recuperarán automáticamente.')) return;
+
   localStorage.removeItem(CAL_STORAGE_KEY);
+  localStorage.removeItem(CAL_NOTIF_SHOWN_KEY);
   calEventos = [];
   sincronizarAtencionesAlCalendario();
+
   if (calInstance) {
     calInstance.removeAllEvents();
     calInstance.addEventSource(calEventosParaFC());
   }
+
   calRenderNotifBar();
   toast('Calendario limpiado correctamente');
+}
+
+// UTILIDAD — DETENER INTERVALO AL SALIR DE PÁGINA
+
+/**
+ * Llama esta función cuando el usuario navega fuera del calendario
+ * para liberar el intervalo de revisión de notificaciones.
+ * Ejemplo: en tu router, al cambiar de página.
+ */
+function calDetenerNotificaciones() {
+  if (calNotifInterval) {
+    clearInterval(calNotifInterval);
+    calNotifInterval = null;
+  }
 }

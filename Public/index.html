@@ -10,7 +10,7 @@
 </head>
 <body>
 
-  <!-- BACKDROP -->
+<!-- BACKDROP -->
 <div class="sidebar-backdrop" id="sidebar-backdrop" onclick="cerrarSidebar()"></div>
 
 <!-- SIDEBAR -->
@@ -119,18 +119,18 @@
     </div>
   </nav>
 
-<div class="sidebar-footer">
-  <div class="profile-pill">
-    <div class="avatar" id="sidebar-avatar">PS</div>
-    <div class="profile-info">
-      <div class="profile-name" id="sidebar-nombre">Sin configurar</div>
-      <div class="profile-role" id="sidebar-rol">Psicólogo/a</div>
+  <div class="sidebar-footer">
+    <div class="profile-pill">
+      <div class="avatar" id="sidebar-avatar">PS</div>
+      <div class="profile-info">
+        <div class="profile-name" id="sidebar-nombre">Sin configurar</div>
+        <div class="profile-role" id="sidebar-rol">Psicólogo/a</div>
+      </div>
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.3)" stroke-width="2">
+        <path d="M9 18l6-6-6-6"/>
+      </svg>
     </div>
-    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="rgba(255,255,255,0.3)" stroke-width="2">
-      <path d="M9 18l6-6-6-6"/>
-    </svg>
   </div>
-</div>
 </aside>
 
 <!-- MAIN -->
@@ -138,43 +138,40 @@
 
   <!-- TOPBAR -->
   <div class="topbar">
-  <button class="btn-hamburger" id="btn-hamburger" onclick="toggleSidebar()">
-    <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-      <path d="M4 6h16M4 12h16M4 18h16"/>
-    </svg>
-  </button>
-
-  <div class="breadcrumb">
-    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="breadcrumb-icon"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
-    <strong id="breadcrumb-text">Inicio</strong>
-  </div>
-
-  <div class="search-wrap" id="search-wrap">
-    <span class="search-icon">
-      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-        <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+    <button class="btn-hamburger" id="btn-hamburger" onclick="toggleSidebar()">
+      <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path d="M4 6h16M4 12h16M4 18h16"/>
       </svg>
-    </span>
-    <input type="text" class="search" id="global-search" placeholder="Buscar estudiante por nombre o DNI..." autocomplete="off">
-    <div class="search-results" id="search-results" style="display:none;"></div>
+    </button>
+
+    <div class="breadcrumb">
+      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" class="breadcrumb-icon"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+      <strong id="breadcrumb-text">Inicio</strong>
+    </div>
+
+    <div class="search-wrap" id="search-wrap">
+      <span class="search-icon">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+        </svg>
+      </span>
+      <input type="text" class="search" id="global-search" placeholder="Buscar estudiante por nombre o DNI..." autocomplete="off">
+      <div class="search-results" id="search-results" style="display:none;"></div>
+    </div>
+
+    <button class="topbar-btn" id="notif-btn" title="Notificaciones">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+      </svg>
+      <span class="notif-dot" id="notif-dot"></span>
+    </button>
+
+    <button class="topbar-btn" title="Perfil">
+      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+      </svg>
+    </button>
   </div>
-
-  <button class="topbar-btn" id="notif-btn" title="Notificaciones">
-    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-      <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-    </svg>
-    <span class="notif-dot" id="notif-dot"></span>
-  </button>
-
-  <button class="topbar-btn" title="Perfil">
-    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-    </svg>
-  </button>
-  
-  </div>
-
-
 
   <!-- CONTENT -->
   <div class="content">
@@ -331,18 +328,20 @@
       <div class="card">
         <div class="card-header">
           <div class="card-title">Listado de atenciones</div>
+          <!-- ✅ Filtros actualizados a los nuevos estados -->
           <div class="filter-btn-group">
-            <button class="btn-secondary btn-sm" onclick="filterCitas('todas')">Todas</button>
-            <button class="btn-secondary btn-sm" onclick="filterCitas('pendiente')">Pendientes</button>
-            <button class="btn-secondary btn-sm" onclick="filterCitas('activo')">Activas</button>
-            <button class="btn-secondary btn-sm" onclick="filterCitas('cerrado')">Cerradas</button>
+            <button class="btn-secondary btn-sm" onclick="filterCitas('todas')">Pendientes</button>
+            <button class="btn-secondary btn-sm" onclick="filterCitas('archivadas')">Archivadas</button>
+            <button class="btn-secondary btn-sm" onclick="filterCitas('asistio')">Asistió</button>
+            <button class="btn-secondary btn-sm" onclick="filterCitas('no_asistio')">No asistió</button>
+            <button class="btn-secondary btn-sm" onclick="filterCitas('reprogramado')">Reprogramadas</button>
           </div>
         </div>
         <div class="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Fecha</th><th>Hora</th><th>Motivo</th><th>Grado</th>
+                <th>Fecha</th><th>Hora</th><th>Motivo</th><th>Grado / Sec.</th>
                 <th>Nivel</th><th>Estado</th><th>Estudiante</th><th>Acciones</th>
               </tr>
             </thead>
@@ -364,7 +363,6 @@
         </div>
       </div>
 
-      <!-- BUSCADOR SIAGIE MEJORADO -->
       <div class="card card--overflow-visible card--mb">
         <div class="card-header">
           <div>
@@ -376,8 +374,6 @@
           </div>
         </div>
         <div class="card-body">
-      
-          <!-- Fila de búsqueda + filtros -->
           <div style="display:grid;grid-template-columns:1fr auto auto;gap:10px;margin-bottom:14px;align-items:center;">
             <div style="position:relative;">
               <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--color-text-secondary,#9B8F82);">
@@ -391,29 +387,21 @@
               <span id="na-buscar-clear" onclick="limpiarBusquedaInput()"
                 style="display:none;position:absolute;right:11px;top:50%;transform:translateY(-50%);cursor:pointer;color:var(--text3,#9B8F82);font-size:16px;line-height:1;">✕</span>
             </div>
-      
             <select id="na-filtro-grado" onchange="buscarEstudianteSiagie()"
               style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);font-family:inherit;font-size:13px;color:var(--text);outline:none;min-width:90px;">
               <option value="">Grado</option>
-              <option value="1">1°</option>
-              <option value="2">2°</option>
-              <option value="3">3°</option>
-              <option value="4">4°</option>
-              <option value="5">5°</option>
+              <option value="1">1°</option><option value="2">2°</option>
+              <option value="3">3°</option><option value="4">4°</option>
+              <option value="5">5°</option><option value="6">6°</option>
             </select>
-      
             <select id="na-filtro-seccion" onchange="buscarEstudianteSiagie()"
               style="padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);font-family:inherit;font-size:13px;color:var(--text);outline:none;min-width:80px;">
               <option value="">Sección</option>
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-              <option value="D">D</option>
-              <option value="E">E</option>
+              <option value="A">A</option><option value="B">B</option>
+              <option value="C">C</option><option value="D">D</option><option value="E">E</option>
             </select>
           </div>
-      
-          <!-- Estado inicial -->
+
           <div id="na-estado-inicial" style="display:flex;align-items:center;gap:14px;padding:13px 16px;background:var(--bg2);border-radius:8px;border:1px solid var(--border);">
             <div style="width:38px;height:38px;border-radius:50%;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;">👥</div>
             <div>
@@ -421,18 +409,15 @@
               <div style="font-size:12px;color:var(--text3);margin-top:2px;">Solo aparecen estudiantes importados desde SIAGIE — Secundaria</div>
             </div>
           </div>
-      
-          <!-- Resultados dropdown -->
+
           <div id="na-resultados-busqueda" style="display:none;flex-direction:column;border:1.5px solid var(--border);border-radius:8px;overflow:hidden;max-height:260px;overflow-y:auto;margin-top:0;"></div>
-      
-          <!-- Sin resultados -->
+
           <div id="na-sin-resultados" style="display:none;text-align:center;padding:28px 16px;color:var(--text3);">
             <div style="font-size:28px;margin-bottom:8px;">🔍</div>
             <div style="font-size:13px;">No se encontró ningún estudiante</div>
             <div style="font-size:12px;margin-top:4px;">Prueba con otro nombre, DNI o cambia el filtro</div>
           </div>
-      
-          <!-- Chip seleccionado -->
+
           <div id="na-estudiante-seleccionado" class="student-chip" style="display:none;">
             <div id="na-chip-avatar" style="width:32px;height:32px;border-radius:50%;background:#534AB7;color:#fff;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">AG</div>
             <div style="flex:1;">
@@ -442,7 +427,6 @@
             <span style="font-size:15px;">✓</span>
             <button onclick="limpiarEstudianteSeleccionado()" class="student-chip-close">✕</button>
           </div>
-      
         </div>
       </div>
 
@@ -587,10 +571,18 @@
           <div class="page-title">Reportes</div>
           <div class="page-subtitle">Estadísticas y análisis del sistema</div>
         </div>
-        <button class="btn-primary" onclick="generarReporte()">
-          <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-          Generar PDF
-        </button>
+        <div style="display:flex;gap:8px;">
+  <button class="btn-secondary" onclick="generarReporte('primaria')">
+    📄 Primaria
+  </button>
+  <button class="btn-secondary" onclick="generarReporte('secundaria')">
+    📄 Secundaria
+  </button>
+  <button class="btn-primary" onclick="generarReporte('todos')">
+    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+    Reporte General
+  </button>
+</div>
       </div>
       <div class="stat-strip" id="rep-stats"></div>
       <div class="main-grid">
@@ -608,7 +600,7 @@
     <!-- CALENDARIO -->
     <div class="page" id="page-calendario"></div>
 
-    <!-- HISTORIAL DE AÑOS ANTERIORES -->
+    <!-- HISTORIAL DE AÑOS -->
     <div class="page" id="page-historial-anios">
       <div class="page-header">
         <div>
@@ -620,11 +612,11 @@
           Exportar año
         </button>
       </div>
-
       <div class="card card--mb">
         <div class="card-header"><div class="card-title">Seleccionar año escolar</div></div>
         <div class="anios-btn-group">
-          <button class="btn-secondary anio-btn anio-btn--active" id="anio-btn-2025" onclick="seleccionarAnio(2025)">2025</button>
+          <button class="btn-secondary anio-btn" id="anio-btn-2026" onclick="seleccionarAnio(2026)">2026</button>
+          <button class="btn-secondary anio-btn" id="anio-btn-2025" onclick="seleccionarAnio(2025)">2025</button>
           <button class="btn-secondary anio-btn" id="anio-btn-2024" onclick="seleccionarAnio(2024)">2024</button>
           <button class="btn-secondary anio-btn" id="anio-btn-2023" onclick="seleccionarAnio(2023)">2023</button>
           <button class="btn-secondary anio-btn" id="anio-btn-2022" onclick="seleccionarAnio(2022)">2022</button>
@@ -632,16 +624,13 @@
           <button class="btn-secondary anio-btn" id="anio-btn-2020" onclick="seleccionarAnio(2020)">2020</button>
         </div>
       </div>
-
       <div class="anio-stats-grid" id="anio-stats"></div>
-
       <div class="card card--mb">
         <div class="card-header">
           <div class="card-title" id="anio-chart-title">Atenciones por mes — 2025</div>
         </div>
         <div class="chart-area" id="anio-chart"></div>
       </div>
-
       <div class="card">
         <div class="card-header">
           <div class="card-title" id="anio-tabla-title">Casos registrados — 2025</div>
@@ -663,9 +652,7 @@
     </div><!-- /page-historial-anios -->
 
 
-    <!-- ════════════════════════════════════════════════ -->
-    <!-- SIAGIE — CON SELECTOR DE NIVEL                  -->
-    <!-- ════════════════════════════════════════════════ -->
+    <!-- SIAGIE -->
     <div class="page" id="page-siagie">
       <div class="page-header">
         <div>
@@ -673,13 +660,10 @@
           <div class="page-subtitle">Importa la nómina de estudiantes — Primaria o Secundaria</div>
         </div>
       </div>
-
-      <!-- Banner SIAGIE -->
       <div class="siagie-banner">
         <div class="siagie-banner-logo">SIAGIE</div>
         <div>
           <div class="siagie-banner-title">Ministerio de Educación — Perú</div>
-          <!-- Este texto se actualiza dinámicamente con actualizarNivelSiagie() -->
           <div class="siagie-banner-sub" id="siagie-nivel-texto">Importación de nómina — Nivel Secundaria</div>
         </div>
         <div class="siagie-banner-time">
@@ -687,75 +671,46 @@
           <div class="siagie-banner-time-value" id="siagie-sync-time">—</div>
         </div>
       </div>
-
-      <!-- Selector de nivel + Drop zone -->
       <div class="card card--mb">
         <div class="card-header">
           <div class="card-title">Importar nómina desde Excel</div>
           <div class="card-meta">Selecciona el nivel educativo y sube el archivo de SIAGIE</div>
         </div>
         <div class="card-body">
-
-          <!-- ── SELECTOR DE NIVEL ─────────────────────────────── -->
           <div style="margin-bottom:20px;">
             <label style="font-weight:600;font-size:13px;color:var(--color-text-primary);display:block;margin-bottom:10px;">
               📚 ¿A qué nivel pertenece este Excel?
             </label>
             <div style="display:flex;gap:12px;flex-wrap:wrap;">
-
-              <label class="siagie-nivel-label" style="
-                display:flex;align-items:center;gap:8px;cursor:pointer;
-                padding:10px 20px;border-radius:8px;
-                border:2px solid #534AB7;background:#EEEDFE;
-                color:#534AB7;font-weight:600;font-size:13px;
-                transition:all 0.2s;
-              ">
-                <input type="radio" name="siagie-nivel" value="secundaria"
-                  checked onchange="actualizarNivelSiagie(this.value)"
-                  style="accent-color:#534AB7;">
+              <label class="siagie-nivel-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 20px;border-radius:8px;border:2px solid #534AB7;background:#EEEDFE;color:#534AB7;font-weight:600;font-size:13px;transition:all 0.2s;">
+                <input type="radio" name="siagie-nivel" value="secundaria" checked onchange="actualizarNivelSiagie(this.value)" style="accent-color:#534AB7;">
                  Secundaria
               </label>
-
-              <label class="siagie-nivel-label" style="
-                display:flex;align-items:center;gap:8px;cursor:pointer;
-                padding:10px 20px;border-radius:8px;
-                border:2px solid var(--color-border, #e5e7eb);background:'';
-                color:var(--color-text-secondary, #6b7280);font-weight:600;font-size:13px;
-                transition:all 0.2s;
-              ">
-                <input type="radio" name="siagie-nivel" value="primaria"
-                  onchange="actualizarNivelSiagie(this.value)"
-                  style="accent-color:#534AB7;">
+              <label class="siagie-nivel-label" style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px 20px;border-radius:8px;border:2px solid var(--color-border, #e5e7eb);color:var(--color-text-secondary, #6b7280);font-weight:600;font-size:13px;transition:all 0.2s;">
+                <input type="radio" name="siagie-nivel" value="primaria" onchange="actualizarNivelSiagie(this.value)" style="accent-color:#534AB7;">
                  Primaria
               </label>
-
             </div>
           </div>
-          <!-- ── FIN SELECTOR ──────────────────────────────────── -->
-
-          <!-- Instrucciones dinámicas -->
           <div class="siagie-instructions">
-            <b>¿Cómo obtener el Excel?</b><br>
+            <b>¿Cómo obtener el archivo CSV?</b><br>
             1. Ingresa a <b>siagie.minedu.gob.pe</b> con tu cuenta del colegio<br>
             2. Ve a <b>Matrícula → Nómina de matrícula</b><br>
-            3. Selecciona el nivel <b id="siagie-instrucciones-nivel">Secundaria</b> y exporta en Excel<br>
-            4. Sube el archivo descargado aquí abajo
+            3. Selecciona el nivel <b id="siagie-instrucciones-nivel">Secundaria</b> y descarga el Excel<br>
+            4. Abre el archivo en <b>Microsoft Excel</b> o <b>Google Sheets</b><br>
+            5. Ve a <b>Archivo → Guardar como</b> y elige el formato <b>CSV (separado por comas)</b><br>
+            6. Sube el archivo <b>.csv</b> descargado aquí abajo
           </div>
-
-          <!-- Drop zone -->
           <label id="drop-zone" class="drop-zone">
             <div class="drop-zone-icon">📂</div>
-            <div class="drop-zone-title">Haz clic para seleccionar el archivo Excel</div>
-            <div class="drop-zone-sub">Formatos aceptados: .xlsx · .xls</div>
-            <input type="file" accept=".xlsx,.xls" class="input-hidden"
-              onchange="importarExcelSiagie(this.files[0]); actualizarNombreArchivo(this)">
+            <div class="drop-zone-title">Haz clic para seleccionar el archivo CSV</div>
+            <div class="drop-zone-sub">Formatos aceptados: .CSV</div>
+            <input type="file" accept=".csv" class="input-hidden"
+              onchange="importarCSVSiagie(this.files[0]); actualizarNombreArchivo(this)">
           </label>
           <div id="siagie-archivo" class="siagie-filename" style="display:none;"></div>
-
         </div>
       </div>
-
-      <!-- Tabla importados — ahora con columna Nivel -->
       <div class="card">
         <div class="card-header">
           <div class="card-title">Estudiantes importados</div>
@@ -764,21 +719,12 @@
           <table>
             <thead>
               <tr>
-                <th>Apellidos y nombres</th>
-                <th>DNI</th>
-                <th>Grado</th>
-                <th>Sección</th>
-                <th>Nivel</th>   <!-- ← columna nueva -->
-                <th>Estado</th>
+                <th>Apellidos y nombres</th><th>DNI</th><th>Grado</th>
+                <th>Sección</th><th>Nivel</th><th>Estado</th>
               </tr>
             </thead>
             <tbody id="siagie-tbody">
-              <tr><td colspan="6">
-                <div class="empty-state">
-                  <div class="es-icon">📋</div>
-                  <div class="es-text">Selecciona el nivel e importa un Excel de SIAGIE para ver los estudiantes aquí</div>
-                </div>
-              </td></tr>
+              <tr><td colspan="6"><div class="empty-state"><div class="es-icon">📋</div><div class="es-text">Selecciona el nivel e importa un Excel de SIAGIE para ver los estudiantes aquí</div></div></td></tr>
             </tbody>
           </table>
         </div>
@@ -831,16 +777,11 @@
             <label>Correo electrónico</label>
             <input type="email" id="cfg-email" placeholder="consultorio@email.com">
           </div>
-          <div class="form-group full">
-            <label>Dirección</label>
-            <input type="text" id="cfg-dir" placeholder="Av. Principal 123, Piso 2">
-          </div>
         </div>
         <div class="form-actions">
           <button class="btn-primary" onclick="guardarConfig()">Guardar cambios</button>
         </div>
       </div>
-
       <div class="card">
         <div class="card-header">
           <div>
@@ -864,7 +805,7 @@
 </div><!-- /main -->
 
 
-<!-- MODAL — NUEVA SESIÓN -->
+<!-- MODAL — NUEVA SESIÓN ✅ sin estado activo -->
 <div class="modal-overlay" id="modal-cita">
   <div class="modal">
     <div class="modal-header">
@@ -892,11 +833,11 @@
             <option>Terapia familiar</option>
           </select>
         </div>
+        <!-- ✅ Estado fijo: solo pendiente, sin activo -->
         <div class="form-group">
           <label>Estado</label>
           <select id="mc-estado">
-            <option value="pendiente">Pendiente</option>
-            <option value="activo">Activo</option>
+            <option value="pendiente" selected>Pendiente</option>
           </select>
         </div>
         <div class="form-group">
@@ -914,17 +855,15 @@
           <select id="mc-nivel">
             <option value="leve">🟢 Leve</option>
             <option value="moderado" selected>🟡 Moderado</option>
-            <option value="alta">🔴 Grave</option>
+            <option value="grave">🔴 Grave</option>
           </select>
         </div>
         <div class="form-group">
           <label>Grado</label>
           <select id="mc-grado">
             <option value="">-- Selecciona grado --</option>
-            <option value="1">1°</option>
-            <option value="2">2°</option>
-            <option value="3">3°</option>
-            <option value="4">4°</option>
+            <option value="1">1°</option><option value="2">2°</option>
+            <option value="3">3°</option><option value="4">4°</option>
             <option value="5">5°</option>
           </select>
         </div>
@@ -932,10 +871,8 @@
           <label>Sección</label>
           <select id="mc-seccion">
             <option value="">-- Selecciona sección --</option>
-            <option value="A">A</option>
-            <option value="B">B</option>
-            <option value="C">C</option>
-            <option value="D">D</option>
+            <option value="A">A</option><option value="B">B</option>
+            <option value="C">C</option><option value="D">D</option>
             <option value="E">E</option>
           </select>
         </div>
@@ -974,7 +911,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
+<!-- LINKS A JS -->
 <script src="js/utils.js"></script>
 <script src="js/api.js"></script>
 <script src="js/siagie.js"></script>

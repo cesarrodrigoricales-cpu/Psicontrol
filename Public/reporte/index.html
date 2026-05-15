@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte PsiControl — IE Chinchaysuyo</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Source+Sans+3:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script> 
+<!-- CSS -->
+<link rel="stylesheet" href="/reporte/styles.css">
+</head>
+<body>
+
+<!-- CABECERA -->
+<div class="cabecera">
+<!-- Logo -->
+<img id="logo-inst" src="/reporte/logo-chinchaysuyo.png" alt="Logo IE Chinchaysuyo">
+  <div class="cabecera-texto">
+    <h1>Institución Educativa Chinchaysuyo</h1>
+    <p>Servicio de Atención Psicológica — PsiControl</p>
+    <span class="nivel-badge" id="badge-nivel">General</span>
+  </div>
+  <div class="cabecera-meta">
+    <div><strong>Reporte mensual</strong></div>
+    <div id="meta-fecha">—</div>
+    <div id="meta-psicologo">—</div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-row">
+  <div class="stat-box">
+    <div class="stat-num" id="s-estudiantes">0</div>
+    <div class="stat-lbl">Estudiantes</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-num" id="s-atenciones">0</div>
+    <div class="stat-lbl">Atenciones</div>
+  </div>
+  <div class="stat-box amarillo">
+    <div class="stat-num" id="s-pendientes">0</div>
+    <div class="stat-lbl">Pendientes</div>
+  </div>
+  <div class="stat-box amarillo">
+    <div class="stat-num" id="s-cerradas">0</div>
+    <div class="stat-lbl">Cerradas</div>
+  </div>
+</div>
+
+<!-- GRÁFICOS -->
+<div class="graficos-grid">
+
+  <!-- Atenciones por mes (ancho completo) -->
+  <div class="grafico-card full">
+    <div class="grafico-titulo">📅 Atenciones por mes</div>
+    <canvas id="g-meses" height="100"></canvas>
+  </div>
+
+  <!-- Por género -->
+  <div class="grafico-card">
+    <div class="grafico-titulo">👥 Estudiantes por género</div>
+    <canvas id="g-genero" height="160"></canvas>
+  </div>
+
+  <!-- Por grado -->
+  <div class="grafico-card">
+    <div class="grafico-titulo">📚 Atenciones por grado</div>
+    <canvas id="g-grado" height="160"></canvas>
+  </div>
+
+  <!-- Por sección -->
+  <div class="grafico-card full">
+    <div class="grafico-titulo">🏫 Atenciones por sección</div>
+    <canvas id="g-seccion" height="120"></canvas>
+  </div>
+
+</div>
+
+
+
+<!-- PIE -->
+<div class="pie-reporte">
+  Sistema <strong>PsiControl</strong> · IE Chinchaysuyo · Reporte generado el <span id="pie-fecha">—</span>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script src="./soporte.js"></script>
+</body>
+</html>

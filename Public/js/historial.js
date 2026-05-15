@@ -124,24 +124,56 @@ async function cargarHistorialPaciente(id) {
     ? (atencionesEst[0].motivoconsulta || atencionesEst[0].motivo || '—')
     : '—';
 
-  const contactosHtml = p.contactosEmergencia?.length > 0
+  // ─── Contactos de emergencia ───────────────────────────────────────────
+  // Combina ambos formatos:
+  // 1. Array contactosEmergencia (guardado desde el modal de edición)
+  // 2. Campos sueltos telefonoemergencia + parentescoemergencia (guardado desde nueva atención)
+  let contactosList = [];
+
+  if (p.contactosEmergencia?.length > 0) {
+    contactosList = p.contactosEmergencia;
+  } else if (p.telefonoemergencia || p.telefono_emergencia) {
+    // Campos sueltos del formulario de nueva atención
+    const tel = p.telefonoemergencia || p.telefono_emergencia || '';
+    const par = p.parentescoemergencia || p.parentesco_emergencia || '';
+    if (tel) contactosList = [{ nombre: '', parentesco: par, celular: tel }];
+  }
+
+  const contactosHtml = contactosList.length > 0
     ? `<div style="margin-top:16px;">
         <div style="font-size:12px;font-weight:600;color:var(--text-muted);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;">
-          📞 Contactos de emergencia
+          📞 Contacto de emergencia
         </div>
         <div style="display:grid;gap:8px;">
-          ${p.contactosEmergencia.map(c => `
+          ${contactosList.map(c => {
+            const icono = c.parentesco === 'Madre' ? '👩'
+                        : c.parentesco === 'Padre' ? '👨' : '👤';
+            const nombreMostrar = c.nombre || (c.parentesco ? c.parentesco : 'Contacto');
+            return `
             <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 14px;display:flex;align-items:center;gap:12px;">
-              <div style="font-size:20px;">${c.parentesco === 'Madre' ? '👩' : c.parentesco === 'Padre' ? '👨' : '👤'}</div>
+              <div style="font-size:20px;">${icono}</div>
               <div>
-                <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${c.nombre}</div>
+                <div style="font-size:13px;font-weight:600;color:var(--text-primary);">${nombreMostrar}</div>
                 <div style="font-size:11px;color:var(--text-muted);">${c.parentesco || '—'} · ${c.celular || '—'}</div>
               </div>
-            </div>
-          `).join('')}
+            </div>`;
+          }).join('')}
         </div>
       </div>`
     : '';
+
+  // ─── Estado icon según nuevos estados ─────────────────────────────────
+  function iconEstado(estado) {
+    const m = {
+      asistio:      '✅',
+      no_asistio:   '❌',
+      reprogramado: '🔄',
+      cerrado:      '🔒',
+      pendiente:    '⏳',
+      activo:       '✅',
+    };
+    return m[estado] || '⏳';
+  }
 
   panel.innerHTML = `
     <div class="hist-detail-content">
@@ -216,9 +248,7 @@ async function cargarHistorialPaciente(id) {
               ${atencionesEst.map(a => `
                 <div class="hist-atencion-item">
                   <div style="display:flex;align-items:center;gap:10px;">
-                    <div style="font-size:20px;">
-                      ${a.estado === 'activo' ? '✅' : a.estado === 'pendiente' ? '⏳' : '🔒'}
-                    </div>
+                    <div style="font-size:20px;">${iconEstado(a.estado)}</div>
                     <div>
                       <div style="font-size:13px;font-weight:600;color:var(--text-primary);">
                         ${fmtFecha(a.fechahora)} · ${fmtHora(a.fechahora)}
@@ -256,10 +286,20 @@ function abrirEditarEstudiante(id) {
     document.body.appendChild(modal);
   }
 
-  // Contactos iniciales desde el store
-  window._editContactos = (p.contactosEmergencia?.length > 0)
-    ? p.contactosEmergencia.map(c => ({ ...c }))
-    : [{ nombre: '', parentesco: '', celular: '' }];
+  // Combinar ambos formatos al abrir el modal de edición
+  let contactosIniciales = [];
+  if (p.contactosEmergencia?.length > 0) {
+    contactosIniciales = p.contactosEmergencia.map(c => ({ ...c }));
+  } else if (p.telefonoemergencia || p.telefono_emergencia) {
+    const tel = p.telefonoemergencia || p.telefono_emergencia || '';
+    const par = p.parentescoemergencia || p.parentesco_emergencia || '';
+    if (tel) contactosIniciales = [{ nombre: '', parentesco: par, celular: tel }];
+  }
+  if (contactosIniciales.length === 0) {
+    contactosIniciales = [{ nombre: '', parentesco: '', celular: '' }];
+  }
+
+  window._editContactos = contactosIniciales;
 
   const renderFilasContactos = () => window._editContactos.map((c, i) => `
     <div class="contacto-row" id="contacto-row-${i}"
@@ -282,7 +322,7 @@ function abrirEditarEstudiante(id) {
         <label style="font-size:11px;">Celular</label>
         <input type="tel" class="cont-celular" data-i="${i}" maxlength="9"
                value="${c.celular || ''}" placeholder="999999999"
-               oninput="this.value=this.value.replace(/\\D/g,'').slice(0,9)">
+               oninput="this.value=this.value.replace(/\D/g,'').slice(0,9)">
       </div>
       <button onclick="eliminarContactoRow(${i})"
               style="background:none;border:1px solid #e57373;color:#e57373;
@@ -312,7 +352,7 @@ function abrirEditarEstudiante(id) {
             <label>Teléfono</label>
             <input type="tel" id="edit-telefono" maxlength="9"
               value="${p.telefono || ''}"
-              oninput="this.value=this.value.replace(/\\D/g,'').slice(0,9)">
+              oninput="this.value=this.value.replace(/\D/g,'').slice(0,9)">
           </div>
           <div class="form-group">
             <label>Género</label>
@@ -332,7 +372,6 @@ function abrirEditarEstudiante(id) {
           </div>
         </div>
 
-        <!-- CONTACTOS DE EMERGENCIA -->
         <div style="margin-top:16px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
             <label style="font-size:12px;font-weight:600;color:var(--text-muted);
@@ -363,7 +402,6 @@ function abrirEditarEstudiante(id) {
   modal.classList.add('open');
 }
 
-// Lee los contactos actuales del DOM
 function leerContactosDelDOM() {
   const nombres     = [...document.querySelectorAll('.cont-nombre')].map(el => el.value.trim());
   const parentescos = [...document.querySelectorAll('.cont-parentesco')].map(el => el.value);
@@ -375,7 +413,6 @@ function leerContactosDelDOM() {
   }));
 }
 
-// Agrega una fila nueva de contacto
 function agregarContactoRow() {
   window._editContactos = leerContactosDelDOM();
   window._editContactos.push({ nombre: '', parentesco: '', celular: '' });
@@ -407,7 +444,7 @@ function agregarContactoRow() {
       <label style="font-size:11px;">Celular</label>
       <input type="tel" class="cont-celular" data-i="${i}" maxlength="9"
              value="" placeholder="999999999"
-             oninput="this.value=this.value.replace(/\\D/g,'').slice(0,9)">
+             oninput="this.value=this.value.replace(/\D/g,'').slice(0,9)">
     </div>
     <button onclick="eliminarContactoRow(${i})"
             style="background:none;border:1px solid #e57373;color:#e57373;
@@ -418,7 +455,6 @@ function agregarContactoRow() {
   wrapper.appendChild(div);
 }
 
-// Elimina una fila de contacto
 function eliminarContactoRow(i) {
   window._editContactos = leerContactosDelDOM();
   window._editContactos.splice(i, 1);
@@ -447,7 +483,7 @@ function eliminarContactoRow(i) {
         <label style="font-size:11px;">Celular</label>
         <input type="tel" class="cont-celular" data-i="${idx}" maxlength="9"
                value="${c.celular || ''}" placeholder="999999999"
-               oninput="this.value=this.value.replace(/\\D/g,'').slice(0,9)">
+               oninput="this.value=this.value.replace(/\D/g,'').slice(0,9)">
       </div>
       <button onclick="eliminarContactoRow(${idx})"
               style="background:none;border:1px solid #e57373;color:#e57373;
@@ -457,8 +493,6 @@ function eliminarContactoRow(i) {
     </div>
   `).join('');
 }
-
-// ── GUARDAR EDICIÓN ────────────────────────────────────
 
 async function guardarEdicionEstudiante(id) {
   const p = store.estudiantes.find(x => x.id == id);
@@ -475,7 +509,6 @@ async function guardarEdicionEstudiante(id) {
     return;
   }
 
-  // Leer contactos del DOM y filtrar los que están completamente vacíos
   const contactosEmergencia = leerContactosDelDOM()
     .filter(c => c.nombre || c.celular);
 
@@ -486,17 +519,21 @@ async function guardarEdicionEstudiante(id) {
         ...p,
         nombres, apellidos, telefono,
         genero, condicion,
-        contactosEmergencia
+        contactosEmergencia,
+        // Limpiar campos sueltos viejos para no duplicar
+        telefonoemergencia:   contactosEmergencia[0]?.celular   || '',
+        parentescoemergencia: contactosEmergencia[0]?.parentesco || '',
       })
     });
 
-    // Actualizar store local
     const idx = store.estudiantes.findIndex(x => x.id == id);
     if (idx !== -1) {
       store.estudiantes[idx] = {
         ...p, nombres, apellidos, telefono,
         genero, condicion,
-        contactosEmergencia
+        contactosEmergencia,
+        telefonoemergencia:   contactosEmergencia[0]?.celular   || '',
+        parentescoemergencia: contactosEmergencia[0]?.parentesco || '',
       };
     }
 
@@ -508,8 +545,6 @@ async function guardarEdicionEstudiante(id) {
     toast('Error al guardar cambios', 'warning');
   }
 }
-
-// ── FILTRO DE BÚSQUEDA ─────────────────────────────────
 
 function filterHistorial() {
   const searchEl = document.getElementById('hist-search');
