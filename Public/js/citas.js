@@ -1,4 +1,231 @@
-// CITAS.JS
+// ═══════════════════════════════════════════════════════════════
+// CITAS.JS — Atenciones + Validaciones
+// PsiControl · Sistema de Atención Psicológica Escolar
+// ═══════════════════════════════════════════════════════════════
+
+// ══════════════════════════════════════════════════════════════════
+// SECCIÓN 1: CONFIGURACIÓN Y VALIDACIONES
+// ══════════════════════════════════════════════════════════════════
+
+const CONFIG_CITAS = {
+  HORA_INICIO: 8,
+  HORA_FIN:    17,
+  DURACION_SESION_MIN: 30,
+  MAX_ATENCIONES_DIA: 12,
+  MAX_CITAS_PENDIENTES_POR_ESTUDIANTE: 2,
+  DIAS_BLOQUEADOS: [0, 6],
+  RECREOS: [
+    { inicio: '10:30', fin: '11:00' },
+    { inicio: '13:00', fin: '14:00' },
+  ],
+  FERIADOS: [
+    '2026-01-01','2026-04-02','2026-04-03','2026-05-01',
+    '2026-06-07','2026-06-24','2026-06-29','2026-07-23',
+    '2026-07-28','2026-07-29','2026-08-06','2026-08-30',
+    '2026-10-08','2026-11-01','2026-11-10','2026-12-08',
+    '2026-12-09','2026-12-25',
+  ],
+  VACACIONES: [
+    { inicio: '2026-07-13', fin: '2026-07-24' },
+    { inicio: '2026-10-05', fin: '2026-10-09' },
+    { inicio: '2026-12-21', fin: '2027-03-14' },
+  ],
+};
+
+function _horaAMinutos(horaStr) {
+  const [h, m] = horaStr.split(':').map(Number);
+  return h * 60 + m;
+}
+
+function validarNoEsPasado(fecha, hora) {
+  const ahora    = new Date();
+  const citaDate = new Date(`${fecha}T${hora}:00`);
+  if (citaDate < ahora) {
+    return { ok: false, mensaje: '⏰ No puedes agendar en una fecha u hora pasada.' };
+  }
+  return { ok: true };
+}
+
+function validarNoDiasBloqueados(fecha) {
+  const diaSemana = new Date(fecha + 'T12:00:00').getDay();
+  if (CONFIG_CITAS.DIAS_BLOQUEADOS.includes(diaSemana)) {
+    const nombres = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+    return { ok: false, mensaje: `📅 No se puede agendar en ${nombres[diaSemana]}. Solo días hábiles.` };
+  }
+  return { ok: true };
+}
+
+function validarNoFeriado(fecha) {
+  if (CONFIG_CITAS.FERIADOS.includes(fecha)) {
+    return { ok: false, mensaje: '🎉 Esta fecha es feriado nacional. Elige otro día.' };
+  }
+  for (const vac of CONFIG_CITAS.VACACIONES) {
+    if (fecha >= vac.inicio && fecha <= vac.fin) {
+      return { ok: false, mensaje: `🏖️ Esta fecha cae en vacaciones escolares (${vac.inicio} al ${vac.fin}).` };
+    }
+  }
+  return { ok: true };
+}
+
+function validarHorarioAtencion(hora) {
+  const minutos   = _horaAMinutos(hora);
+  const minInicio = CONFIG_CITAS.HORA_INICIO * 60;
+  const minFin    = CONFIG_CITAS.HORA_FIN * 60 - CONFIG_CITAS.DURACION_SESION_MIN;
+  if (minutos < minInicio) {
+    return { ok: false, mensaje: `🕗 El horario de atención comienza a las ${String(CONFIG_CITAS.HORA_INICIO).padStart(2,'0')}:00.` };
+  }
+  if (minutos > minFin) {
+    const horaLimite = Math.floor(minFin / 60);
+    const minLimite  = minFin % 60;
+    return { ok: false, mensaje: `🕔 La última cita disponible es a las ${String(horaLimite).padStart(2,'0')}:${String(minLimite).padStart(2,'0')}.` };
+  }
+  return { ok: true };
+}
+
+function validarNoRecreo(hora) {
+  const minCita = _horaAMinutos(hora);
+  const minFin  = minCita + CONFIG_CITAS.DURACION_SESION_MIN;
+  for (const rec of CONFIG_CITAS.RECREOS) {
+    const minRecInicio = _horaAMinutos(rec.inicio);
+    const minRecFin    = _horaAMinutos(rec.fin);
+    if (minCita < minRecFin && minFin > minRecInicio) {
+      return { ok: false, mensaje: `⏸️ Este horario coincide con el recreo/almuerzo (${rec.inicio}–${rec.fin}). Elige otra hora.` };
+    }
+  }
+  return { ok: true };
+}
+
+function validarMaxAtencionesDia(fecha, idAtencionExcluir, atenciones) {
+  atenciones        = atenciones || store.atenciones;
+  idAtencionExcluir = idAtencionExcluir || null;
+  const citasDia = (atenciones || []).filter(a => {
+    if (!a.fechahora) return false;
+    if (ESTADOS_ARCHIVADOS.includes(a.estado)) return false;
+    if (idAtencionExcluir && String(a.id) === String(idAtencionExcluir)) return false;
+    return a.fechahora.startsWith(fecha);
+  });
+  if (citasDia.length >= CONFIG_CITAS.MAX_ATENCIONES_DIA) {
+    return { ok: false, mensaje: `📋 Se alcanzó el límite de ${CONFIG_CITAS.MAX_ATENCIONES_DIA} atenciones para este día.` };
+  }
+  return { ok: true };
+}
+
+function validarMaxCitasPendientesEstudiante(idestudiante, idAtencionExcluir, atenciones) {
+  atenciones        = atenciones || store.atenciones;
+  idAtencionExcluir = idAtencionExcluir || null;
+  const pendientes = (atenciones || []).filter(a => {
+    if (String(a.idestudiante) !== String(idestudiante)) return false;
+    if (a.estado !== 'pendiente' && a.estado !== 'activo') return false;
+    if (idAtencionExcluir && String(a.id) === String(idAtencionExcluir)) return false;
+    return true;
+  });
+  if (pendientes.length >= CONFIG_CITAS.MAX_CITAS_PENDIENTES_POR_ESTUDIANTE) {
+    return { ok: false, mensaje: `⚠️ Este estudiante ya tiene ${pendientes.length} cita(s) pendiente(s). Confirma o cancela las anteriores antes de agendar otra.` };
+  }
+  return { ok: true };
+}
+
+function validarNoDuplicado(idestudiante, fecha, hora, idAtencionExcluir, atenciones) {
+  atenciones        = atenciones || store.atenciones;
+  idAtencionExcluir = idAtencionExcluir || null;
+  const fechahora   = `${fecha}T${hora}`;
+  const duplicado = (atenciones || []).find(a => {
+    if (String(a.idestudiante) !== String(idestudiante)) return false;
+    if (ESTADOS_ARCHIVADOS.includes(a.estado)) return false;
+    if (idAtencionExcluir && String(a.id) === String(idAtencionExcluir)) return false;
+    return a.fechahora && a.fechahora.startsWith(fechahora);
+  });
+  if (duplicado) {
+    return { ok: false, mensaje: `🔁 Este estudiante ya tiene una cita registrada el ${fmtFecha(fecha)} a las ${hora}.` };
+  }
+  return { ok: true };
+}
+
+function validarEstudianteActivo(idestudiante) {
+  const estudiante = (store.estudiantes || []).find(e => String(e.id) === String(idestudiante));
+  if (!estudiante) {
+    return { ok: false, mensaje: '👤 No se encontró al estudiante en el sistema.' };
+  }
+  if (estudiante.condicion === 'inactivo' || estudiante.condicion === 'egresado') {
+    return { ok: false, mensaje: `⛔ El estudiante ${estudiante.nombres} ${estudiante.apellidos} está ${estudiante.condicion}. No se puede agendar.` };
+  }
+  return { ok: true, estudiante };
+}
+
+function validarPuedeReprogramar(atencion) {
+  if (!atencion) return { ok: false, mensaje: '❌ No se encontró la cita.' };
+  if (ESTADOS_ARCHIVADOS.includes(atencion.estado)) {
+    const textos = {
+      asistio:      'ya fue registrada como asistida',
+      no_asistio:   'ya fue registrada como inasistencia',
+      reprogramado: 'ya fue reprogramada anteriormente',
+      cerrado:      'fue cancelada',
+    };
+    return { ok: false, mensaje: `🔒 Esta cita ${textos[atencion.estado] || 'ya está archivada'} y no puede modificarse.` };
+  }
+  return { ok: true };
+}
+
+function validarPuedeRegistrarAsistencia(atencion) {
+  if (!atencion) return { ok: false, mensaje: '❌ No se encontró la cita.' };
+  if (ESTADOS_ARCHIVADOS.includes(atencion.estado)) {
+    return { ok: false, mensaje: '🔒 Esta cita ya está archivada.' };
+  }
+  if (!citaVencida(atencion.fechahora)) {
+    return { ok: false, mensaje: `⏳ Esta cita aún no ha ocurrido (${fmtFecha(atencion.fechahora)} ${fmtHora(atencion.fechahora)}). No puedes registrar asistencia antes de la fecha.` };
+  }
+  return { ok: true };
+}
+
+async function validarTodaLaCita({ fecha, hora, idestudiante, idAtencionExcluir, atenciones }) {
+  atenciones        = atenciones || store.atenciones;
+  idAtencionExcluir = idAtencionExcluir || null;
+
+  const checks = [
+    () => validarNoEsPasado(fecha, hora),
+    () => validarNoDiasBloqueados(fecha),
+    () => validarNoFeriado(fecha),
+    () => validarHorarioAtencion(hora),
+    () => validarNoRecreo(hora),
+    () => validarEstudianteActivo(idestudiante),
+    () => validarMaxAtencionesDia(fecha, idAtencionExcluir, atenciones),
+    () => validarMaxCitasPendientesEstudiante(idestudiante, idAtencionExcluir, atenciones),
+    () => validarNoDuplicado(idestudiante, fecha, hora, idAtencionExcluir, atenciones),
+    async () => {
+      const libre = await validarHorarioUnico(fecha, hora, idAtencionExcluir, atenciones);
+      if (!libre) {
+        const libres     = generarHorasDisponibles(fecha, idAtencionExcluir, null);
+        const sugerencia = libres.length ? ` Próximo disponible: ${libres[0]}` : ' No hay horarios libres ese día.';
+        return { ok: false, mensaje: `❌ Ese horario ya está ocupado.${sugerencia}` };
+      }
+      return { ok: true };
+    },
+    () => {
+      const r = validarCronologiaEstudiante(idestudiante, fecha, hora, idAtencionExcluir, atenciones);
+      if (!r.ok) {
+        if (r.motivo === 'fecha_minima') {
+          return { ok: false, mensaje: `❌ Para la 3ra cita en adelante, agenda después del ${r.fechaMinimaFmt}.` };
+        }
+        return { ok: false, mensaje: `❌ Debes agendar DESPUÉS de la última cita (${r.ultimaFecha} ${r.ultimaHora}).` };
+      }
+      return { ok: true };
+    },
+  ];
+
+  for (const check of checks) {
+    const resultado = await check();
+    if (!resultado.ok) {
+      toast(resultado.mensaje, 'warning');
+      return resultado;
+    }
+  }
+  return { ok: true };
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SECCIÓN 2: FUNCIONES DE CITAS / ATENCIONES
+// ══════════════════════════════════════════════════════════════════
+
 function limpiarFechahora(fh) {
   if (!fh) return fh;
   return fh.replace('T', ' ').replace(/\.\d+Z?$/, '').replace('Z', '');
@@ -7,9 +234,6 @@ function limpiarFechahora(fh) {
 function limpiarAtencion(a) {
   return Object.assign({}, a, { fechahora: limpiarFechahora(a.fechahora) });
 }
-
-
-// ATENCIONES / CITAS
 
 async function cargarYRenderCitas() {
   try {
@@ -26,10 +250,6 @@ function renderCitas() {
   const tbody = document.getElementById('citas-tbody');
   if (!tbody) return;
 
-  // Filtros de vista
-  // 'todas'       → pendientes (activas)
-  // 'archivadas'  → asistio + no_asistio + reprogramado + cerrado
-  // cualquier otro estado → ese estado específico
   let lista;
   if (citaFiltro === 'todas') {
     lista = store.atenciones.filter(function(a) { return a.estado === 'pendiente' || a.estado === 'activo'; });
@@ -41,12 +261,12 @@ function renderCitas() {
 
   if (lista.length === 0) {
     const msgs = {
-      todas:       'No hay citas activas',
-      archivadas:  'No hay citas archivadas',
-      asistio:     'No hay citas con asistencia',
-      no_asistio:  'No hay inasistencias',
-      reprogramado:'No hay citas reprogramadas',
-      cerrado:     'No hay citas cerradas',
+      todas:        'No hay citas activas',
+      archivadas:   'No hay citas archivadas',
+      asistio:      'No hay citas con asistencia',
+      no_asistio:   'No hay inasistencias',
+      reprogramado: 'No hay citas reprogramadas',
+      cerrado:      'No hay citas cerradas',
     };
     const msg = msgs[citaFiltro] || 'No hay atenciones para mostrar';
     tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="es-icon">📅</div><div class="es-text">' + msg + '</div></div></td></tr>';
@@ -59,29 +279,23 @@ function renderCitas() {
     const seccionMostrar = a.seccion || '—';
 
     const esArchivada = ESTADOS_ARCHIVADOS.includes(a.estado);
-    // 'activo' es un estado legado: siempre se trata como vencida para mostrar los botones correctos
     const vencida     = !esArchivada && (citaVencida(a.fechahora) || a.estado === 'activo');
 
-    // Botones según estado y si la cita venció
     let acciones = '';
     if (esArchivada) {
       acciones = '<span style="font-size:11px;color:var(--text-muted);font-style:italic;">' + estadoTextoCorto(a.estado) + '</span>';
     } else if (vencida) {
-      // Cita pendiente vencida → registrar asistencia
       acciones = '<div class="td-actions">' +
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--teal);border-color:var(--teal);" onclick="registrarAsistencia(' + a.id + ')">✅ Asistió</button>' +
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--rose);border-color:var(--rose);" onclick="registrarNoAsistencia(' + a.id + ')">❌ No asistió</button>' +
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--purple);border-color:var(--purple);" onclick="abrirReprogramacion(' + a.id + ')">🔄 Reprogramar</button>' +
         '</div>';
     } else {
-      // Cita pendiente futura → solo cancelar
       acciones = '<div class="td-actions">' +
+        '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--purple);border-color:var(--purple);" onclick="abrirReprogramacion(' + a.id + ')">🔄 Reprogramar</button>' +
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--rose);border-color:var(--rose);" onclick="cancelarAtencion(' + a.id + ')">Cancelar</button>' +
         '</div>';
     }
-
-    // Sin badge extra de vencida — los botones ya indican la acción
-    const badgeVencida = '';
 
     return '<tr id="atencion-row-' + a.id + '">' +
       '<td>' + fmtFecha(a.fechahora) + '</td>' +
@@ -114,11 +328,13 @@ function filterCitas(tipo) {
   renderCitas();
 }
 
-// ACCIONES DE CITA
 async function registrarAsistencia(id) {
   try {
     const atencion = store.atenciones.find(function(a) { return a.id == id; });
     if (!atencion) return;
+
+    const check = validarPuedeRegistrarAsistencia(atencion);
+    if (!check.ok) { toast(check.mensaje, 'warning'); return; }
 
     await apiFetch(API + '/atenciones/' + id, {
       method: 'PUT',
@@ -140,7 +356,6 @@ async function registrarAsistencia(id) {
 
 async function registrarNoAsistencia(id) {
   if (!confirm('¿Confirmar que el estudiante NO asistió a esta cita?')) return;
-
   try {
     const atencion = store.atenciones.find(function(a) { return a.id == id; });
     if (!atencion) return;
@@ -165,7 +380,6 @@ async function registrarNoAsistencia(id) {
 
 async function cancelarAtencion(id) {
   if (!confirm('¿Cancelar esta cita? Se marcará como cerrada.')) return;
-
   try {
     const atencion = store.atenciones.find(function(a) { return a.id == id; });
     if (!atencion) return;
@@ -192,12 +406,13 @@ async function cancelarAtencion(id) {
   }
 }
 
-// REPROGRAMACIÓN
 async function abrirReprogramacion(id) {
   const atencion = store.atenciones.find(function(a) { return a.id == id; });
   if (!atencion) return;
 
-  // Refrescar atenciones
+  const checkRep = validarPuedeReprogramar(atencion);
+  if (!checkRep.ok) { toast(checkRep.mensaje, 'warning'); return; }
+
   try {
     const frescas = await apiFetch(API + '/atenciones');
     store.atenciones = frescas || [];
@@ -233,11 +448,17 @@ async function abrirReprogramacion(id) {
   document.getElementById('rp-subtitulo').textContent =
     'Estudiante: ' + atencion.paciente + ' · Cita original: ' + fmtFecha(atencion.fechahora) + ' ' + fmtHora(atencion.fechahora);
 
-  const minFecha = calcularFechaMinima(atencion.idestudiante, id);
-  const fechaEl  = document.getElementById('rp-fecha');
+  // Fecha mínima = día siguiente a la cita original o calcularFechaMinima, lo que sea mayor
+  const fechaCitaOriginal = atencion.fechahora.split('T')[0];
+  const diaSiguiente = new Date(new Date(fechaCitaOriginal + 'T12:00:00').getTime() + 86400000)
+    .toISOString().split('T')[0];
+  const minFechaCronologia = calcularFechaMinima(atencion.idestudiante, id);
+  const minFecha = diaSiguiente > minFechaCronologia ? diaSiguiente : minFechaCronologia;
+
+  const fechaEl = document.getElementById('rp-fecha');
   if (fechaEl) {
-    fechaEl.min   = minFecha;
-    fechaEl.value = minFecha;
+    fechaEl.min      = minFecha;
+    fechaEl.value    = minFecha;
     fechaEl.onchange = function() {
       actualizarHorasSelectConEstudiante('rp-hora', this.value, atencion.idestudiante, id);
     };
@@ -246,34 +467,25 @@ async function abrirReprogramacion(id) {
 
   modal.classList.add('open');
 
-  // Reemplazar botón para evitar listeners duplicados
   const btnOld = document.getElementById('btn-guardar-reprogramar');
-  const btnNew  = btnOld.cloneNode(true);
+  const btnNew = btnOld.cloneNode(true);
   btnOld.parentNode.replaceChild(btnNew, btnOld);
 
   document.getElementById('btn-guardar-reprogramar').onclick = async function() {
-    const fecha  = document.getElementById('rp-fecha')?.value;
-    const hora   = document.getElementById('rp-hora')?.value;
+    const fecha = document.getElementById('rp-fecha')?.value;
+    const hora  = document.getElementById('rp-hora')?.value;
 
-    if (!fecha || !hora) {
-      toast('Indica la nueva fecha y hora', 'warning');
-      return;
-    }
-    if (fecha < hoy()) {
-      toast('No puedes agendar en una fecha pasada', 'warning');
-      return;
-    }
+    if (!fecha || !hora) { toast('Indica la nueva fecha y hora', 'warning'); return; }
+    if (fecha < hoy())   { toast('No puedes agendar en una fecha pasada', 'warning'); return; }
 
-    // Regla 2: horario libre global (excluyendo la cita original)
     const disponible = await validarHorarioUnico(fecha, hora, id, store.atenciones);
     if (!disponible) {
-      const libres = generarHorasDisponibles(fecha, id, null);
+      const libres     = generarHorasDisponibles(fecha, id, null);
       const sugerencia = libres.length ? ' Próximo disponible: ' + libres[0] : ' No hay horarios libres ese día.';
       toast('❌ Horario ocupado.' + sugerencia, 'warning');
       return;
     }
 
-    // Regla 1: cronología (excluyendo la cita original)
     const cronOk = validarCronologiaEstudiante(atencion.idestudiante, fecha, hora, id, store.atenciones);
     if (!cronOk.ok) {
       if (cronOk.motivo === 'fecha_minima') {
@@ -285,24 +497,22 @@ async function abrirReprogramacion(id) {
     }
 
     try {
-      // 1. Marcar la cita original como 'reprogramado'
       await apiFetch(API + '/atenciones/' + id, {
         method: 'PUT',
         body: JSON.stringify(limpiarAtencion(Object.assign({}, atencion, { estado: 'reprogramado' })))
       });
 
-      // 2. Crear la nueva cita
       const fechahora = fecha + 'T' + hora + ':00';
       await apiFetch(API + '/atenciones', {
         method: 'POST',
         body: JSON.stringify({
           idestudiante:  atencion.idestudiante,
-          fechahora:     fechahora,
+          fechahora,
           nivelatencion: atencion.nivelatencion || 'moderado',
           idmotivo:      atencion.idmotivo      || 1,
           estado:        'pendiente',
           grado:         atencion.grado         || '',
-          seccion:       atencion.seccion       || '',
+          seccion:       atencion.seccion        || '',
         })
       });
 
@@ -319,13 +529,6 @@ async function abrirReprogramacion(id) {
   };
 }
 
-function verAtencionDetalle(id) {
-  const a = store.atenciones.find(function(x) { return x.id == id; });
-  if (!a) return;
-  toast(a.paciente + ' · ' + fmtFecha(a.fechahora) + ' ' + fmtHora(a.fechahora), 'info');
-}
-
-// GUARDAR CITA (modal de atenciones)
 async function guardarCita() {
   const idestudiante  = document.getElementById('mc-paciente')?.value?.trim();
   const fecha         = document.getElementById('mc-fecha')?.value;
@@ -337,35 +540,13 @@ async function guardarCita() {
     return;
   }
 
-  if (fecha < hoy()) {
-    toast('No puedes agendar en una fecha pasada', 'warning');
-    return;
-  }
-
-  // Regla 2: horario libre global
-  const disponible = await validarHorarioUnico(fecha, hora, null, store.atenciones);
-  if (!disponible) {
-    const libres = generarHorasDisponibles(fecha, null, null);
-    const sugerencia = libres.length ? ' Próximo disponible: ' + libres[0] : ' No hay horarios libres ese día.';
-    toast('❌ Horario ocupado.' + sugerencia, 'warning');
-    return;
-  }
-
-  // Regla 1: cronología del estudiante
-  const cronOk = validarCronologiaEstudiante(idestudiante, fecha, hora, null, store.atenciones);
-  if (!cronOk.ok) {
-    if (cronOk.motivo === 'fecha_minima') {
-      toast('❌ Para la 3ra cita en adelante, debes agendar después del ' + cronOk.fechaMinimaFmt, 'warning');
-    } else {
-      toast('❌ Debes agendar DESPUÉS de la última cita del estudiante (' + cronOk.ultimaFecha + ' ' + cronOk.ultimaHora + ')', 'warning');
-    }
-    return;
-  }
+  const resultado = await validarTodaLaCita({ fecha, hora, idestudiante: parseInt(idestudiante) });
+  if (!resultado.ok) return;
 
   const motivoTexto = document.getElementById('mc-motivo')?.value?.trim() || 'Consulta general';
   let idmotivo = 1;
   try {
-    const motivos   = await apiFetch(API + '/motivosconsulta');
+    const motivos    = await apiFetch(API + '/motivosconsulta');
     const encontrado = motivos.find(function(m) { return m.descripcion === motivoTexto || m.nombre === motivoTexto; });
     idmotivo = encontrado ? encontrado.idmotivo : (motivos[0]?.idmotivo || 1);
   } catch (_) {}
@@ -376,17 +557,15 @@ async function guardarCita() {
   const gradoFinal   = gradoModal   || estModal?.grado   || '';
   const seccionFinal = seccionModal || estModal?.seccion || '';
 
-  const fechahora = fecha + 'T' + hora + ':00';
-
   try {
     await apiFetch(API + '/atenciones', {
       method: 'POST',
       body: JSON.stringify({
         idestudiante: parseInt(idestudiante),
-        fechahora:    fechahora,
+        fechahora:    fecha + 'T' + hora + ':00',
         estado:       'pendiente',
-        idmotivo:     idmotivo,
-        nivelatencion:nivelatencion,
+        idmotivo,
+        nivelatencion,
         grado:        gradoFinal,
         seccion:      seccionFinal,
       })
@@ -403,7 +582,6 @@ async function guardarCita() {
   }
 }
 
-// MODAL SEGUNDA CITA
 function mostrarModalSegundaCita(callback) {
   let modal = document.getElementById('modal-segunda-cita');
   if (!modal) {
@@ -482,27 +660,22 @@ async function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
     document.body.appendChild(modal);
   }
 
-  // Buscar motivo de la primera cita del estudiante
   const citasDelEst = store.atenciones
     .filter(function(a) { return String(a.idestudiante) === String(idestudiante) && !!a.fechahora; })
     .sort(function(a, b) { return new Date(a.fechahora) - new Date(b.fechahora); });
-  const primeraCita  = citasDelEst[0];
-  const motivoPrimera = primeraCita?.motivoconsulta || primeraCita?.motivo || null;
+  const motivoPrimera = citasDelEst[0]?.motivoconsulta || citasDelEst[0]?.motivo || null;
 
   const subtituloEl = document.getElementById('sc-subtitulo');
   if (subtituloEl) {
-    subtituloEl.innerHTML =
-      '<strong>Estudiante:</strong> ' + nombreCompleto +
-      (motivoPrimera
-        ? '<br><span style="margin-top:4px;display:inline-block;"><strong>Motivo 1ra cita:</strong> ' + motivoPrimera + '</span>'
-        : '');
+    subtituloEl.innerHTML = '<strong>Estudiante:</strong> ' + nombreCompleto +
+      (motivoPrimera ? '<br><span style="margin-top:4px;display:inline-block;"><strong>Motivo 1ra cita:</strong> ' + motivoPrimera + '</span>' : '');
   }
 
   const minFecha = calcularFechaMinima(idestudiante);
   const fechaEl  = document.getElementById('sc-fecha');
   if (fechaEl) {
-    fechaEl.min   = minFecha;
-    fechaEl.value = minFecha;
+    fechaEl.min      = minFecha;
+    fechaEl.value    = minFecha;
     fechaEl.onchange = function() {
       actualizarHorasSelectConEstudiante('sc-hora', this.value, idestudiante);
     };
@@ -516,56 +689,29 @@ async function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
   btnGuardar.parentNode.replaceChild(btnNuevo, btnGuardar);
 
   document.getElementById('btn-guardar-segunda').onclick = async function() {
-    const fecha  = document.getElementById('sc-fecha')?.value;
-    const hora   = document.getElementById('sc-hora')?.value;
-    const obs    = document.getElementById('sc-observaciones')?.value?.trim();
+    const fecha = document.getElementById('sc-fecha')?.value;
+    const hora  = document.getElementById('sc-hora')?.value;
+    const obs   = document.getElementById('sc-observaciones')?.value?.trim();
 
-    if (!fecha || !hora) {
-      toast('Indica la fecha y hora de la segunda cita', 'warning');
-      return;
-    }
-    if (fecha < hoy()) {
-      toast('No puedes agendar en una fecha pasada', 'warning');
-      return;
-    }
+    if (!fecha || !hora) { toast('Indica la fecha y hora de la segunda cita', 'warning'); return; }
 
-    // Regla 2: horario libre global
-    const disponible = await validarHorarioUnico(fecha, hora, null, store.atenciones);
-    if (!disponible) {
-      const libres = generarHorasDisponibles(fecha, null, null);
-      const sugerencia = libres.length ? ' Próximo disponible: ' + libres[0] : ' No hay horarios libres ese día.';
-      toast('❌ Horario ocupado.' + sugerencia, 'warning');
-      return;
-    }
+    const resultado = await validarTodaLaCita({ fecha, hora, idestudiante: parseInt(idestudiante) });
+    if (!resultado.ok) return;
 
-    // Regla 1: cronología del estudiante
-    const cronOk = validarCronologiaEstudiante(idestudiante, fecha, hora, null, store.atenciones);
-    if (!cronOk.ok) {
-      if (cronOk.motivo === 'fecha_minima') {
-        toast('❌ Para la 3ra cita en adelante, debes agendar después del ' + cronOk.fechaMinimaFmt, 'warning');
-      } else {
-        toast('❌ Debes agendar DESPUÉS de la última cita (' + cronOk.ultimaFecha + ' ' + cronOk.ultimaHora + ')', 'warning');
-      }
-      return;
-    }
-
-    const estSC     = store.estudiantes.find(function(e) { return e.id == parseInt(idestudiante); });
-    const gradoSC   = estSC?.grado   || '';
-    const seccionSC = estSC?.seccion || '';
+    const estSC = store.estudiantes.find(function(e) { return e.id == parseInt(idestudiante); });
 
     try {
-      const fechahora = fecha + 'T' + hora + ':00';
       await apiFetch(API + '/atenciones', {
         method: 'POST',
         body: JSON.stringify({
           idestudiante:  parseInt(idestudiante),
-          fechahora:     fechahora,
+          fechahora:     fecha + 'T' + hora + ':00',
           nivelatencion: 'moderado',
           idmotivo:      1,
           estado:        'pendiente',
           observaciones: obs || null,
-          grado:         gradoSC,
-          seccion:       seccionSC,
+          grado:         estSC?.grado   || '',
+          seccion:       estSC?.seccion || '',
         })
       });
 
@@ -580,4 +726,10 @@ async function abrirFormularioSegundaCita(idestudiante, nombreCompleto) {
       toast('Error al guardar segunda cita', 'warning');
     }
   };
+}
+
+function verAtencionDetalle(id) {
+  const a = store.atenciones.find(function(x) { return x.id == id; });
+  if (!a) return;
+  toast(a.paciente + ' · ' + fmtFecha(a.fechahora) + ' ' + fmtHora(a.fechahora), 'info');
 }

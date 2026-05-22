@@ -204,9 +204,9 @@ function validarPaso1() {
   const fechaNacVal = (fechaNacEl?.value || '').trim();
   if (fechaNacVal) {
     const edad = calcularEdad(fechaNacVal);
-    if (edad < 11 || edad > 18) {
+    if (edad < 10 || edad > 18) {
       if (fechaNacEl) fechaNacEl.style.border = '2px solid red';
-      toast('⚠️ La fecha de nacimiento no corresponde a un estudiante de secundaria (11–17 años)', 'warning');
+      toast('⚠️ La fecha de nacimiento no corresponde a un estudiante de secundaria (10–18 años)', 'warning');
       valido = false;
     } else {
       if (fechaNacEl) fechaNacEl.style.border = '';
@@ -394,7 +394,7 @@ try {
         fechahora,
         nivelatencion: nivel,
         idmotivo: idmotivo || null,
-        estado: 'cerrado',
+        estado: 'pendiente',
         observaciones: obs || null,
         grado,
         seccion
@@ -406,13 +406,17 @@ try {
 
     await cargarDatos();
 
-    mostrarModalSegundaCita((quiere) => {
-      if (quiere) {
-        abrirFormularioSegundaCita(idestudiante, `${nombres} ${apellidos}`);
-      } else {
-        navigateTo('historial');
-      }
-    });
+   if (typeof mostrarModalSegundaCita === 'function') {
+  mostrarModalSegundaCita((quiere) => {
+    if (quiere) {
+      abrirFormularioSegundaCita(idestudiante, `${nombres} ${apellidos}`);
+    } else {
+      navigateTo('historial');
+    }
+  });
+} else {
+  navigateTo('historial');
+}
 
   } catch (err) {
     console.error('Error guardando nueva atención:', err);
