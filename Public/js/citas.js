@@ -26,66 +26,75 @@ function renderCitas() {
   const tbody = document.getElementById('citas-tbody');
   if (!tbody) return;
 
-  // Filtros de vista
-  // 'todas'       → pendientes (activas)
-  // 'archivadas'  → asistio + no_asistio + reprogramado + cerrado
-  // cualquier otro estado → ese estado específico
   let lista;
   if (citaFiltro === 'todas') {
-    lista = store.atenciones.filter(function(a) { return a.estado === 'pendiente' || a.estado === 'activo'; });
+    lista = store.atenciones.filter(a => a.estado === 'pendiente' || a.estado === 'activo');
   } else if (citaFiltro === 'archivadas') {
-    lista = store.atenciones.filter(function(a) { return ESTADOS_ARCHIVADOS.includes(a.estado); });
+    lista = store.atenciones.filter(a => ESTADOS_ARCHIVADOS.includes(a.estado));
   } else {
-    lista = store.atenciones.filter(function(a) { return a.estado === citaFiltro; });
+    lista = store.atenciones.filter(a => a.estado === citaFiltro);
   }
 
   if (lista.length === 0) {
     const msgs = {
-      todas:       'No hay citas activas',
-      archivadas:  'No hay citas archivadas',
-      asistio:     'No hay citas con asistencia',
-      no_asistio:  'No hay inasistencias',
-      reprogramado:'No hay citas reprogramadas',
-      cerrado:     'No hay citas cerradas',
+      todas: 'No hay citas activas', archivadas: 'No hay citas archivadas',
+      asistio: 'No hay citas con asistencia', no_asistio: 'No hay inasistencias',
+      reprogramado: 'No hay citas reprogramadas', cerrado: 'No hay citas cerradas',
     };
-    const msg = msgs[citaFiltro] || 'No hay atenciones para mostrar';
-    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="es-icon">📅</div><div class="es-text">' + msg + '</div></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="es-icon">📅</div><div class="es-text">' +
+      (msgs[citaFiltro] || 'No hay atenciones') + '</div></div></td></tr>';
     return;
   }
 
-  tbody.innerHTML = lista.map(function(a) {
+  const hoyStr = hoy(); // "YYYY-MM-DD"
+
+  function fechSolo(fh) {
+    if (!fh) return '';
+    return fh.replace('T', ' ').substring(0, 10);
+  }
+
+  const citasHoy     = lista.filter(a => fechSolo(a.fechahora) === hoyStr);
+  const citasProximas = lista.filter(a => fechSolo(a.fechahora) > hoyStr);
+  const citasVencidas = lista.filter(a => fechSolo(a.fechahora) < hoyStr);
+
+  // Ordenar
+  const sortAsc = (a, b) => new Date(a.fechahora) - new Date(b.fechahora);
+  citasHoy.sort(sortAsc);
+  citasProximas.sort(sortAsc);
+  citasVencidas.sort((a, b) => new Date(b.fechahora) - new Date(a.fechahora)); // más reciente primero
+
+  function buildRow(a, esHoy) {
     const gradoRaw     = String(a.grado || '').replace('to', '').trim();
     const gradoMostrar = gradoRaw ? (gradoRaw.includes('°') ? gradoRaw : gradoRaw + '°') : '—';
     const seccionMostrar = a.seccion || '—';
+    const esArchivada  = ESTADOS_ARCHIVADOS.includes(a.estado);
+    const vencida      = !esArchivada && (citaVencida(a.fechahora) || a.estado === 'activo');
 
-    const esArchivada = ESTADOS_ARCHIVADOS.includes(a.estado);
-    // 'activo' es un estado legado: siempre se trata como vencida para mostrar los botones correctos
-    const vencida     = !esArchivada && (citaVencida(a.fechahora) || a.estado === 'activo');
-
-    // Botones según estado y si la cita venció
     let acciones = '';
     if (esArchivada) {
       acciones = '<span style="font-size:11px;color:var(--text-muted);font-style:italic;">' + estadoTextoCorto(a.estado) + '</span>';
-    } else if (vencida) {
-      // Cita pendiente vencida → registrar asistencia
-      acciones = '<div class="td-actions">' +
+    } else if (vencida || esHoy) {
+      acciones =
+        '<div class="td-actions">' +
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--teal);border-color:var(--teal);" onclick="registrarAsistencia(' + a.id + ')">✅ Asistió</button>' +
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--rose);border-color:var(--rose);" onclick="registrarNoAsistencia(' + a.id + ')">❌ No asistió</button>' +
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--purple);border-color:var(--purple);" onclick="abrirReprogramacion(' + a.id + ')">🔄 Reprogramar</button>' +
         '</div>';
     } else {
-      // Cita pendiente futura → solo cancelar
-      acciones = '<div class="td-actions">' +
+      acciones =
+        '<div class="td-actions">' +
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--rose);border-color:var(--rose);" onclick="cancelarAtencion(' + a.id + ')">Cancelar</button>' +
         '</div>';
     }
 
-    // Sin badge extra de vencida — los botones ya indican la acción
-    const badgeVencida = '';
+    // Hora resaltada si es hoy
+    const horaStyle = esHoy
+      ? 'font-weight:700;color:var(--teal);font-size:15px;'
+      : 'font-weight:600;';
 
     return '<tr id="atencion-row-' + a.id + '">' +
       '<td>' + fmtFecha(a.fechahora) + '</td>' +
-      '<td style="font-weight:600;">' + fmtHora(a.fechahora) + '</td>' +
+      '<td style="' + horaStyle + '">' + fmtHora(a.fechahora) + '</td>' +
       '<td>' + (a.motivoconsulta || '—') + '</td>' +
       '<td>' + gradoMostrar + ' ' + seccionMostrar + '</td>' +
       '<td>' + nivelBadge(a.nivelatencion) + '</td>' +
@@ -100,8 +109,49 @@ function renderCitas() {
         '</div>' +
       '</td>' +
       '<td>' + acciones + '</td>' +
-      '</tr>';
-  }).join('');
+    '</tr>';
+  }
+
+  function sectionHeader(icono, titulo, color, count) {
+    return '<tr>' +
+      '<td colspan="8" style="padding:18px 8px 6px;border-bottom:none;">' +
+        '<div style="display:flex;align-items:center;gap:10px;">' +
+          '<span style="width:10px;height:10px;border-radius:50%;background:' + color + ';display:inline-block;"></span>' +
+          '<span style="font-size:13px;font-weight:600;color:' + color + ';">' + icono + ' ' + titulo + '</span>' +
+          '<span style="font-size:11px;color:var(--text-muted);background:var(--bg-secondary,#f3f4f6);padding:1px 8px;border-radius:99px;">' + count + '</span>' +
+        '</div>' +
+        '<div style="height:2px;background:' + color + ';opacity:0.18;border-radius:2px;margin-top:6px;"></div>' +
+      '</td>' +
+    '</tr>';
+  }
+
+  function emptyRow(msg) {
+    return '<tr><td colspan="8" style="padding:10px 20px;font-size:12px;color:var(--text-muted);font-style:italic;">' + msg + '</td></tr>';
+  }
+
+ let html = '';
+
+  // ── HOY ── (primero)
+  html += sectionHeader('📅', 'Hoy', 'var(--teal, #1D9E75)', citasHoy.length);
+  if (citasHoy.length === 0) {
+    html += emptyRow('Sin citas programadas para hoy');
+  } else {
+    html += citasHoy.map(a => buildRow(a, true)).join('');
+  }
+
+  // ── VENCIDAS ── (segundo, si las hay)
+  if (citasVencidas.length > 0) {
+    html += sectionHeader('⚠️', 'Vencidas — pendientes de registro', 'var(--rose, #e74c3c)', citasVencidas.length);
+    html += citasVencidas.map(a => buildRow(a, true)).join('');
+  }
+
+  // ── PRÓXIMAS ── (al final)
+  if (citasProximas.length > 0) {
+    html += sectionHeader('🗓️', 'Próximas citas', 'var(--text-muted, #888)', citasProximas.length);
+    html += citasProximas.map(a => buildRow(a, false)).join('');
+  }
+
+  tbody.innerHTML = html;
 }
 
 function estadoTextoCorto(estado) {
