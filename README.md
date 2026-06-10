@@ -51,6 +51,7 @@ cd psicontrol
 
 ```bash
 npm install
+npm install express
 ```
 
 ### 3. Configura la base de datos
