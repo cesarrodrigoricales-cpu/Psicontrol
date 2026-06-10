@@ -260,19 +260,14 @@ function renderCitas() {
   }
 
   if (lista.length === 0) {
+    // CORRECCIÓN #2: objeto msgs sin claves duplicadas
     const msgs = {
-<<<<<<< HEAD
-      todas: 'No hay citas activas', archivadas: 'No hay citas archivadas',
-      asistio: 'No hay citas con asistencia', no_asistio: 'No hay inasistencias',
-      reprogramado: 'No hay citas reprogramadas', cerrado: 'No hay citas cerradas',
-=======
       todas:        'No hay citas activas',
       archivadas:   'No hay citas archivadas',
       asistio:      'No hay citas con asistencia',
       no_asistio:   'No hay inasistencias',
       reprogramado: 'No hay citas reprogramadas',
       cerrado:      'No hay citas cerradas',
->>>>>>> d1201728dd7f0e151d21aa66c49dbb6f49c1ba1f
     };
     tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="es-icon">📅</div><div class="es-text">' +
       (msgs[citaFiltro] || 'No hay atenciones') + '</div></div></td></tr>';
@@ -286,7 +281,7 @@ function renderCitas() {
     return fh.replace('T', ' ').substring(0, 10);
   }
 
-  const citasHoy     = lista.filter(a => fechSolo(a.fechahora) === hoyStr);
+  const citasHoy      = lista.filter(a => fechSolo(a.fechahora) === hoyStr);
   const citasProximas = lista.filter(a => fechSolo(a.fechahora) > hoyStr);
   const citasVencidas = lista.filter(a => fechSolo(a.fechahora) < hoyStr);
 
@@ -296,54 +291,37 @@ function renderCitas() {
   citasProximas.sort(sortAsc);
   citasVencidas.sort((a, b) => new Date(b.fechahora) - new Date(a.fechahora)); // más reciente primero
 
+  // CORRECCIÓN #1: buildRow con una sola declaración de variables y bloque acciones limpio
   function buildRow(a, esHoy) {
-    const gradoRaw     = String(a.grado || '').replace('to', '').trim();
-    const gradoMostrar = gradoRaw ? (gradoRaw.includes('°') ? gradoRaw : gradoRaw + '°') : '—';
+    const gradoRaw       = String(a.grado || '').replace('to', '').trim();
+    const gradoMostrar   = gradoRaw ? (gradoRaw.includes('°') ? gradoRaw : gradoRaw + '°') : '—';
     const seccionMostrar = a.seccion || '—';
-    const esArchivada  = ESTADOS_ARCHIVADOS.includes(a.estado);
-    const vencida      = !esArchivada && (citaVencida(a.fechahora) || a.estado === 'activo');
+    const esArchivada    = ESTADOS_ARCHIVADOS.includes(a.estado);
+    const vencida        = !esArchivada && (citaVencida(a.fechahora) || a.estado === 'activo');
 
-<<<<<<< HEAD
     let acciones = '';
     if (esArchivada) {
       acciones = '<span style="font-size:11px;color:var(--text-muted);font-style:italic;">' + estadoTextoCorto(a.estado) + '</span>';
     } else if (vencida || esHoy) {
       acciones =
         '<div class="td-actions">' +
-=======
-    const esArchivada = ESTADOS_ARCHIVADOS.includes(a.estado);
-    const vencida     = !esArchivada && (citaVencida(a.fechahora) || a.estado === 'activo');
-
-    let acciones = '';
-    if (esArchivada) {
-      acciones = '<span style="font-size:11px;color:var(--text-muted);font-style:italic;">' + estadoTextoCorto(a.estado) + '</span>';
-    } else if (vencida) {
-      acciones = '<div class="td-actions">' +
->>>>>>> d1201728dd7f0e151d21aa66c49dbb6f49c1ba1f
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--teal);border-color:var(--teal);" onclick="registrarAsistencia(' + a.id + ')">✅ Asistió</button>' +
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--rose);border-color:var(--rose);" onclick="registrarNoAsistencia(' + a.id + ')">❌ No asistió</button>' +
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--purple);border-color:var(--purple);" onclick="abrirReprogramacion(' + a.id + ')">🔄 Reprogramar</button>' +
         '</div>';
     } else {
-<<<<<<< HEAD
       acciones =
         '<div class="td-actions">' +
-=======
-      acciones = '<div class="td-actions">' +
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--purple);border-color:var(--purple);" onclick="abrirReprogramacion(' + a.id + ')">🔄 Reprogramar</button>' +
->>>>>>> d1201728dd7f0e151d21aa66c49dbb6f49c1ba1f
         '<button class="btn-secondary" style="font-size:11px;padding:4px 10px;color:var(--rose);border-color:var(--rose);" onclick="cancelarAtencion(' + a.id + ')">Cancelar</button>' +
         '</div>';
     }
 
-<<<<<<< HEAD
     // Hora resaltada si es hoy
     const horaStyle = esHoy
       ? 'font-weight:700;color:var(--teal);font-size:15px;'
       : 'font-weight:600;';
 
-=======
->>>>>>> d1201728dd7f0e151d21aa66c49dbb6f49c1ba1f
     return '<tr id="atencion-row-' + a.id + '">' +
       '<td>' + fmtFecha(a.fechahora) + '</td>' +
       '<td style="' + horaStyle + '">' + fmtHora(a.fechahora) + '</td>' +
@@ -381,7 +359,8 @@ function renderCitas() {
     return '<tr><td colspan="8" style="padding:10px 20px;font-size:12px;color:var(--text-muted);font-style:italic;">' + msg + '</td></tr>';
   }
 
- let html = '';
+  // CORRECCIÓN #3: indentación correcta de `let html`
+  let html = '';
 
   // ── HOY ── (primero)
   html += sectionHeader('📅', 'Hoy', 'var(--teal, #1D9E75)', citasHoy.length);
