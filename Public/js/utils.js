@@ -17,9 +17,23 @@ let citaFiltro = 'todas';
 
 const ESTADOS_ARCHIVADOS = ['asistio', 'no_asistio', 'reprogramado', 'cerrado'];
 
+// ─────────────────────────────────────────────────────────────────
+// HELPER: quita la Z y milisegundos para forzar lectura local
+// Ej: '2026-06-11T14:00:00.000Z' → '2026-06-11T14:00:00'
+// ─────────────────────────────────────────────────────────────────
+function _isoLocal(iso) {
+  if (!iso) return iso;
+  return iso.replace(/\.\d+Z$/, '').replace('Z', '').replace(' ', 'T');
+}
+
+// ✅ CORREGIDO: compara sin conversión UTC
 function citaVencida(fechahora) {
   if (!fechahora) return false;
-  return new Date(fechahora).getTime() < Date.now();
+  const local = _isoLocal(fechahora);
+  const [fecha, tiempo] = local.split('T');
+  const [anio, mes, dia] = fecha.split('-').map(Number);
+  const [h, m] = (tiempo || '00:00').split(':').map(Number);
+  return new Date(anio, mes - 1, dia, h, m, 0).getTime() < Date.now();
 }
 
 // UTILS DE FECHA Y FORMATO
@@ -27,22 +41,26 @@ function hoy() {
   return new Date().toISOString().split('T')[0];
 }
 
+// ✅ CORREGIDO: lee el string directamente sin new Date() que desplaza por UTC
 function fmtFecha(iso) {
   if (!iso) return '—';
-  const d = new Date(iso);
+  const parte = _isoLocal(iso).substring(0, 10);
+  const [anio, mes, dia] = parte.split('-').map(Number);
   const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
-  return d.getDate() + ' ' + meses[d.getMonth()] + ' ' + d.getFullYear();
+  return dia + ' ' + meses[mes - 1] + ' ' + anio;
 }
 
+// ✅ CORREGIDO: extrae la hora del string directamente sin new Date()
 function fmtHora(iso) {
   if (!iso) return '—';
-  const d = new Date(iso);
-  let h = d.getHours();
-  const m = String(d.getMinutes()).padStart(2, '0');
+  const clean    = _isoLocal(iso);
+  const timePart = clean.includes('T') ? clean.split('T')[1] : clean.split(' ')[1];
+  if (!timePart) return '—';
+  let [h, m] = timePart.split(':').map(Number);
   const period = h >= 12 ? 'PM' : 'AM';
   h = h % 12;
   if (h === 0) h = 12;
-  return String(h).padStart(2, '0') + ':' + m + ' ' + period;
+  return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ' ' + period;
 }
 
 function colorAvatar(nombre) {
@@ -117,7 +135,7 @@ function slotBase(ms) {
 
 function validarCronologiaEstudiante(idestudiante, nuevaFecha, nuevaHora, idAtencionExcluir, atencionesOverride) {
   idAtencionExcluir = idAtencionExcluir || null;
-  const atenciones = atencionesOverride || store.atenciones;
+  const atenciones  = atencionesOverride || store.atenciones;
 
   const delEst = atenciones
     .filter(function(a) {
@@ -126,18 +144,20 @@ function validarCronologiaEstudiante(idestudiante, nuevaFecha, nuevaHora, idAten
       if (idAtencionExcluir && String(a.id) === String(idAtencionExcluir)) return false;
       return !!a.fechahora;
     })
-    .sort(function(a, b) { return new Date(a.fechahora) - new Date(b.fechahora); });
+    .sort(function(a, b) {
+      return new Date(_isoLocal(a.fechahora)) - new Date(_isoLocal(b.fechahora));
+    });
 
   if (delEst.length === 0) return { ok: true };
 
   const ultimaCita = delEst[delEst.length - 1];
-  const ultimaMs   = new Date(ultimaCita.fechahora).getTime();
+  const ultimaMs   = new Date(_isoLocal(ultimaCita.fechahora)).getTime();
   const nuevaMs    = new Date(nuevaFecha + 'T' + nuevaHora + ':00').getTime();
 
   if (nuevaMs <= ultimaMs) {
     return {
       ok: false,
-      motivo: 'cronologia',
+      motivo:      'cronologia',
       ultimaFecha: fmtFecha(ultimaCita.fechahora),
       ultimaHora:  fmtHora(ultimaCita.fechahora),
     };
@@ -145,12 +165,12 @@ function validarCronologiaEstudiante(idestudiante, nuevaFecha, nuevaHora, idAten
 
   if (delEst.length >= 2) {
     const penultimaCita  = delEst[delEst.length - 2];
-    const penultimaFecha = penultimaCita.fechahora.split('T')[0];
+    const penultimaFecha = _isoLocal(penultimaCita.fechahora).split('T')[0];
 
     if (nuevaFecha <= penultimaFecha) {
       return {
         ok: false,
-        motivo: 'fecha_minima',
+        motivo:         'fecha_minima',
         fechaMinima:    penultimaFecha,
         fechaMinimaFmt: fmtFecha(penultimaCita.fechahora),
         ultimaFecha:    fmtFecha(ultimaCita.fechahora),
@@ -162,7 +182,7 @@ function validarCronologiaEstudiante(idestudiante, nuevaFecha, nuevaHora, idAten
   return { ok: true };
 }
 
-// REGLA 2: Horario único global
+// REGLA: Horario único global
 async function validarHorarioUnico(fecha, hora, idAtencionExcluir, atencionesOverride) {
   idAtencionExcluir = idAtencionExcluir || null;
   let atenciones;
@@ -180,7 +200,8 @@ async function validarHorarioUnico(fecha, hora, idAtencionExcluir, atencionesOve
     if (!a.fechahora) return false;
     if (ESTADOS_ARCHIVADOS.includes(a.estado)) return false;
     if (idAtencionExcluir && String(a.id) === String(idAtencionExcluir)) return false;
-    const existSlot = slotBase(new Date(a.fechahora).getTime());
+    // ✅ _isoLocal elimina la Z para comparar en hora local
+    const existSlot = slotBase(new Date(_isoLocal(a.fechahora)).getTime());
     return existSlot === nuevoSlot;
   });
 
@@ -201,7 +222,7 @@ function generarHorasDisponibles(fecha, idAtencionExcluir, idestudiante) {
       const m = minutos[mi];
       if (h === 17 && m === '30') continue;
 
-      const hora      = String(h).padStart(2,'0') + ':' + m;
+      const hora      = String(h).padStart(2, '0') + ':' + m;
       const slotMs    = new Date(fecha + 'T' + hora + ':00').getTime();
       const nuevoSlot = slotBase(slotMs);
 
@@ -209,7 +230,8 @@ function generarHorasDisponibles(fecha, idAtencionExcluir, idestudiante) {
         if (!a.fechahora) return false;
         if (ESTADOS_ARCHIVADOS.includes(a.estado)) return false;
         if (idAtencionExcluir && String(a.id) === String(idAtencionExcluir)) return false;
-        const existSlot = slotBase(new Date(a.fechahora).getTime());
+        // ✅ _isoLocal elimina la Z para comparar en hora local
+        const existSlot = slotBase(new Date(_isoLocal(a.fechahora)).getTime());
         return existSlot === nuevoSlot;
       });
 
@@ -239,18 +261,23 @@ function calcularFechaMinima(idestudiante, idAtencionExcluir, atencionesOverride
       if (idAtencionExcluir && String(a.id) === String(idAtencionExcluir)) return false;
       return !!a.fechahora;
     })
-    .sort(function(a, b) { return new Date(a.fechahora) - new Date(b.fechahora); });
+    .sort(function(a, b) {
+      return new Date(_isoLocal(a.fechahora)) - new Date(_isoLocal(b.fechahora));
+    });
 
   if (delEst.length >= 2) {
-    const penultima = delEst[delEst.length - 2];
-    const d = new Date(penultima.fechahora);
-    d.setDate(d.getDate() + 1);
-    const minFecha = d.toISOString().split('T')[0];
+    const penultima        = delEst[delEst.length - 2];
+    const fParte           = _isoLocal(penultima.fechahora).split('T')[0];
+    const [anio, mes, dia] = fParte.split('-').map(Number);
+    const d       = new Date(anio, mes - 1, dia + 1);
+    const minFecha = d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
     return minFecha > hoy() ? minFecha : hoy();
   }
 
   if (delEst.length === 1) {
-    const ultima = delEst[0].fechahora.split('T')[0];
+    const ultima = _isoLocal(delEst[0].fechahora).split('T')[0];
     return ultima > hoy() ? ultima : hoy();
   }
 
@@ -308,12 +335,12 @@ function openModal(id) {
       actualizarSelectEstudiantes();
 
       document.getElementById('mc-paciente').addEventListener('change', function() {
-        const est = store.estudiantes.find(function(e) { return e.id === parseInt(this.value); }.bind(this));
+        const est        = store.estudiantes.find(function(e) { return e.id === parseInt(this.value); }.bind(this));
         const gradoSel   = document.getElementById('mc-grado');
         const seccionSel = document.getElementById('mc-seccion');
 
         if (est) {
-          const gradoVal = String(est.grado || '').replace('°','').replace('to','').trim();
+          const gradoVal = String(est.grado || '').replace('°', '').replace('to', '').trim();
           if (gradoSel)   gradoSel.value   = gradoVal;
           if (seccionSel) seccionSel.value = est.seccion || '';
 
@@ -369,7 +396,7 @@ function actualizarSelectEstudiantes() {
     })
     .forEach(function(e) {
       const opt = document.createElement('option');
-      opt.value = e.id;
+      opt.value       = e.id;
       opt.textContent = e.apellidos + ', ' + e.nombres + ' · DNI: ' + (e.dni || '—');
       sel.appendChild(opt);
     });

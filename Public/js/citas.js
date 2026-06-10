@@ -14,10 +14,7 @@ const CONFIG_CITAS = {
   MAX_ATENCIONES_DIA: 12,
   MAX_CITAS_PENDIENTES_POR_ESTUDIANTE: 2,
   DIAS_BLOQUEADOS: [0, 6],
-  RECREOS: [
-    { inicio: '10:30', fin: '11:00' },
-    { inicio: '13:00', fin: '14:00' },
-  ],
+
   FERIADOS: [
     '2026-01-01','2026-04-02','2026-04-03','2026-05-01',
     '2026-06-07','2026-06-24','2026-06-29','2026-07-23',
@@ -82,18 +79,6 @@ function validarHorarioAtencion(hora) {
   return { ok: true };
 }
 
-function validarNoRecreo(hora) {
-  const minCita = _horaAMinutos(hora);
-  const minFin  = minCita + CONFIG_CITAS.DURACION_SESION_MIN;
-  for (const rec of CONFIG_CITAS.RECREOS) {
-    const minRecInicio = _horaAMinutos(rec.inicio);
-    const minRecFin    = _horaAMinutos(rec.fin);
-    if (minCita < minRecFin && minFin > minRecInicio) {
-      return { ok: false, mensaje: `⏸️ Este horario coincide con el recreo/almuerzo (${rec.inicio}–${rec.fin}). Elige otra hora.` };
-    }
-  }
-  return { ok: true };
-}
 
 function validarMaxAtencionesDia(fecha, idAtencionExcluir, atenciones) {
   atenciones        = atenciones || store.atenciones;
@@ -186,7 +171,6 @@ async function validarTodaLaCita({ fecha, hora, idestudiante, idAtencionExcluir,
     () => validarNoDiasBloqueados(fecha),
     () => validarNoFeriado(fecha),
     () => validarHorarioAtencion(hora),
-    () => validarNoRecreo(hora),
     () => validarEstudianteActivo(idestudiante),
     () => validarMaxAtencionesDia(fecha, idAtencionExcluir, atenciones),
     () => validarMaxCitasPendientesEstudiante(idestudiante, idAtencionExcluir, atenciones),

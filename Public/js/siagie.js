@@ -481,14 +481,14 @@ function buscarEstudianteSiagie() {
   contenedor.style.display = 'block';
 }
 
-function seleccionarEstudianteSiagie(id) {
-  const e = store.estudiantes.find(est => est.id === id);
-  if (!e) return;
-
+function _poblarFormularioEstudiante(e) {
   document.getElementById('na-nombres').value    = e.nombres   || '';
   document.getElementById('na-apellidos').value  = e.apellidos || '';
   document.getElementById('na-doc-numero').value = e.dni       || '';
   document.getElementById('na-fechanac').value   = e.fechanac  || '';
+
+  const telInput = document.getElementById('na-telefono');
+  if (telInput) telInput.value = e.telefono || '';
 
   const generoSelect = document.getElementById('na-genero');
   if (generoSelect && e.genero) {
@@ -530,6 +530,96 @@ function seleccionarEstudianteSiagie(id) {
 
   document.getElementById('na-buscar-estudiante').value = '';
   document.getElementById('na-resultados-busqueda').style.display = 'none';
+}
+
+function seleccionarEstudianteSiagie(id) {
+  const e = store.estudiantes.find(est => est.id === id);
+  if (!e) return;
+
+  // Cerrar dropdown primero
+  document.getElementById('na-buscar-estudiante').value = '';
+  document.getElementById('na-resultados-busqueda').style.display = 'none';
+
+  // Contar sesiones previas
+  const sesionesCount = store.atenciones.filter(a => a.idestudiante === e.id).length;
+
+  if (sesionesCount > 0) {
+    // Tiene historial → mostrar modal de decisión
+    mostrarModalHistorialEstudiante(e, sesionesCount);
+  } else {
+    // Alumno nuevo → poblar directamente sin preguntar
+    _poblarFormularioEstudiante(e);
+  }
+}
+
+function mostrarModalHistorialEstudiante(e, sesionesCount) {
+  let modal = document.getElementById('modal-historial-previo');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-historial-previo';
+    modal.className = 'modal-overlay';
+    document.body.appendChild(modal);
+  }
+
+  const nombreCompleto = `${e.apellidos}, ${e.nombres}`;
+
+  modal.innerHTML = `
+    <div class="modal" style="max-width:440px;">
+      <div class="modal-body" style="padding:24px;">
+
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;">
+          <div style="width:44px;height:44px;border-radius:50%;background:#FAEEDA;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <span style="font-size:22px;">🕐</span>
+          </div>
+          <div>
+            <div style="font-size:15px;font-weight:600;color:var(--text-primary);">Estudiante con sesiones previas</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${nombreCompleto}</div>
+          </div>
+        </div>
+
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text-secondary);line-height:1.6;margin-bottom:18px;">
+          Este estudiante ya tiene <strong style="color:var(--text-primary);">${sesionesCount} sesión${sesionesCount > 1 ? 'es' : ''} registrada${sesionesCount > 1 ? 's' : ''}</strong>.
+          Puedes continuar con una nueva sesión aquí, o revisar su historial primero.
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:8px;">
+
+          <button onclick="
+            _poblarFormularioEstudiante(store.estudiantes.find(x=>x.id===${e.id}));
+            closeModal('modal-historial-previo');
+          " style="display:flex;align-items:center;gap:12px;background:#EEEDFE;border:1px solid #AFA9EC;border-radius:10px;padding:12px 16px;cursor:pointer;text-align:left;width:100%;">
+            <span style="font-size:20px;">📅</span>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:#3C3489;">Continuar con nueva sesión</div>
+              <div style="font-size:11px;color:#7F77DD;margin-top:2px;">Registrar aquí, tú decides el tipo de consulta</div>
+            </div>
+          </button>
+
+          <button onclick="
+            closeModal('modal-historial-previo');
+            navigateTo('historial');
+            setTimeout(() => {
+              const s = document.getElementById('hist-search');
+              if (s) { s.value = '${e.nombres} ${e.apellidos}'; filterHistorial(); }
+            }, 300);
+          " style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 16px;cursor:pointer;text-align:left;width:100%;">
+            <span style="font-size:20px;">📋</span>
+            <div>
+              <div style="font-size:13px;font-weight:600;color:var(--text-primary);">Ver historial primero</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Revisar sesiones anteriores y continuar desde ahí</div>
+            </div>
+          </button>
+
+          <button onclick="closeModal('modal-historial-previo')"
+            style="background:none;border:none;color:var(--text-muted);font-size:12px;cursor:pointer;padding:6px;margin-top:2px;text-align:center;width:100%;">
+            ← Cancelar y buscar otro estudiante
+          </button>
+
+        </div>
+      </div>
+    </div>`;
+
+  modal.classList.add('open');
 }
 
 function limpiarEstudianteSeleccionado() {

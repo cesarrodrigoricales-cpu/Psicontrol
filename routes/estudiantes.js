@@ -49,6 +49,16 @@ router.get('/primaria', async (req, res) => {
       WHERE e.nivel = 'primaria'
       ORDER BY CAST(e.grado AS UNSIGNED) ASC, p.apellidos ASC
     `);
+
+    // ✅ FIX: incluir contactos de emergencia igual que en GET /
+    const [contactos] = await sequelize.query(`SELECT * FROM contacto_emergencia`);
+    const map = {};
+    contactos.forEach(c => {
+      if (!map[c.idestudiante]) map[c.idestudiante] = [];
+      map[c.idestudiante].push(c);
+    });
+    rows.forEach(e => { e.contactosEmergencia = map[e.id] || []; });
+
     res.json(rows);
   } catch (err) {
     console.error('GET /estudiantes/primaria:', err.message);
@@ -70,6 +80,16 @@ router.get('/secundaria', async (req, res) => {
       WHERE e.nivel = 'secundaria'
       ORDER BY CAST(e.grado AS UNSIGNED) ASC, p.apellidos ASC
     `);
+
+    // ✅ FIX: incluir contactos de emergencia igual que en GET /
+    const [contactos] = await sequelize.query(`SELECT * FROM contacto_emergencia`);
+    const map = {};
+    contactos.forEach(c => {
+      if (!map[c.idestudiante]) map[c.idestudiante] = [];
+      map[c.idestudiante].push(c);
+    });
+    rows.forEach(e => { e.contactosEmergencia = map[e.id] || []; });
+
     res.json(rows);
   } catch (err) {
     console.error('GET /estudiantes/secundaria:', err.message);

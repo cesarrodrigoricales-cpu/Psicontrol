@@ -4,7 +4,6 @@
 // ═══════════════════════════════════════════════
 
 // ── STORE GLOBAL ────────────────────────────────
-// Compartido con todos los módulos vía window.store
 window.store = {
   atenciones:  [],
   estudiantes: [],
@@ -28,15 +27,16 @@ const pageLabels = {
   citas:      'Atenciones',
   nuevo:      'Nueva atención',
   reportes:   'Reportes',
-  'historial-anios': 'Historial de años anteriores',  
+  'historial-anios': 'Historial de años anteriores',
   siagie:            'Integración SIAGIE',
   calendario: 'Calendario',
   config:     'Configuración',
   '404':      'Página no encontrada'
 };
 
-function navigateTo(page) {
+function navigateTo(page, callback) {
   cerrarSidebar();
+  cerrarNotificaciones();
   const paginasValidas = Object.keys(pageLabels).filter(k => k !== '404');
   const target = paginasValidas.includes(page) ? page : '404';
 
@@ -54,21 +54,25 @@ function navigateTo(page) {
 
   if (target !== '404') {
     switch (target) {
-      case 'historial':       renderHistorial();       break;
-      case 'citas':           cargarYRenderCitas();    break;
-      case 'reportes':        renderReportes();        break;
-      case 'nuevo':           resetNuevaAtencion();    break;
-      case 'historial-anios': renderHistorialAnios();  break;  
-      case 'siagie':          inicializarSiagie();     break;
-      case 'config':          cargarConfig();          break;
-      case 'calendario':      renderCalendario();      break;
+      case 'historial':       renderHistorial(callback); break;
+      case 'citas':           cargarYRenderCitas();      break;
+      case 'reportes':        renderReportes();          break;
+      case 'nuevo':           resetNuevaAtencion();      break;
+      case 'historial-anios': renderHistorialAnios();    break;
+      case 'siagie':          inicializarSiagie();       break;
+      case 'config':          cargarConfig();            break;
+      case 'calendario':      renderCalendario();        break;
     }
   }
 
-  const searchInput   = document.getElementById('global-search');
-  const searchResults = document.getElementById('search-results');
-  if (searchInput)   searchInput.value = '';
-  if (searchResults) searchResults.style.display = 'none';
+  // Solo limpiar el buscador si no viene un callback
+  // (cuando hay callback, irAEstudianteDesdeSearch ya lo limpió)
+  if (!callback) {
+    const searchInput   = document.getElementById('global-search');
+    const searchResults = document.getElementById('search-results');
+    if (searchInput)   searchInput.value = '';
+    if (searchResults) searchResults.style.display = 'none';
+  }
 }
 
 // ── SIDEBAR MÓVIL ───────────────────────────────
@@ -83,8 +87,27 @@ function cerrarSidebar() {
   document.querySelector('.sidebar').classList.remove('open');
   document.getElementById('sidebar-backdrop').classList.remove('open');
 }
+
 // ── BÚSQUEDA GLOBAL ─────────────────────────────
 let searchTimeout;
+
+function irAEstudianteDesdeSearch(idEstudiante) {
+  const tieneHistorial = store.atenciones.some(a => a.idestudiante == idEstudiante);
+
+  if (!tieneHistorial) {
+    showToast('Este estudiante aún no tiene atenciones registradas', 'warning');
+    return;
+  }
+
+  // Limpiar buscador
+  const searchInput   = document.getElementById('global-search');
+  const searchResults = document.getElementById('search-results');
+  if (searchInput)   searchInput.value = '';
+  if (searchResults) searchResults.style.display = 'none';
+
+  // Navegar a historial y abrir el modal exactamente cuando renderHistorial termine
+  navigateTo('historial', () => verEstudiante(idEstudiante));
+}
 
 function performGlobalSearch(q, searchResultsEl) {
   const query = q?.trim().toLowerCase() || '';
@@ -106,22 +129,137 @@ function performGlobalSearch(q, searchResultsEl) {
     return;
   }
 
-  searchResultsEl.innerHTML = res.map(p =>
-    `<div class="search-result-item" onclick="verEstudiante(${p.id})">
-      <div class="td-avatar ${colorAvatar(p.nombres + p.apellidos)}"
-           style="width:28px;height:28px;font-size:10px;">
-        ${initials(p.nombres + ' ' + p.apellidos)}
-      </div>
-      <div>
-        <div>${p.nombres} ${p.apellidos}</div>
-        <div class="sr-sub">
-          ${p.dni ? 'DNI: ' + p.dni + ' · ' : ''}${p.telefono || p.codigomatricula || '—'}
+  searchResultsEl.innerHTML = res.map(p => {
+    const tieneHistorial = store.atenciones.some(a => a.idestudiante == p.id);
+
+    return `
+      <div class="search-result-item" onclick="irAEstudianteDesdeSearch(${p.id})">
+        <div class="td-avatar ${colorAvatar(p.nombres + p.apellidos)}"
+             style="width:28px;height:28px;font-size:10px;">
+          ${initials(p.nombres + ' ' + p.apellidos)}
         </div>
-      </div>
-    </div>`
-  ).join('');
+        <div>
+          <div>${p.nombres} ${p.apellidos}</div>
+          <div class="sr-sub">
+            ${p.dni ? 'DNI: ' + p.dni + ' · ' : ''}${p.telefono || p.codigomatricula || '—'}
+            ${!tieneHistorial
+              ? ' · <span style="color:#e67e22;font-size:10px;font-weight:600;">Sin atenciones</span>'
+              : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
 
   searchResultsEl.style.display = 'block';
+}
+
+// ── NOTIFICACIONES ──────────────────────────────
+
+function toggleNotificaciones() {
+  const panel = document.getElementById('notif-panel');
+  if (!panel) return;
+  const abierto = panel.style.display === 'flex';
+  if (abierto) {
+    cerrarNotificaciones();
+  } else {
+    abrirNotificaciones();
+  }
+}
+
+function abrirNotificaciones() {
+  const panel      = document.getElementById('notif-panel');
+  const backdrop   = document.getElementById('notif-backdrop');
+  const lista      = document.getElementById('notif-lista');
+  const badgeCount = document.getElementById('notif-badge-count');
+  if (!panel || !lista) return;
+
+  const pendientes = store.atenciones
+    .filter(a => a.estado === 'pendiente')
+    .sort((a, b) => new Date(a.fechahora) - new Date(b.fechahora))
+    .slice(0, 20);
+
+  if (badgeCount) {
+    badgeCount.textContent = pendientes.length || '';
+    badgeCount.style.display = pendientes.length ? 'inline' : 'none';
+  }
+
+  if (pendientes.length === 0) {
+    lista.innerHTML = `
+      <div style="text-align:center;padding:36px 16px;color:var(--text3,#9B8F82);">
+        <div style="font-size:32px;margin-bottom:8px;">✅</div>
+        <div style="font-size:13px;font-weight:600;color:var(--text,#1a1a1a);">Todo al día</div>
+        <div style="font-size:12px;margin-top:4px;">No tienes atenciones pendientes</div>
+      </div>`;
+  } else {
+    lista.innerHTML = pendientes.map(a => {
+      const est = store.estudiantes.find(e => e.id == a.idestudiante);
+      const nombre = est
+        ? `${est.apellidos}, ${est.nombres}`
+        : (a.paciente || 'Estudiante');
+
+      const grado   = a.grado   || est?.grado   || '';
+      const seccion = a.seccion || est?.seccion || '';
+      const gradoStr = grado ? `${grado}° ${seccion}` : '—';
+
+      const fecha = a.fechahora ? fmtFecha(a.fechahora) : '—';
+      const hora  = a.fechahora ? fmtHora(a.fechahora)  : '—';
+
+      const nivelColor = a.nivelatencion === 'grave'    ? '#c0392b'
+                       : a.nivelatencion === 'moderado' ? '#e67e22'
+                       : '#27ae60';
+      const nivelLabel = a.nivelatencion === 'grave'    ? 'Grave'
+                       : a.nivelatencion === 'moderado' ? 'Moderado'
+                       : 'Leve';
+
+      return `
+        <div onclick="cerrarNotificaciones();navigateTo('citas')"
+          style="display:flex;align-items:flex-start;gap:11px;padding:11px 16px;
+                 cursor:pointer;border-bottom:1px solid var(--border,#e8e3dd);
+                 transition:background 0.15s;"
+          onmouseover="this.style.background='var(--bg2,#faf9f7)'"
+          onmouseout="this.style.background=''">
+
+          <div style="width:36px;height:36px;border-radius:50%;background:#EEEDFE;
+                      color:#534AB7;display:flex;align-items:center;justify-content:center;
+                      font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;">
+            ${est ? initials(est.nombres + ' ' + est.apellidos) : '?'}
+          </div>
+
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:13px;font-weight:600;color:var(--text,#1a1a1a);
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${nombre}
+            </div>
+            <div style="font-size:11px;color:var(--text3,#9B8F82);margin-top:2px;">
+              ${fecha} · ${hora} · ${gradoStr}
+            </div>
+            <div style="font-size:11px;color:var(--text3,#9B8F82);margin-top:1px;">
+              ${a.motivoconsulta || a.motivo || '—'}
+            </div>
+          </div>
+
+          <div style="flex-shrink:0;margin-top:2px;">
+            <span style="font-size:10px;font-weight:600;padding:2px 8px;border-radius:99px;
+                         background:${nivelColor}18;color:${nivelColor};">
+              ${nivelLabel}
+            </span>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  panel.style.display    = 'flex';
+  backdrop.style.display = 'block';
+
+  const notifDot = document.getElementById('notif-dot');
+  if (notifDot) notifDot.style.display = 'none';
+}
+
+function cerrarNotificaciones() {
+  const panel    = document.getElementById('notif-panel');
+  const backdrop = document.getElementById('notif-backdrop');
+  if (panel)    panel.style.display    = 'none';
+  if (backdrop) backdrop.style.display = 'none';
 }
 
 // ── INICIALIZACIÓN ──────────────────────────────
@@ -161,23 +299,16 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   });
 
-  // Botón de notificaciones
+  // Botón notificaciones → panel drawer
   const notifBtn = document.getElementById('notif-btn');
-  const notifDot = document.getElementById('notif-dot');
-
   if (notifBtn) {
-    notifBtn.addEventListener('click', function () {
-      const pend = store.atenciones.filter(a => a.estado === 'pendiente');
-      if (pend.length > 0) {
-        toast(pend.length + ' atención(es) pendientes de confirmar', 'info');
-        if (notifDot) notifDot.style.display = 'none';
-      } else {
-        toast('No tienes notificaciones pendientes', 'info');
-      }
+    notifBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      toggleNotificaciones();
     });
   }
 
-  // Listeners fecha → horas disponibles (modal citas y nueva atención)
+  // Listeners fecha → horas disponibles
   const mcFecha = document.getElementById('mc-fecha');
   if (mcFecha) {
     mcFecha.addEventListener('change', (e) => {
@@ -192,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // Restricciones en campos de nueva atención
+  // Restricciones campos nueva atención
   const docInput      = document.getElementById('na-doc-numero');
   const telefonoInput = document.getElementById('na-telefono');
 
@@ -201,16 +332,14 @@ document.addEventListener('DOMContentLoaded', function () {
       e.target.value = e.target.value.replace(/\D/g, '').slice(0, 8);
     });
   }
-
   if (telefonoInput) {
     telefonoInput.addEventListener('input', (e) => {
       e.target.value = e.target.value.replace(/\D/g, '').slice(0, 9);
     });
   }
-document.addEventListener('DOMContentLoaded', () => {
 
+  // Botón ir a primaria
   const btnIrPrimaria = document.getElementById('btn-ir-primaria');
-
   if (btnIrPrimaria) {
     btnIrPrimaria.addEventListener('click', (e) => {
       e.preventDefault();
@@ -221,10 +350,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }, 450);
     });
   }
-
-});
-   
-
 
   // Construir horario semanal (config)
   buildSchedule();

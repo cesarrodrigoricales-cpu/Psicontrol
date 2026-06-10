@@ -328,7 +328,6 @@
       <div class="card">
         <div class="card-header">
           <div class="card-title">Listado de atenciones</div>
-          <!-- ✅ Filtros actualizados a los nuevos estados -->
           <div class="filter-btn-group">
             <button class="btn-secondary btn-sm" onclick="filterCitas('todas')">Pendientes</button>
             <button class="btn-secondary btn-sm" onclick="filterCitas('archivadas')">Archivadas</button>
@@ -572,17 +571,17 @@
           <div class="page-subtitle">Estadísticas y análisis del sistema</div>
         </div>
         <div style="display:flex;gap:8px;">
-  <button class="btn-secondary" onclick="generarReporte('primaria')">
-    📄 Primaria
-  </button>
-  <button class="btn-secondary" onclick="generarReporte('secundaria')">
-    📄 Secundaria
-  </button>
-  <button class="btn-primary" onclick="generarReporte('todos')">
-    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
-    Reporte General
-  </button>
-</div>
+          <button class="btn-secondary" onclick="generarReporte('primaria')">
+            📄 Primaria
+          </button>
+          <button class="btn-secondary" onclick="generarReporte('secundaria')">
+            📄 Secundaria
+          </button>
+          <button class="btn-primary" onclick="generarReporte('todos')">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+            Reporte General
+          </button>
+        </div>
       </div>
       <div class="stat-strip" id="rep-stats"></div>
       <div class="main-grid">
@@ -805,7 +804,9 @@
 </div><!-- /main -->
 
 
-<!-- MODAL — NUEVA SESIÓN ✅ sin estado activo -->
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MODAL — NUEVA SESIÓN                            -->
+<!-- ═══════════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-cita">
   <div class="modal">
     <div class="modal-header">
@@ -833,7 +834,6 @@
             <option>Terapia familiar</option>
           </select>
         </div>
-        <!-- ✅ Estado fijo: solo pendiente, sin activo -->
         <div class="form-group">
           <label>Estado</label>
           <select id="mc-estado">
@@ -889,7 +889,9 @@
   </div>
 </div>
 
-<!-- MODAL — VER ESTUDIANTE -->
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MODAL — VER ESTUDIANTE                          -->
+<!-- ═══════════════════════════════════════════════ -->
 <div class="modal-overlay" id="modal-paciente">
   <div class="modal">
     <div class="modal-header">
@@ -900,20 +902,79 @@
   </div>
 </div>
 
-<!-- TOAST -->
+<!-- ═══════════════════════════════════════════════ -->
+<!-- TOAST                                           -->
+<!-- ═══════════════════════════════════════════════ -->
 <div class="toast-container" id="toast-container"></div>
 
-<!-- Canvas oculto para PDF -->
+<!-- ═══════════════════════════════════════════════ -->
+<!-- Canvas oculto para PDF                          -->
+<!-- ═══════════════════════════════════════════════ -->
 <canvas id="graficoPDF" width="400" height="200" class="canvas-hidden"></canvas>
 
-<!-- SCRIPTS -->
+<!-- ═══════════════════════════════════════════════ -->
+<!-- PANEL DE NOTIFICACIONES                         -->
+<!-- ═══════════════════════════════════════════════ -->
+
+<!-- Backdrop -->
+<div id="notif-backdrop"
+     onclick="cerrarNotificaciones()"
+     style="display:none;position:fixed;inset:0;z-index:1099;background:rgba(0,0,0,0.18);"></div>
+
+<!-- Drawer -->
+<div id="notif-panel"
+     style="display:none;flex-direction:column;position:fixed;top:60px;right:16px;
+            z-index:1100;width:340px;max-width:calc(100vw - 32px);
+            max-height:calc(100vh - 80px);border-radius:14px;
+            background:var(--card,#fff);box-shadow:0 8px 32px rgba(0,0,0,0.16);
+            overflow:hidden;animation:notifSlideIn .18s ease;">
+
+  <!-- Cabecera -->
+  <div style="display:flex;align-items:center;justify-content:space-between;
+              padding:14px 16px 12px;border-bottom:1px solid var(--border,#e8e3dd);
+              flex-shrink:0;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:15px;font-weight:700;color:var(--text,#1a1a1a);">Pendientes</span>
+      <span id="notif-badge-count"
+            style="display:none;font-size:10px;font-weight:700;padding:1px 7px;
+                   border-radius:99px;background:#c0392b;color:#fff;"></span>
+    </div>
+    <button onclick="cerrarNotificaciones()"
+            style="border:none;background:none;cursor:pointer;font-size:18px;
+                   color:var(--text3,#9B8F82);line-height:1;padding:2px 6px;">✕</button>
+  </div>
+
+  <!-- Lista scrolleable -->
+  <div id="notif-lista" style="overflow-y:auto;flex:1;"></div>
+
+  <!-- Pie -->
+  <div style="padding:10px 16px;border-top:1px solid var(--border,#e8e3dd);
+              flex-shrink:0;text-align:center;">
+    <button onclick="cerrarNotificaciones();navigateTo('citas')"
+            style="font-size:12px;font-weight:600;color:var(--primary,#534AB7);
+                   background:none;border:none;cursor:pointer;">
+      Ver todas las atenciones →
+    </button>
+  </div>
+</div>
+
+<!-- Animación del drawer -->
+<style>
+@keyframes notifSlideIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+</style>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- SCRIPTS                                         -->
+<!-- ═══════════════════════════════════════════════ -->
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
-<!-- LINKS A JS -->
 <script src="js/utils.js"></script>
 <script src="js/api.js"></script>
 <script src="js/siagie.js"></script>

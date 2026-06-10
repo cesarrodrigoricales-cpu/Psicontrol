@@ -1,6 +1,5 @@
 // HISTORIAL.JS
-
-async function renderHistorial(filtro = '') {
+async function renderHistorial(filtro = '', callback) {
   const tbody = document.getElementById('hist-tbody');
   if (!tbody) return;
 
@@ -30,6 +29,7 @@ async function renderHistorial(filtro = '') {
 
     if (lista.length === 0) {
       tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="es-icon">📭</div><div class="es-text">No hay estudiantes atendidos aún</div></div></td></tr>';
+      if (typeof callback === 'function') callback();
       return;
     }
 
@@ -79,6 +79,8 @@ async function renderHistorial(filtro = '') {
         </td>
       </tr>`;
     }).join('');
+
+    if (typeof callback === 'function') callback();
 
   } catch (err) {
     console.error('Error renderizando historial:', err);

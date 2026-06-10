@@ -90,7 +90,7 @@ function leerContactosEmergencia() {
 }
 
 function resetNuevaAtencion() {
-    ['na-nombres','na-apellidos','na-tipo-doc','na-telefono','na-telefono-emergencia','na-fechanac','na-condicion','na-motivo-texto','na-observaciones']
+  ['na-nombres','na-apellidos','na-tipo-doc','na-telefono','na-telefono-emergencia','na-fechanac','na-condicion','na-motivo-texto','na-observaciones']
     .forEach(id => {
       const el = document.getElementById(id);
       if (el) el.value = '';
@@ -98,8 +98,8 @@ function resetNuevaAtencion() {
 
   const generoEl = document.getElementById('na-genero');
   if (generoEl) generoEl.value = '';
-  
-  const parentescoEl = document.getElementById('na-parentesco-emergencia'); 
+
+  const parentescoEl = document.getElementById('na-parentesco-emergencia');
   if (parentescoEl) parentescoEl.value = '';
 
   const gradoEl   = document.getElementById('na-grado');
@@ -138,19 +138,19 @@ function resetNuevaAtencion() {
   const lista = document.getElementById('contactos-lista');
   if (lista) lista.innerHTML = '';
 
-  //  Limpiar buscador SIAGIE
+  // Limpiar buscador SIAGIE
   const buscarEl = document.getElementById('na-buscar-estudiante');
   if (buscarEl) buscarEl.value = '';
   const chip = document.getElementById('na-estudiante-seleccionado');
   if (chip) chip.style.display = 'none';
 
-  //  Limpiar filtros de grado y sección del buscador
+  // Limpiar filtros de grado y sección del buscador
   const filtroGrado   = document.getElementById('na-filtro-grado');
   const filtroSeccion = document.getElementById('na-filtro-seccion');
   if (filtroGrado)   filtroGrado.value   = '';
   if (filtroSeccion) filtroSeccion.value = '';
 
-  //  Restaurar estado inicial del buscador
+  // Restaurar estado inicial del buscador
   const estadoInicial = document.getElementById('na-estado-inicial');
   const resEl         = document.getElementById('na-resultados-busqueda');
   const sinEl         = document.getElementById('na-sin-resultados');
@@ -160,7 +160,6 @@ function resetNuevaAtencion() {
   if (sinEl)         sinEl.style.display         = 'none';
   if (clearBtn)      clearBtn.style.display      = 'none';
 }
-
 
 function calcularEdad(fechaNacStr) {
   const nacimiento = new Date(fechaNacStr);
@@ -297,24 +296,24 @@ async function guardarNuevaAtencion() {
     return;
   }
 
-  const nombres   = document.getElementById('na-nombres')?.value?.trim();
-  const apellidos = document.getElementById('na-apellidos')?.value?.trim();
-  const dni       = document.getElementById('na-doc-numero')?.value?.trim();
-  const telefono  = document.getElementById('na-telefono')?.value?.trim();
-  const telefonoEmergencia = document.getElementById('na-telefono-emergencia')?.value?.trim();
-  const parentescoEmergencia = document.getElementById('na-parentesco-emergencia')?.value || ''; 
-  const fechanac  = document.getElementById('na-fechanac')?.value;
-  const genero    = document.getElementById('na-genero')?.value;
-  const grado     = document.getElementById('na-grado')?.value;
-  const seccion   = document.getElementById('na-seccion')?.value;
-  const nivel     = document.getElementById('na-nivel')?.value || 'moderado';
-  const obs       = document.getElementById('na-observaciones')?.value?.trim();
-  const contactosEmergencia = leerContactosEmergencia();
+  const nombres              = document.getElementById('na-nombres')?.value?.trim();
+  const apellidos            = document.getElementById('na-apellidos')?.value?.trim();
+  const dni                  = document.getElementById('na-doc-numero')?.value?.trim();
+  const telefono             = document.getElementById('na-telefono')?.value?.trim();
+  const telefonoEmergencia   = document.getElementById('na-telefono-emergencia')?.value?.trim();
+  const parentescoEmergencia = document.getElementById('na-parentesco-emergencia')?.value || '';
+  const fechanac             = document.getElementById('na-fechanac')?.value;
+  const genero               = document.getElementById('na-genero')?.value;
+  const grado                = document.getElementById('na-grado')?.value;
+  const seccion              = document.getElementById('na-seccion')?.value;
+  const nivel                = document.getElementById('na-nivel')?.value || 'moderado';
+  const obs                  = document.getElementById('na-observaciones')?.value?.trim();
+  const contactosEmergencia  = leerContactosEmergencia();
 
   try {
     let idestudiante;
 
-    // ✅ Buscar si ya existe en la BD por DNI
+    // Buscar si ya existe en la BD por DNI o nombre
     const estudiantesActuales = await apiFetch(`${API}/estudiantes`);
     const existente = (estudiantesActuales || []).find(e =>
       e.dni === dni ||
@@ -330,47 +329,78 @@ async function guardarNuevaAtencion() {
         return;
       }
 
-   //  CORRECTO — un solo bloque, sin duplicados:
-try {
- await apiFetch(`${API}/estudiantes/${idestudiante}`, {
-  method: 'PUT',
-  body: JSON.stringify({
-    ...existente,
-    telefono,
-    telefonoEmergencia,      
-    parentescoEmergencia,    
-    contactosEmergencia
-  })
-});
-} catch (_) {}
-} else {
-  const nivelPagina = window.location.pathname.includes('primaria') ? 'primaria' : 'secundaria';
-  const nuevoEst = await apiFetch(`${API}/estudiantes`, {
-    method: 'POST',
-   body: JSON.stringify({
-     nombres, apellidos, dni, telefono,
-     telefonoEmergencia, parentescoEmergencia,  // 👈
-     fechanac, genero, grado, seccion,
-     nivel: nivelPagina, condicion: 'activo',
-     contactosEmergencia
-   })
-  });
-  idestudiante = nuevoEst.id;
+      // ✅ FIX: Preservar contactos existentes si el usuario no agregó ninguno nuevo.
+      // Si el usuario llenó contactos en el formulario → usar esos.
+      // Si no → conservar los que ya tenía el estudiante en la BD.
+      const contactosFinales = contactosEmergencia.length > 0
+        ? contactosEmergencia
+        : (existente.contactosEmergencia || []);
 
-   store.estudiantes.push({
-    id: idestudiante,
-    nombres, apellidos, dni, telefono,
-    telefonoEmergencia, parentescoEmergencia,  
-    fechanac, genero, grado, seccion,
-    nivel: nivelPagina, condicion: 'activo',
-    contactosEmergencia
-  });
-}
+      // Si vino un teléfono suelto del campo simple y no hay ningún contacto, usarlo.
+      if (telefonoEmergencia && contactosFinales.length === 0) {
+        contactosFinales.push({
+          nombre: '',
+          parentesco: parentescoEmergencia || '',
+          celular: telefonoEmergencia
+        });
+      }
+
+      try {
+        await apiFetch(`${API}/estudiantes/${idestudiante}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            ...existente,
+            telefono,
+            contactosEmergencia: contactosFinales,
+          })
+        });
+
+        // Actualizar store local también
+        const idx = store.estudiantes.findIndex(x => x.id == idestudiante);
+        if (idx !== -1) {
+          store.estudiantes[idx] = {
+            ...store.estudiantes[idx],
+            telefono,
+            contactosEmergencia: contactosFinales,
+          };
+        }
+      } catch (_) {}
+
+    } else {
+      const nivelPagina = window.location.pathname.includes('primaria') ? 'primaria' : 'secundaria';
+
+      // Para estudiante nuevo: si hay contactos del widget usarlos,
+      // si no y hay teléfono suelto, construir contacto simple.
+      const contactosNuevo = contactosEmergencia.length > 0
+        ? contactosEmergencia
+        : (telefonoEmergencia
+            ? [{ nombre: '', parentesco: parentescoEmergencia || '', celular: telefonoEmergencia }]
+            : []);
+
+      const nuevoEst = await apiFetch(`${API}/estudiantes`, {
+        method: 'POST',
+        body: JSON.stringify({
+          nombres, apellidos, dni, telefono,
+          fechanac, genero, grado, seccion,
+          nivel: nivelPagina, condicion: 'activo',
+          contactosEmergencia: contactosNuevo,
+        })
+      });
+      idestudiante = nuevoEst.id;
+
+      store.estudiantes.push({
+        id: idestudiante,
+        nombres, apellidos, dni, telefono,
+        fechanac, genero, grado, seccion,
+        nivel: nivelPagina, condicion: 'activo',
+        contactosEmergencia: contactosNuevo,
+      });
+    }
 
     // Buscar o crear motivo de consulta
     let idmotivo = null;
     try {
-      const motivos = await apiFetch(`${API}/motivosconsulta`);
+      const motivos    = await apiFetch(`${API}/motivosconsulta`);
       const encontrado = (motivos || []).find(m => m.motivoconsulta === motivoTexto);
 
       if (encontrado) {
@@ -393,11 +423,11 @@ try {
         idestudiante,
         fechahora,
         nivelatencion: nivel,
-        idmotivo: idmotivo || null,
-        estado: 'pendiente',
+        idmotivo:      idmotivo || null,
+        estado:        'pendiente',
         observaciones: obs || null,
         grado,
-        seccion
+        seccion,
       })
     });
 
@@ -406,17 +436,17 @@ try {
 
     await cargarDatos();
 
-   if (typeof mostrarModalSegundaCita === 'function') {
-  mostrarModalSegundaCita((quiere) => {
-    if (quiere) {
-      abrirFormularioSegundaCita(idestudiante, `${nombres} ${apellidos}`);
+    if (typeof mostrarModalSegundaCita === 'function') {
+      mostrarModalSegundaCita((quiere) => {
+        if (quiere) {
+          abrirFormularioSegundaCita(idestudiante, `${nombres} ${apellidos}`);
+        } else {
+          navigateTo('historial');
+        }
+      });
     } else {
       navigateTo('historial');
     }
-  });
-} else {
-  navigateTo('historial');
-}
 
   } catch (err) {
     console.error('Error guardando nueva atención:', err);
@@ -424,7 +454,7 @@ try {
   }
 }
 
-//  DOMContentLoaded — FUERA de guardarNuevaAtencion
+// DOMContentLoaded — FUERA de guardarNuevaAtencion
 document.addEventListener('DOMContentLoaded', function () {
   const naFecha = document.getElementById('na-fecha');
   if (naFecha) {
@@ -447,7 +477,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   }
 
-  // FIX: Cargar secciones cuando cambia el grado
+  // Cargar secciones cuando cambia el grado
   const gradoEl = document.getElementById('na-grado');
   if (gradoEl) {
     gradoEl.addEventListener('change', function () {
