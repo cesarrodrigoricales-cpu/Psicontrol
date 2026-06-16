@@ -5,10 +5,23 @@ const API = 'http://localhost:3000/api';
 
 async function apiFetch(url, options = {}) {
   try {
+    const token = localStorage.getItem('psicontrol_token');
     const res = await fetch(url, {
-      headers: { 'Content-Type': 'application/json' },
-      ...options
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...(options.headers || {})
+      }
     });
+
+    // Token expirado o inválido → redirigir al login
+    if (res.status === 401 || res.status === 403) {
+      localStorage.removeItem('psicontrol_token');
+      window.location.replace('/login.html');
+      return;
+    }
+
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Error en la solicitud');
     return data;
@@ -17,7 +30,6 @@ async function apiFetch(url, options = {}) {
     throw err;
   }
 }
-
 async function cargarDatos() {
   try {
     const [atenciones, estudiantes] = await Promise.all([
@@ -29,7 +41,6 @@ async function cargarDatos() {
     renderDashboard();
     actualizarSelectEstudiantes();
 
-    // ✅ Cargar config guardada del localStorage
     const guardado = localStorage.getItem('psicontrol_config');
     if (guardado) {
       store.config = JSON.parse(guardado);

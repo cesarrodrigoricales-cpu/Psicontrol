@@ -7,6 +7,15 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <link rel="icon" href="/favicon.ico" type="image/x-icon">
+<script>
+  (function() {
+    const token = localStorage.getItem('psicontrol_token');
+    if (!token) {
+      window.location.href = '/login.html';
+      document.documentElement.innerHTML = '';
+    }
+  })();
+</script>
 </head>
 <body>
 
@@ -131,6 +140,7 @@
       </svg>
     </div>
   </div>
+  
 </aside>
 
 <!-- MAIN -->
@@ -166,11 +176,62 @@
       <span class="notif-dot" id="notif-dot"></span>
     </button>
 
-    <button class="topbar-btn" title="Perfil">
-      <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
-      </svg>
-    </button>
+   <div style="position:relative;">
+  <button class="topbar-btn" id="btn-perfil" title="Perfil" onclick="toggleMenuPerfil()">
+    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+    </svg>
+  </button>
+
+  <div id="menu-perfil" style="
+    display:none;position:absolute;top:calc(100% + 10px);right:0;
+    background:#fff;border-radius:12px;min-width:200px;
+    box-shadow:0 8px 30px rgba(0,0,0,0.15);border:1px solid #e8e8e8;
+    overflow:hidden;z-index:999;animation:notifSlideIn .15s ease;">
+
+    <!-- Info usuario -->
+    <div style="padding:14px 16px;border-bottom:1px solid #f1f5f9;">
+      <div style="font-size:11px;color:#94a3b8;font-weight:500;text-transform:uppercase;letter-spacing:0.5px;">Sesión activa</div>
+      <div style="font-size:13px;font-weight:600;color:#1a2744;margin-top:3px;" id="menu-perfil-nombre">Sin configurar</div>
+      <div style="font-size:12px;color:#64748b;margin-top:1px;">Psicólogo/a</div>
+    </div>
+
+    <!-- Acciones -->
+    <div style="padding:6px;">
+      <button onclick="navigateTo('config');cerrarMenuPerfil()" style="
+        width:100%;padding:9px 12px;border:none;background:none;
+        border-radius:8px;cursor:pointer;display:flex;align-items:center;
+        gap:10px;font-size:13px;font-weight:500;color:#1a2744;
+        font-family:inherit;transition:background 0.15s;text-align:left;"
+        onmouseover="this.style.background='#f8fafc'"
+        onmouseout="this.style.background='none'">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06A1.65 1.65 0 0015 19.4a1.65 1.65 0 00-1.65 1.65V21a2 2 0 01-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.6 12a1.65 1.65 0 00-1.65-1.65H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 5.1l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 2.6a1.65 1.65 0 001.65-1.65V1a2 2 0 014 0v.09a1.65 1.65 0 001.65 1.65z"/>
+        </svg>
+        Configuración
+      </button>
+
+      <div style="height:1px;background:#f1f5f9;margin:4px 0;"></div>
+
+      <button onclick="cerrarSesion()" style="
+        width:100%;padding:9px 12px;border:none;background:none;
+        border-radius:8px;cursor:pointer;display:flex;align-items:center;
+        gap:10px;font-size:13px;font-weight:500;color:#ef4444;
+        font-family:inherit;transition:background 0.15s;text-align:left;"
+        onmouseover="this.style.background='#fef2f2'"
+        onmouseout="this.style.background='none'">
+        <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Cerrar sesión
+      </button>
+    </div>
+  </div>
+</div>
+
   </div>
 
   <!-- CONTENT -->

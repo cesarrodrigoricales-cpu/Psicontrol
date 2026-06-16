@@ -432,6 +432,43 @@ function actualizarHorasDisponibles(fecha) {
   actualizarHorasSelect('mc-hora', fecha);
 }
 
+function toggleMenuPerfil() {
+  const menu = document.getElementById('menu-perfil');
+  const abierto = menu.style.display === 'block';
+  abierto ? cerrarMenuPerfil() : abrirMenuPerfil();
+}
+
+function abrirMenuPerfil() {
+  // Sincronizar nombre con el del sidebar
+  const nombre = document.getElementById('sidebar-nombre')?.textContent || 'Sin configurar';
+  const menuNombre = document.getElementById('menu-perfil-nombre');
+  if (menuNombre) menuNombre.textContent = nombre;
+
+  document.getElementById('menu-perfil').style.display = 'block';
+  // Cerrar al hacer clic fuera
+  setTimeout(() => {
+    document.addEventListener('click', cerrarMenuPerfilFuera);
+  }, 0);
+}
+
+function cerrarMenuPerfil() {
+  document.getElementById('menu-perfil').style.display = 'none';
+  document.removeEventListener('click', cerrarMenuPerfilFuera);
+}
+
+function cerrarMenuPerfilFuera(e) {
+  const menu = document.getElementById('menu-perfil');
+  const btn  = document.getElementById('btn-perfil');
+  if (menu && !menu.contains(e.target) && !btn.contains(e.target)) {
+    cerrarMenuPerfil();
+  }
+}
+
+function cerrarSesion() {
+  localStorage.removeItem('psicontrol_token');
+  window.location.replace('/login.html');
+}
+
 // ACTIVIDAD
 function agregarActividad(tipo, icon, texto, tiempo) {
   store.actividad.unshift({ tipo: tipo, icon: icon, texto: texto, tiempo: tiempo });

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PsiControl — Acceso</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --azul-oscuro: #1a2744;
+      --azul-medio: #2d4a8a;
+      --acento: #5b8dee;
+      --rojo-error: #ef4444;
+      --blanco: #ffffff;
+      --gris-suave: #f1f5f9;
+      --gris-texto: #64748b;
+      --sombra: 0 32px 80px rgba(10,20,50,0.45);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(150deg, #0a1628 0%, #0f1f45 45%, #1a3060 75%, #1e3a7a 100%);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Círculos de fondo */
+    .bg-circle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    .bg-circle-1 {
+      width: 700px; height: 700px;
+      top: -200px; left: -200px;
+      background: radial-gradient(circle, rgba(91,141,238,0.08) 0%, transparent 70%);
+    }
+    .bg-circle-2 {
+      width: 500px; height: 500px;
+      bottom: -150px; right: -100px;
+      background: radial-gradient(circle, rgba(45,74,138,0.12) 0%, transparent 70%);
+    }
+    .bg-circle-3 {
+      width: 300px; height: 300px;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, rgba(91,141,238,0.05) 0%, transparent 70%);
+    }
+
+    /* Líneas decorativas */
+    .bg-lines {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      opacity: 0.03;
+      background-image:
+        linear-gradient(90deg, #fff 1px, transparent 1px),
+        linear-gradient(#fff 1px, transparent 1px);
+      background-size: 60px 60px;
+    }
+
+    /* Tarjeta */
+    .card {
+      position: relative;
+      width: 100%;
+      max-width: 440px;
+      margin: 20px;
+      background: rgba(255,255,255,0.98);
+      border-radius: 24px;
+      box-shadow: var(--sombra);
+      overflow: hidden;
+      animation: aparecer 0.45s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes aparecer {
+      from { opacity: 0; transform: translateY(30px) scale(0.97); }
+      to   { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* Header */
+    .card-header {
+      background: linear-gradient(145deg, #0f1f45 0%, #1a2f6e 50%, #2d4a8a 100%);
+      padding: 44px 44px 36px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .card-header::before {
+      content: '';
+      position: absolute;
+      width: 200px; height: 200px;
+      border-radius: 50%;
+      background: rgba(91,141,238,0.1);
+      top: -60px; right: -60px;
+    }
+    .card-header::after {
+      content: '';
+      position: absolute;
+      width: 120px; height: 120px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.04);
+      bottom: -30px; left: -30px;
+    }
+
+    /* Logo — mente/cerebro profesional */
+    .logo-wrap {
+      width: 76px; height: 76px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.1);
+      border: 1.5px solid rgba(255,255,255,0.18);
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      position: relative; z-index: 1;
+      backdrop-filter: blur(10px);
+    }
+    .logo-wrap svg {
+      width: 40px; height: 40px;
+    }
+
+    .brand-name {
+      color: var(--blanco);
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      position: relative; z-index: 1;
+    }
+    .brand-name span { color: rgba(91,141,238,0.9); }
+
+    .brand-sub {
+      color: rgba(255,255,255,0.5);
+      font-size: 12.5px;
+      margin-top: 5px;
+      font-weight: 400;
+      letter-spacing: 0.3px;
+      position: relative; z-index: 1;
+    }
+
+    /* Divider con texto */
+    .card-divider {
+      display: flex; align-items: center; gap: 12px;
+      padding: 0 44px;
+      margin-top: -1px;
+    }
+    .card-divider::before, .card-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: #e2e8f0;
+    }
+    .card-divider span {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--gris-texto);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      padding: 14px 0;
+    }
+
+    /* Body */
+    .card-body { padding: 28px 44px 36px; }
+
+    /* Error */
+    .error-msg {
+      display: none;
+      align-items: center;
+      gap: 9px;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      padding: 11px 14px;
+      margin-bottom: 22px;
+      font-size: 13px;
+      color: var(--rojo-error);
+      font-weight: 500;
+    }
+    .error-msg.visible { display: flex; animation: sacudir 0.35s ease; }
+    .error-msg svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2.2; flex-shrink: 0; }
+    @keyframes sacudir {
+      0%,100% { transform: translateX(0); }
+      20%,60%  { transform: translateX(-4px); }
+      40%,80%  { transform: translateX(4px); }
+    }
+
+    /* Campos */
+    .campo { margin-bottom: 18px; }
+    .campo label {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 600;
+      color: var(--azul-oscuro);
+      margin-bottom: 7px;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+    }
+
+    .input-wrap { position: relative; }
+
+    .input-icon {
+      position: absolute;
+      left: 14px; top: 50%;
+      transform: translateY(-50%);
+      width: 16px; height: 16px;
+      color: #94a3b8;
+      pointer-events: none;
+      transition: color 0.2s;
+      display: flex; align-items: center;
+    }
+    .input-icon svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+    .campo input {
+      width: 100%;
+      padding: 12px 14px 12px 42px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 11px;
+      font-size: 14px;
+      font-family: 'Inter', sans-serif;
+      color: var(--azul-oscuro);
+      background: var(--gris-suave);
+      transition: all 0.2s;
+      outline: none;
+    }
+    .campo input::placeholder { color: #b0bac7; }
+    .campo input:focus {
+      border-color: var(--acento);
+      background: var(--blanco);
+      box-shadow: 0 0 0 3.5px rgba(91,141,238,0.12);
+    }
+    .campo input:focus ~ .input-icon { color: var(--acento); }
+
+    /* Ojito */
+    .toggle-pass {
+      position: absolute;
+      right: 12px; top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      padding: 5px;
+      border: none; background: none;
+      color: #94a3b8;
+      display: flex; align-items: center; justify-content: center;
+      transition: color 0.2s;
+      z-index: 3;
+      border-radius: 6px;
+    }
+    .toggle-pass:hover { color: var(--azul-medio); background: rgba(45,74,138,0.06); }
+    .toggle-pass svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; display: block; }
+
+    /* Input password con padding derecho para el ojito */
+    #password { padding-right: 42px; }
+
+    /* Botón */
+    .btn-login {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(135deg, #1e3a7a, var(--acento));
+      color: var(--blanco);
+      border: none;
+      border-radius: 11px;
+      font-size: 14.5px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 5px 20px rgba(30,58,122,0.4);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      margin-top: 10px;
+      letter-spacing: 0.2px;
+    }
+    .btn-login:hover:not(:disabled) {
+      transform: translateY(-1.5px);
+      box-shadow: 0 8px 28px rgba(30,58,122,0.5);
+    }
+    .btn-login:active:not(:disabled) { transform: translateY(0); }
+    .btn-login:disabled { opacity: 0.65; cursor: not-allowed; }
+
+    .spinner {
+      display: none;
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: girar 0.65s linear infinite;
+    }
+    .btn-login.cargando .spinner { display: block; }
+    .btn-login.cargando .btn-texto { display: none; }
+    @keyframes girar { to { transform: rotate(360deg); } }
+
+    /* Footer */
+    .card-footer {
+      padding: 14px 44px 22px;
+      text-align: center;
+      border-top: 1px solid #f1f5f9;
+    }
+    .card-footer p {
+      font-size: 11.5px;
+      color: #94a3b8;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .card-footer svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 2; }
+  </style>
+</head>
+<body>
+
+  <div class="bg-circle bg-circle-1"></div>
+  <div class="bg-circle bg-circle-2"></div>
+  <div class="bg-circle bg-circle-3"></div>
+  <div class="bg-lines"></div>
+
+  <div class="card">
+
+    <div class="card-header">
+      <div class="logo-wrap">
+        <!-- Ícono cerebro/mente profesional -->
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M24 8C20 8 16.5 10.5 15 14C12 14.5 9.5 17 9.5 20.5C9.5 21.5 9.8 22.5 10.2 23.3C8.8 24.5 8 26.2 8 28.2C8 31.8 10.8 34.8 14.5 35.3C15.5 37.9 18 39.8 21 40C21 40 22 40 24 40C26 40 27 40 27 40C30 39.8 32.5 37.9 33.5 35.3C37.2 34.8 40 31.8 40 28.2C40 26.2 39.2 24.5 37.8 23.3C38.2 22.5 38.5 21.5 38.5 20.5C38.5 17 36 14.5 33 14C31.5 10.5 28 8 24 8Z" stroke="rgba(255,255,255,0.9)" stroke-width="1.8" stroke-linejoin="round"/>
+          <path d="M24 14V26M19 19H29M20 26C20 28.2 21.8 30 24 30C26.2 30 28 28.2 28 26" stroke="rgba(91,141,238,0.95)" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="brand-name">Psi<span>Control</span></div>
+      <div class="brand-sub">Sistema de Consejería Psicológica Escolar</div>
+    </div>
+
+    <div class="card-divider"><span>Iniciar sesión</span></div>
+
+    <div class="card-body">
+
+      <div class="error-msg" id="errorMsg">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="errorTexto">Credenciales incorrectas.</span>
+      </div>
+
+      <div class="campo">
+        <label for="usuario">Usuario</label>
+        <div class="input-wrap">
+          <input type="text" id="usuario" placeholder="Ingresa tu usuario" autocomplete="username"/>
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="campo">
+        <label for="password">Contraseña</label>
+        <div class="input-wrap">
+          <input type="password" id="password" placeholder="Ingresa tu contraseña" autocomplete="current-password"/>
+          <span class="input-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </span>
+          <button class="toggle-pass" id="togglePass" type="button" title="Mostrar contraseña">
+            <svg id="iconoOjo" viewBox="0 0 24 24">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn-login" id="btnLogin" type="button">
+        <div class="spinner"></div>
+        <span class="btn-texto">Ingresar al sistema</span>
+      </button>
+
+    </div>
+
+    <div class="card-footer">
+      <p>
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Acceso restringido — Solo personal autorizado
+      </p>
+    </div>
+
+  </div>
+
+  <script src="/js/login.js"></script>
+</body>
+</html>
