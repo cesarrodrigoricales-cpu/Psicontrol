@@ -1,7 +1,5 @@
 // ═══════════════════════════════════════════════
 // REPORTES.JS — Estadísticas y generación de PDF
-// PsiControl · Sistema de Atención Psicológica
-// ═══════════════════════════════════════════════
 
 function renderReportes() {
   const total    = store.estudiantes.filter(e =>

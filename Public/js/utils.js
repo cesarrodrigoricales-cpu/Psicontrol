@@ -17,16 +17,13 @@ let citaFiltro = 'todas';
 
 const ESTADOS_ARCHIVADOS = ['asistio', 'no_asistio', 'reprogramado', 'cerrado'];
 
-// ─────────────────────────────────────────────────────────────────
-// HELPER: quita la Z y milisegundos para forzar lectura local
-// Ej: '2026-06-11T14:00:00.000Z' → '2026-06-11T14:00:00'
-// ─────────────────────────────────────────────────────────────────
+
 function _isoLocal(iso) {
   if (!iso) return iso;
   return iso.replace(/\.\d+Z$/, '').replace('Z', '').replace(' ', 'T');
 }
 
-// ✅ CORREGIDO: compara sin conversión UTC
+// CORREGIDO: compara sin conversión UTC
 function citaVencida(fechahora) {
   if (!fechahora) return false;
   const local = _isoLocal(fechahora);
@@ -41,7 +38,7 @@ function hoy() {
   return new Date().toISOString().split('T')[0];
 }
 
-// ✅ CORREGIDO: lee el string directamente sin new Date() que desplaza por UTC
+// CORREGIDO: lee el string directamente sin new Date() que desplaza por UTC
 function fmtFecha(iso) {
   if (!iso) return '—';
   const parte = _isoLocal(iso).substring(0, 10);
@@ -50,7 +47,7 @@ function fmtFecha(iso) {
   return dia + ' ' + meses[mes - 1] + ' ' + anio;
 }
 
-// ✅ CORREGIDO: extrae la hora del string directamente sin new Date()
+// CORREGIDO: extrae la hora del string directamente sin new Date()
 function fmtHora(iso) {
   if (!iso) return '—';
   const clean    = _isoLocal(iso);

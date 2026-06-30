@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'psicontrol_jwt_secret_clave_muy_larga_2024_segura';
 
-// ✅ Middleware: protege rutas API
+//  Middleware: protege rutas API
 function verificarToken(req, res, next) {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer <token>

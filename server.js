@@ -4,7 +4,7 @@ const cors = require('cors');
 require('dotenv').config(); // ← carga el .env
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000; // ← Render asigna su propio puerto
 
 console.log('Ruta Public:', path.join(__dirname, 'Public'));
 
@@ -21,7 +21,7 @@ app.use('/api/auth', require('./routes/auth'));
 const { verificarToken } = require('./config/auth');
 app.use('/api', verificarToken);
 
-//  APIs protegidas
+// APIs protegidas
 app.use('/api/roles',               require('./routes/roles'));
 app.use('/api/personas',            require('./routes/personas'));
 app.use('/api/estudiantes',         require('./routes/estudiantes'));
