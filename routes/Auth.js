@@ -3,7 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const { JWT_SECRET } = require('../config/Auth');
 
-// ⚙️ Credenciales fijas del administrador (cambia estos valores)
+// Credenciales fijas del administrador (cambia estos valores)
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASS = process.env.ADMIN_PASS || '1234';
 const JWT_EXPIRES = process.env.JWT_EXPIRES || '8h';

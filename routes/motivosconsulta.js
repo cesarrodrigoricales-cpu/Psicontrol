@@ -11,7 +11,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// ✅ Ruta POST para crear nuevo motivo
+// Ruta POST para crear nuevo motivo
 router.post('/', async (req, res) => {
   try {
     const { motivoconsulta } = req.body;

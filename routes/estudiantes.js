@@ -2,10 +2,6 @@ const express = require('express');
 const router = express.Router();
 const { sequelize } = require('../models');
 
-// ══════════════════════════════════════════════════════
-// ⚠️  ORDEN CRÍTICO: rutas específicas ANTES de /:id
-// ══════════════════════════════════════════════════════
-
 // ── GET todos los estudiantes ──────────────────────────
 router.get('/', async (req, res) => {
   try {
@@ -50,7 +46,7 @@ router.get('/primaria', async (req, res) => {
       ORDER BY CAST(e.grado AS UNSIGNED) ASC, p.apellidos ASC
     `);
 
-    // ✅ FIX: incluir contactos de emergencia igual que en GET /
+    // FIX: incluir contactos de emergencia igual que en GET /
     const [contactos] = await sequelize.query(`SELECT * FROM contacto_emergencia`);
     const map = {};
     contactos.forEach(c => {
@@ -81,7 +77,7 @@ router.get('/secundaria', async (req, res) => {
       ORDER BY CAST(e.grado AS UNSIGNED) ASC, p.apellidos ASC
     `);
 
-    // ✅ FIX: incluir contactos de emergencia igual que en GET /
+    // FIX: incluir contactos de emergencia igual que en GET /
     const [contactos] = await sequelize.query(`SELECT * FROM contacto_emergencia`);
     const map = {};
     contactos.forEach(c => {
