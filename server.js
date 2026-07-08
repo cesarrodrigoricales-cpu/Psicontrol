@@ -15,7 +15,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'Public')));
 
 // Ruta de autenticación (pública — no requiere token)
-app.use('/api/auth', require('./routes/auth'));
+app.use('/api/Auth', require('./routes/Auth'));
 
 // Middleware JWT — protege TODAS las rutas /api/* que siguen
 const { verificarToken } = require('./config/Auth');
