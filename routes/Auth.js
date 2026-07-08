@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require('../config/auth');
+const { JWT_SECRET } = require('../config/Auth');
 
 // ⚙️ Credenciales fijas del administrador (cambia estos valores)
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
@@ -41,7 +41,7 @@ router.post('/logout', (req, res) => {
 });
 
 // GET /api/auth/verificar — para checkear si el token sigue válido
-router.get('/verificar', require('../config/auth').verificarToken, (req, res) => {
+router.get('/verificar', require('../config/Auth').verificarToken, (req, res) => {
   res.json({ success: true, usuario: req.usuario });
 });
 
