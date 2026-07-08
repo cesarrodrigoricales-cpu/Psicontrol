@@ -18,7 +18,7 @@ app.use(express.static(path.join(__dirname, 'Public')));
 app.use('/api/auth', require('./routes/auth'));
 
 // Middleware JWT — protege TODAS las rutas /api/* que siguen
-const { verificarToken } = require('./config/auth');
+const { verificarToken } = require('./config/Auth');
 app.use('/api', verificarToken);
 
 // APIs protegidas
